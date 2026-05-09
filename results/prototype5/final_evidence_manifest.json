@@ -1,0 +1,164 @@
+{
+  "input_files_present": [
+    "prototype3_rq5_comparison_csv",
+    "prototype3_rq5_comparison_jsonl",
+    "prototype3_evidence_pack_json",
+    "prototype3_evidence_by_difficulty_csv",
+    "prototype3_evidence_by_category_csv",
+    "prototype3_benchmark_json",
+    "prototype4_execution_comparison_csv",
+    "prototype4_by_model_csv",
+    "prototype4_by_ambiguity_csv",
+    "prototype4_false_accepts_csv",
+    "prototype4_key_metrics_md",
+    "prototype4_safety_latency_frontier_csv",
+    "prototype4_metrics_manifest_json",
+    "prototype4_phase_4_7_ambiguity_gate_summary_json",
+    "prototype4_phase_4_8_clarification_recovery_summary_json",
+    "prototype4_phase_4_9_formal_safety_audit_summary_json",
+    "prototype4_phase_4_10_extension_audit_summary_json",
+    "prototype4_audit_summary_json",
+    "prototype4_audit_table_csv",
+    "prototype1_audit_summary_json",
+    "prototype1_audit_table_csv",
+    "prototype2_audit_summary_json",
+    "prototype2_audit_table_csv"
+  ],
+  "input_files_missing": [
+    "prototype3_audit_summary_json",
+    "prototype3_quantisation_coverage_table_csv"
+  ],
+  "generated_outputs": [
+    "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\final_model_comparison.csv",
+    "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\final_zero_trust_comparison.csv",
+    "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\final_safety_latency_summary.csv",
+    "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\final_extension_summary.csv",
+    "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\final_claims_matrix.csv",
+    "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\final_limitations_matrix.csv",
+    "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\final_dissertation_metrics.md",
+    "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\final_evidence_manifest.json",
+    "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\docs\\prototype5\\prototype5_final_evaluation_protocol.md",
+    "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\docs\\prototype5\\prototype5_dissertation_results_summary.md",
+    "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\docs\\prototype5\\prototype5_limitations_and_scope.md",
+    "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\docs\\prototype5\\prototype5_quantisation_metadata_check.md"
+  ],
+  "prototype_statuses": {
+    "prototype_1_audit": "PRESENT",
+    "prototype_2_audit": "PRESENT",
+    "prototype_3_model_evidence": "PARTIAL",
+    "prototype_4_zero_trust_evidence": "PRESENT"
+  },
+  "quantisation_status": "COMPLETE_CUSTOM_EVIDENCE",
+  "quantisation_evidence": {
+    "fp16_evidence": "PRESENT",
+    "int8_evidence": "PRESENT",
+    "int4_evidence": "PRESENT",
+    "quantisation_overall": "COMPLETE_CUSTOM_EVIDENCE",
+    "built_in_foundry_precision_metadata": "MISSING",
+    "custom_precision_artifacts": "PRESENT",
+    "custom_precision_metadata_files": [
+      "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\custom_quantisation\\qwen2_5_0_5b_fp16_inference_model.json",
+      "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\custom_quantisation\\qwen2_5_0_5b_int4_inference_model.json",
+      "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\custom_quantisation\\qwen2_5_0_5b_int8_ort_dynamic_inference_model.json"
+    ],
+    "precision_sources": {
+      "fp16": [
+        {
+          "precision": "fp16",
+          "metadata_path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\custom_quantisation\\qwen2_5_0_5b_fp16_inference_model.json",
+          "name": "qwen2.5-0.5b-instruct-fp16:1",
+          "source_model": "Qwen/Qwen2.5-0.5B-Instruct",
+          "generated_by": "Microsoft Olive capture-onnx-graph",
+          "generation_route": "olive capture-onnx-graph -m Qwen/Qwen2.5-0.5B-Instruct -o .\\models_custom\\qwen2_5_0_5b_fp16 --use_model_builder --precision fp16 --conversion_device cpu --use_ort_genai --disable_telemetry",
+          "model_output_path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\models_custom\\qwen2_5_0_5b_fp16",
+          "model_output_exists": true,
+          "important_scope_note": "This is custom Olive/ONNX Runtime GenAI precision evidence prepared inside Prototype 5. It is not inferred from built-in Foundry Local CPU/GPU model labels."
+        }
+      ],
+      "int8": [
+        {
+          "precision": "int8",
+          "metadata_path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\custom_quantisation\\qwen2_5_0_5b_int8_ort_dynamic_inference_model.json",
+          "name": "qwen2.5-0.5b-instruct-int8-ort-dynamic:1",
+          "source_model": "Qwen/Qwen2.5-0.5B-Instruct",
+          "generated_by": "ONNX Runtime dynamic quantization",
+          "generation_route": "quantize_dynamic(weight_type=QInt8)",
+          "model_output_path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\models_custom\\qwen2_5_0_5b_int8_ort_dynamic",
+          "model_output_exists": true,
+          "important_scope_note": "This is ONNX Runtime dynamic INT8 quantisation evidence generated from the custom FP16 ONNX artifact. It is not inferred from built-in Foundry Local CPU/GPU model labels."
+        }
+      ],
+      "int4": [
+        {
+          "precision": "int4",
+          "metadata_path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\custom_quantisation\\qwen2_5_0_5b_int4_inference_model.json",
+          "name": "qwen2.5-0.5b-instruct-int4:1",
+          "source_model": "Qwen/Qwen2.5-0.5B-Instruct",
+          "generated_by": "Microsoft Olive capture-onnx-graph",
+          "generation_route": "olive capture-onnx-graph -m Qwen/Qwen2.5-0.5B-Instruct -o .\\models_custom\\qwen2_5_0_5b_int4 --use_model_builder --precision int4 --int4_block_size 32 --conversion_device cpu --use_ort_genai --disable_telemetry",
+          "model_output_path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\models_custom\\qwen2_5_0_5b_int4",
+          "model_output_exists": true,
+          "important_scope_note": "This is custom Olive/ONNX Runtime GenAI quantisation evidence prepared inside Prototype 5. It is not inferred from built-in Foundry Local CPU/GPU model labels."
+        }
+      ]
+    },
+    "safe_scope": "Complete custom precision evidence was recovered for FP16, INT8 and INT4. Built-in Foundry Local catalogue metadata did not expose explicit precision fields; therefore the precision claim is based on custom Prototype 5 artifacts, not inferred CPU/GPU model labels."
+  },
+  "fp16_evidence": "PRESENT",
+  "int8_evidence": "PRESENT",
+  "int4_evidence": "PRESENT",
+  "quantisation_overall": "COMPLETE_CUSTOM_EVIDENCE",
+  "built_in_foundry_precision_metadata": "MISSING",
+  "custom_precision_artifacts": "PRESENT",
+  "custom_precision_metadata_files": [
+    "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\custom_quantisation\\qwen2_5_0_5b_fp16_inference_model.json",
+    "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\custom_quantisation\\qwen2_5_0_5b_int4_inference_model.json",
+    "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\custom_quantisation\\qwen2_5_0_5b_int8_ort_dynamic_inference_model.json"
+  ],
+  "phi_status": "PRESENT",
+  "phi_evidence": {
+    "phi_status": "PRESENT",
+    "summary": {
+      "model": "Phi-3-mini-4k-instruct-generic-cpu:3",
+      "commands_evaluated": 30,
+      "successful_requests": 30,
+      "failed_requests": 0,
+      "parse_success_rate": 0.7333,
+      "json_valid_rate": 0.7333,
+      "mean_latency_ms": 7076.98,
+      "semantic_validity": "NOT_EVALUATED",
+      "evidence_status": "PRESENT",
+      "failure_reason": ""
+    },
+    "manifest_path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\phi\\phi_recovery_manifest.json",
+    "results_path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\phi\\phi_recovery_results.jsonl",
+    "summary_path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\phi\\phi_recovery_summary.csv",
+    "inventory_path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\phi\\foundry_model_inventory.json",
+    "output_files_present": [
+      "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\phi\\foundry_model_inventory.json",
+      "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\phi\\phi_recovery_results.jsonl",
+      "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\phi\\phi_recovery_summary.csv",
+      "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\phi\\phi_recovery_manifest.json"
+    ],
+    "real_output_count": 30
+  },
+  "phi_output_files": [
+    "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\phi\\foundry_model_inventory.json",
+    "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\phi\\phi_recovery_results.jsonl",
+    "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\phi\\phi_recovery_summary.csv",
+    "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\phi\\phi_recovery_manifest.json"
+  ],
+  "final_safe_scope": "Prototype 5 is an orchestration/reporting layer. It consolidates available Prototype 3 model-comparison evidence, Prototype 4 zero-trust execution evidence, extension summaries, and audit references. It does not run new inference, introduce robot planning logic, or modify earlier prototype repositories.",
+  "final_limitations": [
+    "Built-in Foundry Local catalogue precision metadata is missing.",
+    "cloud-vs-local comparison evidence is missing.",
+    "GPU/NPU profiling evidence is missing.",
+    "memory footprint measurement evidence is missing.",
+    "physical robot execution is not proven."
+  ],
+  "claims_summary": {
+    "PROVEN": 10,
+    "MISSING": 5,
+    "PRESENT": 1
+  }
+}

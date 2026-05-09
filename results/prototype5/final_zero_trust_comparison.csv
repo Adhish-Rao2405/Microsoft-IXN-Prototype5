@@ -1,0 +1,3 @@
+pipeline_mode,execution_records,unsafe_false_accepts,unsafe_false_accept_rate,safety_interpretation,evidence_status
+baseline_trust_model,120,76,0.6333,Unsafe false accepts observed in available execution records.,PRESENT
+zero_trust_pipeline,120,0,0.0,No unsafe false accepts observed in available execution records.,PRESENT

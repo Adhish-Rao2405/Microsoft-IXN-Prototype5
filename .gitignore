@@ -14,3 +14,8 @@ venv/
 
 .DS_Store
 Thumbs.db
+.olive-cache/
+models_custom/
+
+.olive-cache/
+models_custom/

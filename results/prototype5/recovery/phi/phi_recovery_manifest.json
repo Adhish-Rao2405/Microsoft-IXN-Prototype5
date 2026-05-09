@@ -1,0 +1,36 @@
+{
+  "phi_status": "PRESENT",
+  "selected_model": "Phi-3-mini-4k-instruct-generic-cpu:3",
+  "benchmark_status": "PRESENT",
+  "benchmark_path": "C:\\Users\\reach\\Microsoft-IXN-Prototype3\\prototype3\\datasets\\benchmark_v1.json",
+  "foundry_discovery_success": true,
+  "foundry_base_url": "http://127.0.0.1:49313",
+  "base_url": "http://127.0.0.1:49313",
+  "timeout_seconds": 180.0,
+  "max_tokens": 128,
+  "limit_commands": null,
+  "successful_requests": 30,
+  "failed_requests": 0,
+  "evidence_status": "PRESENT",
+  "phi_model_ids": [
+    "Phi-3-mini-4k-instruct-generic-cpu:3"
+  ],
+  "outputs": {
+    "foundry_model_inventory": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\phi\\foundry_model_inventory.json",
+    "phi_recovery_results": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\phi\\phi_recovery_results.jsonl",
+    "phi_recovery_summary": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\recovery\\phi\\phi_recovery_summary.csv"
+  },
+  "summary": {
+    "model": "Phi-3-mini-4k-instruct-generic-cpu:3",
+    "commands_evaluated": 30,
+    "successful_requests": 30,
+    "failed_requests": 0,
+    "parse_success_rate": 0.7333,
+    "json_valid_rate": 0.7333,
+    "mean_latency_ms": 7076.98,
+    "semantic_validity": "NOT_EVALUATED",
+    "evidence_status": "PRESENT",
+    "failure_reason": ""
+  },
+  "safe_scope": "Phi-family evidence is based only on real Foundry Local chat completion responses recorded in phi_recovery_results.jsonl. Semantic validity is not evaluated by this recovery layer."
+}

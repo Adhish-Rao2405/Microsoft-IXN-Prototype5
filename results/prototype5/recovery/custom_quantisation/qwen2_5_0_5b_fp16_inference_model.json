@@ -1,0 +1,12 @@
+﻿{
+  "Name": "qwen2.5-0.5b-instruct-fp16:1",
+  "source_model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "precision": "fp16",
+  "created_for": "Microsoft IXN Prototype 5 Mode B",
+  "generated_by": "Microsoft Olive capture-onnx-graph",
+  "olive_command": "olive capture-onnx-graph -m Qwen/Qwen2.5-0.5B-Instruct -o .\\models_custom\\qwen2_5_0_5b_fp16 --use_model_builder --precision fp16 --conversion_device cpu --use_ort_genai --disable_telemetry",
+  "model_output_path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\models_custom\\qwen2_5_0_5b_fp16",
+  "evidence_role": "Prototype 5 custom quantisation evidence",
+  "claim_status": "FP16 evidence present because Microsoft Olive generated a custom ONNX Runtime GenAI model using explicit --precision fp16",
+  "important_scope_note": "This is custom Olive/ONNX Runtime GenAI precision evidence prepared inside Prototype 5. It is not inferred from built-in Foundry Local CPU/GPU model labels."
+}

@@ -1,0 +1,8 @@
+limitation,status,safe_interpretation
+custom FP16/INT8/INT4 precision artifacts,PRESENT,"Explicit Prototype 5 custom metadata proves FP16, INT8, and INT4 precision artifacts."
+built-in Foundry Local precision metadata,MISSING,Built-in Foundry catalogue precision metadata is still not proven.
+Phi-family evaluation,MISSING,No explicit Phi-family result file is present.
+cloud-vs-local comparison,MISSING,No cloud baseline evidence is present.
+GPU/NPU profiling,MISSING,No GPU or NPU profiling evidence is present.
+memory footprint measurement,MISSING,No memory-footprint evidence is present.
+physical robot execution,MISSING,Prototype 5 consolidates simulation and execution-record evidence only.

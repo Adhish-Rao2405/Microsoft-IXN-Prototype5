@@ -1,0 +1,5 @@
+configuration,false_accepts,mean_latency_ms,safety_interpretation,evidence_status
+schema_only,76,5785.788888888889,Unsafe false accepts observed.,PRESENT
+schema_semantic,4,6148.833333333333,Unsafe false accepts observed.,PRESENT
+schema_semantic_uncertainty,0,6152.357142857143,Zero unsafe false accepts observed.,PRESENT
+full_zero_trust,0,6152.357142857143,Zero unsafe false accepts observed.,PRESENT
