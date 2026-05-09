@@ -2,20 +2,20 @@
 
 Phi-family evidence is counted only when real Foundry Local Phi responses are recorded. Semantic validity remains NOT_EVALUATED.
 
-- Phi evidence status: PARTIAL
+- Phi evidence status: PRESENT
 - Selected model: Phi-3-mini-4k-instruct-generic-cpu:3
 - Base URL: http://127.0.0.1:49313
-- Timeout seconds: 1
-- Max tokens: 32
-- Limit commands: 1
+- Timeout seconds: 180.0
+- Max tokens: 128
+- Limit commands: None
 - Benchmark status: PRESENT
-- Successful requests: 1
+- Successful requests: 30
 - Failed requests: 0
-- Parse success rate: 1.0
-- JSON valid rate: 1.0
+- Parse success rate: 0.7333
+- JSON valid rate: 0.7333
 
 ## Outputs
 
-- tests\prototype5\_tmp_phi_metrics\foundry_model_inventory.json
-- tests\prototype5\_tmp_phi_metrics\phi_recovery_results.jsonl
-- tests\prototype5\_tmp_phi_metrics\phi_recovery_summary.csv
+- C:\Users\reach\Microsoft-IXN-Prototype5\results\prototype5\recovery\phi\foundry_model_inventory.json
+- C:\Users\reach\Microsoft-IXN-Prototype5\results\prototype5\recovery\phi\phi_recovery_results.jsonl
+- C:\Users\reach\Microsoft-IXN-Prototype5\results\prototype5\recovery\phi\phi_recovery_summary.csv

@@ -1,2 +1,2 @@
 model,commands_evaluated,successful_requests,failed_requests,parse_success_rate,json_valid_rate,mean_latency_ms,semantic_validity,evidence_status
-Phi-3-mini-4k-instruct-generic-cpu:3,30,30,0,0.7333,0.7333,7076.98,NOT_EVALUATED,PRESENT
+Phi-3-mini-4k-instruct-generic-cpu:3,30,30,0,0.7333,0.7333,7028.0,NOT_EVALUATED,PRESENT

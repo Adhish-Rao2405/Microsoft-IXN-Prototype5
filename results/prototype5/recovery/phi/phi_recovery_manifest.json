@@ -27,7 +27,7 @@
     "failed_requests": 0,
     "parse_success_rate": 0.7333,
     "json_valid_rate": 0.7333,
-    "mean_latency_ms": 7076.98,
+    "mean_latency_ms": 7028.0,
     "semantic_validity": "NOT_EVALUATED",
     "evidence_status": "PRESENT",
     "failure_reason": ""
