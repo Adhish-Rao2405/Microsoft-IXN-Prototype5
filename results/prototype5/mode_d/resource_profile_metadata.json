@@ -1,0 +1,16 @@
+{
+  "run_id": "mode_d_20260511T095718Z",
+  "device_metadata": {
+    "os_name": "Windows",
+    "os_version": "10.0.26200",
+    "python_version": "3.12.10",
+    "processor": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+    "machine": "AMD64",
+    "cpu_logical_count": 16,
+    "cpu_physical_count": 8,
+    "total_memory_mb": 15720.25,
+    "foundry_model_id": "Phi-3-mini-4k-instruct-generic-cpu:3",
+    "profiling_timestamp_utc": "2026-05-11T09:57:18.915146Z",
+    "profiler_backend": "PSUTIL_AVAILABLE"
+  }
+}

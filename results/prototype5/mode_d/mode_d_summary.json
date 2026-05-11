@@ -1,0 +1,77 @@
+{
+  "mode": "Prototype 5 Mode D",
+  "mode_d_status": "COMPLETE_REPLAY_PROFILE",
+  "purpose": "Quantify the resource footprint and throughput stability of the local Prototype 5 evidence-processing workload.",
+  "run_id": "mode_d_20260511T095718Z",
+  "workload_mode": "evidence_replay",
+  "live_local_status": "NOT_REQUESTED",
+  "total_commands": 30,
+  "successful_commands": 30,
+  "success_rate": 1.0,
+  "json_valid_rate": 0.7333,
+  "mean_latency_ms": 7028.0,
+  "p50_latency_ms": 6668.36,
+  "p95_latency_ms": 9151.82,
+  "min_latency_ms": 4275.19,
+  "max_latency_ms": 9944.56,
+  "throughput_commands_per_min": 8.54,
+  "cpu_profile": {
+    "status": "PRESENT",
+    "mean_process_cpu_percent": 0.0,
+    "peak_process_cpu_percent": 0.0,
+    "mean_system_cpu_percent": 2.02,
+    "peak_system_cpu_percent": 66.7
+  },
+  "memory_profile": {
+    "status": "PRESENT",
+    "memory_before_rss_mb": 19.05,
+    "memory_after_rss_mb": 19.13,
+    "peak_memory_rss_mb": 19.13,
+    "memory_delta_rss_mb": 0.08
+  },
+  "gpu_profile": {
+    "status": "NOT_DETECTED",
+    "notes": "GPU counters are reported only when measurable; no GPU metrics were inferred."
+  },
+  "npu_profile": {
+    "status": "NOT_DETECTED",
+    "notes": "NPU counters are reported only when measurable; no NPU metrics were inferred."
+  },
+  "device_metadata": {
+    "os_name": "Windows",
+    "os_version": "10.0.26200",
+    "python_version": "3.12.10",
+    "processor": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+    "machine": "AMD64",
+    "cpu_logical_count": 16,
+    "cpu_physical_count": 8,
+    "total_memory_mb": 15720.25,
+    "foundry_model_id": "Phi-3-mini-4k-instruct-generic-cpu:3",
+    "profiling_timestamp_utc": "2026-05-11T09:57:18.915146Z",
+    "profiler_backend": "PSUTIL_AVAILABLE"
+  },
+  "outputs": {
+    "resource_profile_samples": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\mode_d\\resource_profile_samples.csv",
+    "resource_profile_summary": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\mode_d\\resource_profile_summary.csv",
+    "throughput_stability": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\mode_d\\throughput_stability.csv",
+    "mode_d_summary": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\mode_d\\mode_d_summary.json",
+    "documentation": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\docs\\prototype5\\prototype5_resource_profile.md"
+  },
+  "limitations": [
+    "Mode D is a resource/throughput profiling layer, not a new model benchmark.",
+    "Default Mode D uses evidence replay unless live local execution is explicitly enabled.",
+    "Replay profiling measures the profiling harness and evidence-processing workload, not a fresh Foundry model inference run.",
+    "Live local inference profiling can be added if Foundry Local live-call integration is enabled.",
+    "GPU/NPU fields are reported only if measurable; otherwise they are recorded as unavailable.",
+    "If psutil is not installed, install it with pip install psutil to enable CPU and memory counters.",
+    "No cloud calls are made in Mode D."
+  ],
+  "dissertation_claims_unlocked": [
+    "The project includes a resource profiling layer aligned with the Microsoft IXN requirement for resource-utilisation evaluation.",
+    "The profiling layer records CPU, memory, throughput and hardware visibility metrics for the local evidence-processing workload.",
+    "GPU/NPU metrics are reported cautiously and only where measurable.",
+    "The results separate local inference/evidence latency from resource pressure and throughput stability.",
+    "The project avoids unsupported claims where live Foundry or hardware counters are unavailable."
+  ],
+  "notes": "Evidence replay workload; no new model call performed."
+}

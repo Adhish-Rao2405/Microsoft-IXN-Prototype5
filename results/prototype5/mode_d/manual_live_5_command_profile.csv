@@ -1,0 +1,6 @@
+"command_id","model","backend","request_success","parse_success","json_valid","latency_ms","process_memory_before_mb","process_memory_after_mb","process_memory_delta_mb","system_cpu_before_percent","system_cpu_after_percent","notes"
+"C01","Phi-3-mini-4k-instruct-generic-cpu:3","foundry_local_live","True","True","True","5774.73","63.92","63.91","-0.01","13.05","24.6","live Foundry Local request completed"
+"C02","Phi-3-mini-4k-instruct-generic-cpu:3","foundry_local_live","True","False","False","13219.16","63.91","64.23","0.32","10.67","20.22","live Foundry Local request completed"
+"C03","Phi-3-mini-4k-instruct-generic-cpu:3","foundry_local_live","True","True","True","8208.74","64.22","64.23","0.01","13.23","23.08","live Foundry Local request completed"
+"C04","Phi-3-mini-4k-instruct-generic-cpu:3","foundry_local_live","True","True","True","6368.46","64.23","64.23","0","17.95","47.62","live Foundry Local request completed"
+"C05","Phi-3-mini-4k-instruct-generic-cpu:3","foundry_local_live","True","True","True","8274.72","64.23","64.23","0","32.71","37.34","live Foundry Local request completed"

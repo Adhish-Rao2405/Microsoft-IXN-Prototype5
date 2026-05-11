@@ -1,0 +1,23 @@
+﻿{
+    "mode":  "Prototype 5 Mode D Manual Live Foundry Process Profile",
+    "workload_mode":  "manual_live_foundry_process",
+    "live_local_status":  "COMPLETE",
+    "model":  "Phi-3-mini-4k-instruct-generic-cpu:3",
+    "foundry_pid":  29080,
+    "total_commands":  30,
+    "successful_requests":  30,
+    "parse_successes":  24,
+    "json_valid":  24,
+    "request_success_rate":  1,
+    "json_valid_rate":  0.8,
+    "mean_latency_ms":  7896.97,
+    "min_latency_ms":  4117.67,
+    "max_latency_ms":  19007.83,
+    "mean_approx_foundry_cpu_percent":  772.98,
+    "peak_approx_foundry_cpu_percent":  788.49,
+    "mean_working_set_delta_mb":  0.82,
+    "mean_private_memory_delta_mb":  0.54,
+    "run_started":  "2026-05-11T10:16:07.7555381Z",
+    "run_finished":  "2026-05-11T10:22:08.2284734Z",
+    "notes":  "Manual live profile of the Foundry Local serving process; measures actual local requests and process-level memory/CPU deltas."
+}

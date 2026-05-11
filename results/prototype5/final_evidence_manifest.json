@@ -172,13 +172,13 @@
     "cloud_error_reason": "",
     "cloud_run_scope": "full_30_command_benchmark",
     "cloud_retry_policy": {
-      "delay_seconds": 15.0,
+      "delay_seconds": 20.0,
       "max_retries": 5,
-      "backoff_seconds": 20.0,
+      "backoff_seconds": 30.0,
       "model": "gpt-4o-mini",
       "resume_enabled": true
     },
-    "cloud_delay_seconds": 15.0,
+    "cloud_delay_seconds": 20.0,
     "cloud_max_retries": 5,
     "cloud_resume_enabled": true,
     "cost_comparison_available": false,

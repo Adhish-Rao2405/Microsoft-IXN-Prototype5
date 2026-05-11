@@ -1,0 +1,69 @@
+﻿{
+    "mode":  "Prototype 5 Mode D",
+    "final_mode_d_status":  "COMPLETE_LIVE_PROFILE",
+    "purpose":  "Quantify resource utilisation and throughput stability for both replayed local evidence and actual live Foundry Local inference.",
+    "replay_profile":  {
+                           "success_rate":  1.0,
+                           "total_commands":  30,
+                           "cpu_profile_status":  "PRESENT",
+                           "mean_latency_ms":  7028.0,
+                           "workload_mode":  "evidence_replay",
+                           "memory_profile_status":  "PRESENT",
+                           "throughput_commands_per_min":  8.54,
+                           "json_valid_rate":  0.7333,
+                           "status":  "COMPLETE_REPLAY_PROFILE",
+                           "notes":  "Evidence replay workload; no new model call performed."
+                       },
+    "live_foundry_profile":  {
+                                 "logical_cpu_cores":  16,
+                                 "raw_mean_approx_foundry_cpu_percent":  772.98,
+                                 "total_commands":  30,
+                                 "mean_working_set_delta_mb":  0.82,
+                                 "min_latency_ms":  4117.67,
+                                 "json_valid_rate":  0.8,
+                                 "model":  "Phi-3-mini-4k-instruct-generic-cpu:3",
+                                 "workload_mode":  "manual_live_foundry_process",
+                                 "parse_successes":  24,
+                                 "current_foundry_private_memory_mb":  6899.72,
+                                 "raw_peak_approx_foundry_cpu_percent":  788.49,
+                                 "json_valid":  24,
+                                 "current_foundry_working_set_mb":  2827.12,
+                                 "normalized_mean_foundry_cpu_percent_of_total_logical_capacity":  48.31,
+                                 "cpu_interpretation":  "Raw process CPU percent can exceed 100 because the Foundry process can use multiple logical CPU cores. Normalized CPU divides raw process CPU by logical core count to estimate share of total logical CPU capacity.",
+                                 "successful_requests":  30,
+                                 "max_latency_ms":  19007.83,
+                                 "normalized_peak_foundry_cpu_percent_of_total_logical_capacity":  49.28,
+                                 "mean_latency_ms":  7896.97,
+                                 "status":  "COMPLETE",
+                                 "mean_private_memory_delta_mb":  0.54,
+                                 "foundry_pid":  "29080",
+                                 "request_success_rate":  1
+                             },
+    "hardware_visibility":  {
+                                "npu_status":  "NOT_DETECTED",
+                                "note":  "GPU/NPU counters were only reported where measurable; no hardware acceleration claim is made.",
+                                "gpu_status":  "NOT_DETECTED"
+                            },
+    "outputs":  {
+                    "final_summary":  "results/prototype5/mode_d/mode_d_final_evidence_summary.json",
+                    "live_summary":  "results/prototype5/mode_d/manual_live_30_command_foundry_process_summary_normalized.json",
+                    "live_profile_csv":  "results/prototype5/mode_d/manual_live_30_command_foundry_process_profile.csv",
+                    "replay_summary":  "results/prototype5/mode_d/mode_d_summary.json",
+                    "final_documentation":  "docs/prototype5/prototype5_mode_d_final_live_profile.md"
+                },
+    "limitations":  [
+                        "Live profiling measured the Foundry Local serving process on this Windows machine and is hardware-specific.",
+                        "CPU utilisation is approximated from process CPU-time delta divided by request wall-clock time.",
+                        "Raw process CPU can exceed 100 percent because the model-serving process can use multiple logical cores.",
+                        "Normalized CPU divides raw process CPU by 16 logical cores to estimate total logical CPU capacity usage.",
+                        "GPU and NPU counters were not detected, so no GPU/NPU acceleration claim is made.",
+                        "Semantic validity, schema validity and safety validity are not claimed by Mode D unless separately evaluated."
+                    ],
+    "dissertation_claims_unlocked":  [
+                                         "Prototype 5 Mode D includes a fully working live Foundry Local resource profiling path.",
+                                         "The live profile measured actual local model requests to Phi-3-mini-4k-instruct-generic-cpu:3 through Foundry Local.",
+                                         "The live profile recorded latency, request success, JSON validity, Foundry process CPU pressure and memory deltas across 30 commands.",
+                                         "The live profile complements Mode C by explaining the local operational cost behind local-first inference.",
+                                         "The project reports GPU/NPU visibility cautiously and avoids unsupported hardware acceleration claims."
+                                     ]
+}
