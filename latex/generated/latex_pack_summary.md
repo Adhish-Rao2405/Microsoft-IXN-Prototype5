@@ -1,6 +1,6 @@
 # LaTeX Writing Pack Summary
 
-Generated: 2026-05-11T20:45:31+01:00
+Generated: 2026-05-11T21:01:38+01:00
 
 ## Files Created
 
@@ -29,7 +29,7 @@ Generated: 2026-05-11T20:45:31+01:00
 
 ## Verification Status
 
-- Tests: ============================= 62 passed in 1.03s ==============================
+- Tests: ============================= 62 passed in 0.97s ==============================
 - Orchestrator: Prototype 5 Final Evidence Orchestrator: COMPLETE
 - Final pack generator: Prototype 5 final dissertation pack generated.
 
@@ -63,7 +63,10 @@ Files `01_project_overview.tex` through `11_appendix_verification_evidence.tex` 
 
 - Export `figures/final_zero_trust_architecture.mmd` to `figures/final_zero_trust_architecture.pdf` before compiling the architecture figure in Overleaf.
 - Generated optional PNGs:
-- PNG generation skipped because matplotlib was not available.
+- `figures/verification_pytest_summary.png`
+- `figures/final_evidence_claims_summary.png`
+- `figures/microsoft_brief_alignment_summary.png`
+- `figures/safety_latency_frontier_summary.png`
 
 ## Missing Evidence Or Caveats
 

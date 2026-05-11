@@ -1,15 +1,22 @@
 # LaTeX Pack Audit
 
-Generated: 2026-05-11T20:45:31+01:00
+Generated: 2026-05-11T21:01:38+01:00
 
 ## Current Git Status
 
 ```text
-## master...origin/master
-?? latex/
-?? results/prototype5/latex_pack_audit.md
-?? results/prototype5/verification_snapshots/
-?? scripts/prototype5/generate_latex_writing_pack.py
+## master...origin/master [ahead 1]
+ M latex/generated/11_appendix_verification_evidence.tex
+ M latex/generated/latex_pack_summary.md
+ M results/prototype5/latex_pack_audit.md
+ M results/prototype5/verification_snapshots/git_status_after_latex_pack.txt
+ M results/prototype5/verification_snapshots/pytest_prototype5_output.txt
+ M results/prototype5/verification_snapshots/verification_summary.md
+ M scripts/prototype5/generate_latex_writing_pack.py
+?? figures/final_evidence_claims_summary.png
+?? figures/microsoft_brief_alignment_summary.png
+?? figures/safety_latency_frontier_summary.png
+?? figures/verification_pytest_summary.png
 ```
 
 ## Evidence Files Found
@@ -42,7 +49,7 @@ Generated: 2026-05-11T20:45:31+01:00
 
 - Command: `python -m pytest tests/prototype5 -v`
 - Status: PASS
-- Key output: `============================= 62 passed in 1.03s ==============================`
+- Key output: `============================= 62 passed in 0.97s ==============================`
 
 ## Current Orchestrator Status
 
@@ -59,10 +66,17 @@ Generated: 2026-05-11T20:45:31+01:00
 ## Changed Or Generated Files Before LaTeX Generation
 
 ```text
-?? latex/
-?? results/prototype5/latex_pack_audit.md
-?? results/prototype5/verification_snapshots/
-?? scripts/prototype5/generate_latex_writing_pack.py
+M latex/generated/11_appendix_verification_evidence.tex
+ M latex/generated/latex_pack_summary.md
+ M results/prototype5/latex_pack_audit.md
+ M results/prototype5/verification_snapshots/git_status_after_latex_pack.txt
+ M results/prototype5/verification_snapshots/pytest_prototype5_output.txt
+ M results/prototype5/verification_snapshots/verification_summary.md
+ M scripts/prototype5/generate_latex_writing_pack.py
+?? figures/final_evidence_claims_summary.png
+?? figures/microsoft_brief_alignment_summary.png
+?? figures/safety_latency_frontier_summary.png
+?? figures/verification_pytest_summary.png
 ```
 
 ## Caveats For The LaTeX Pack
@@ -73,4 +87,4 @@ Generated: 2026-05-11T20:45:31+01:00
 - PyBullet is discussed only as optional future visualisation; no PyBullet or robot-control feature is generated.
 - All reported quantitative claims are taken from detected evidence files. Missing values are marked as not available in detected evidence.
 - The architecture figure uses the existing Mermaid source; Overleaf may need a manually exported PDF at `figures/final_zero_trust_architecture.pdf`.
-- Optional PNG generation is skipped because matplotlib is not available in the current Python environment.
+- Optional PNG generation is available through matplotlib.

@@ -648,6 +648,9 @@ def tex_architecture_caption() -> str:
 def create_pngs(ctx: dict[str, Any]) -> list[Path]:
     outputs: list[Path] = []
     try:
+        import matplotlib
+
+        matplotlib.use("Agg")
         import matplotlib.pyplot as plt
     except Exception:
         return outputs

@@ -1,5 +1,12 @@
-## master...origin/master
-?? latex/
-?? results/prototype5/latex_pack_audit.md
-?? results/prototype5/verification_snapshots/
-?? scripts/prototype5/generate_latex_writing_pack.py
+## master...origin/master [ahead 1]
+ M latex/generated/11_appendix_verification_evidence.tex
+ M latex/generated/latex_pack_summary.md
+ M results/prototype5/latex_pack_audit.md
+ M results/prototype5/verification_snapshots/git_status_after_latex_pack.txt
+ M results/prototype5/verification_snapshots/pytest_prototype5_output.txt
+ M results/prototype5/verification_snapshots/verification_summary.md
+ M scripts/prototype5/generate_latex_writing_pack.py
+?? figures/final_evidence_claims_summary.png
+?? figures/microsoft_brief_alignment_summary.png
+?? figures/safety_latency_frontier_summary.png
+?? figures/verification_pytest_summary.png

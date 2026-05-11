@@ -1,7 +1,8 @@
 ============================= test session starts =============================
-platform win32 -- Python 3.12.10, pytest-9.0.3, pluggy-1.6.0 -- C:\Users\reach\AppData\Local\Programs\Python\Python312\python.exe
+platform win32 -- Python 3.12.10, pytest-9.0.3, pluggy-1.6.0 -- C:\Users\reach\Microsoft-IXN-Prototype5\.venv\Scripts\python.exe
 cachedir: .pytest_cache
 rootdir: C:\Users\reach\Microsoft-IXN-Prototype5
+plugins: anyio-4.13.0
 collecting ... collected 62 items
 
 tests/prototype5/test_benchmark_cases.py::test_load_benchmark_cases_normalises_id_and_command PASSED [  1%]
@@ -67,4 +68,4 @@ tests/prototype5/test_throughput_runner.py::test_throughput_runner_generates_mod
 tests/prototype5/test_throughput_runner.py::test_throughput_csv_has_one_row_per_replay_unit PASSED [ 98%]
 tests/prototype5/test_throughput_runner.py::test_live_local_request_records_not_implemented_and_uses_replay PASSED [100%]
 
-============================= 62 passed in 1.03s ==============================
+============================= 62 passed in 0.97s ==============================
