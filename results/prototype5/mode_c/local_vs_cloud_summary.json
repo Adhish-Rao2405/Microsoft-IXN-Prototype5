@@ -1,0 +1,62 @@
+{
+  "mode": "Prototype 5 Mode C",
+  "mode_c_status": "COMPLETE",
+  "purpose": "Compare local Foundry Local inference evidence against a cloud/API baseline on the same 30-command benchmark.",
+  "local_baseline_status": "PRESENT",
+  "cloud_baseline_status": "COMPLETE",
+  "total_commands": 30,
+  "benchmark_status": "PRESENT",
+  "local_success_rate": 1.0,
+  "cloud_success_rate": 1.0,
+  "local_mean_latency_ms": 7028.0,
+  "cloud_mean_latency_ms": 1749.28,
+  "local_json_valid_rate": 0.7333,
+  "cloud_json_valid_rate": 1.0,
+  "cloud_successful_requests": 30,
+  "cloud_failed_requests": 0,
+  "cloud_commands_attempted": 30,
+  "cloud_completion_rate": 1.0,
+  "cloud_error_type": "",
+  "cloud_error_reason": "",
+  "cloud_run_scope": "full_30_command_benchmark",
+  "cloud_retry_policy": {
+    "delay_seconds": 20.0,
+    "max_retries": 5,
+    "backoff_seconds": 30.0,
+    "model": "gpt-4o-mini",
+    "resume_enabled": true
+  },
+  "cloud_delay_seconds": 20.0,
+  "cloud_max_retries": 5,
+  "cloud_resume_enabled": true,
+  "cost_comparison_available": false,
+  "privacy_comparison": {
+    "local": "HIGH_LOCAL_DATA_RETAINED",
+    "cloud": "LOWER_EXTERNAL_API_DEPENDENCY"
+  },
+  "offline_resilience_comparison": {
+    "local": "HIGH_CAN_RUN_WITHOUT_CLOUD",
+    "cloud": "LOW_REQUIRES_NETWORK"
+  },
+  "cost_comparison_note": "Cost comparison was structurally supported but not quantitatively measured because token-level usage/cost accounting was not implemented.",
+  "limitations": [
+    "Mode C is an evaluation/comparison layer, not a replacement for the local-first architecture.",
+    "The final cloud run completed across all 30 commands, but it required API configuration, request pacing, retry/backoff and checkpointed resume.",
+    "This demonstrates that cloud baselines are operationally dependent on provider availability, rate limits and account configuration.",
+    "Semantic validity is only claimed where explicitly evaluated; Mode C marks semantic_validity as NOT_EVALUATED.",
+    "Cost comparison was structurally supported but not quantitatively measured because token-level usage/cost accounting was not implemented."
+  ],
+  "dissertation_claims_unlocked": [
+    "The project includes an explicit local-vs-cloud comparison layer.",
+    "The local Foundry Local architecture can be evaluated against cloud inference under identical benchmark prompts.",
+    "The comparison separates latency, validity, safety, cost structure, privacy and offline resilience.",
+    "Prototype 5 Mode C completed a full 30-command cloud baseline and can support final local-vs-cloud benchmark discussion.",
+    "Cloud inference was faster and more JSON-consistent in this benchmark, while local inference preserved stronger privacy and offline-resilience properties."
+  ],
+  "outputs": {
+    "local_vs_cloud_results": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\mode_c\\local_vs_cloud_results.csv",
+    "local_vs_cloud_summary": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\mode_c\\local_vs_cloud_summary.json",
+    "documentation": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\docs\\prototype5\\prototype5_local_vs_cloud_comparison.md"
+  },
+  "final_interpretation": "Cloud inference was faster and more JSON-consistent in this benchmark, but it depended on external connectivity, API availability, provider rate limits and account configuration. Local inference was slower and less JSON-consistent, but supported local execution, data retention and offline resilience."
+}
