@@ -1,30 +1,31 @@
-﻿# Dissertation Drafts
+# Dissertation Drafts
 
-This folder stores exported dissertation/report drafts generated from the Prototype 5 evidence pack.
+This folder stores ACM-style dissertation/report drafts generated from the Prototype 5 evidence pack.
 
-## Current draft
+## Current Files
 
-- DISS_DRAFT.pdf
-- DISS_DRAFT.tex
+- `DISS_DRAFT.pdf`
+- `DISS_DRAFT.tex`
+- `DISS_DRAFT_cleaned.tex`
+- `references.bib`
+- `DISS_DRAFT_cleanup_report.md`
 
 ## Status
 
-This draft is an early ACM-style assembly of the final evidence pack. It includes the project overview, research questions, system architecture, methodology, results overview, Microsoft IXN alignment, industrial robotics positioning, limitations, future work and verification appendix.
+This is an ACM-style early dissertation/report assembly generated from the Prototype 5 evidence pack. It is based on the frozen Prototype 5 evidence baseline.
 
-## Known issues to fix
+Prototype 1 is context-only early feasibility evidence. The core proof comes from Prototypes 3-5: Prototype 3 model/benchmark evidence, Prototype 4 zero-trust execution evidence, and Prototype 5 evidence orchestration, local-vs-cloud comparison, resource profiling and final reporting.
 
-- Background and Related Work section is currently empty.
-- Architecture diagram needs to be exported from Mermaid and uploaded/rendered as PDF or PNG.
-- Microsoft Foundry Local citation currently needs BibTeX resolution.
-- Duplicate or empty section headings need cleanup.
-- Appendix command paths need robust texttt formatting.
-- Tables may need final compression or appendix relocation.
+No PyBullet implementation or Prototype 6 is included.
 
-## Evidence status
+## Cleanup Notes
 
-The draft is based on the frozen Prototype 5 evidence baseline:
-- 62 tests passed.
-- Prototype 5 final evidence orchestrator completed.
-- Final dissertation pack generator completed.
-- Prototype 1 is context-only.
-- No PyBullet or Prototype 6 was added.
+Known draft issues are being cleaned in `DISS_DRAFT_cleaned.tex`:
+
+- duplicate headings
+- unresolved Microsoft Foundry Local citation
+- missing architecture render
+- appendix command formatting
+- empty related work placeholder
+
+The cleaned file keeps claim boundaries intact and does not change core evidence metrics or benchmark results.

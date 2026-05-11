@@ -1,0 +1,15 @@
+Prototype 5 Final Evidence Orchestrator: COMPLETE
+Prototype 3 model evidence: PRESENT
+Prototype 4 zero-trust evidence: PRESENT
+Prototype 4 extension evidence: PRESENT
+Quantisation evidence: COMPLETE_CUSTOM_EVIDENCE
+Phi evidence: PRESENT
+Mode C status: COMPLETE
+Cloud baseline status: COMPLETE
+Mode D status: COMPLETE_LIVE_PROFILE
+Live Foundry profile: PRESENT
+Live Foundry successful requests: 30/30
+Live Foundry JSON-valid rate: 0.8
+Live Foundry mean latency: 7896.97 ms
+Live Foundry normalized mean CPU: 48.31%
+Generated outputs: 12
