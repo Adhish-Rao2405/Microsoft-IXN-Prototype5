@@ -56,9 +56,18 @@ Run final orchestrator:
 python -m src.prototype5.run_orchestrator
 ```
 
+Generate final dissertation evidence pack:
+
+```powershell
+python -m src.prototype5.generate_final_dissertation_pack
+```
+
 Key documentation:
 
 - `docs/dissertation_evidence/microsoft_ixn_brief_closure.md`
+- `results/prototype5/final_evidence_dashboard.md`
+- `results/prototype5/microsoft_brief_alignment_matrix.md`
+- `results/prototype5/final_pack_completion_report.md`
 - `docs/dissertation_evidence/lee_feedback_closure.md`
 - `docs/dissertation_evidence/prototype_io_contracts.md`
 - `docs/dissertation_evidence/evaluation_pipeline.md`

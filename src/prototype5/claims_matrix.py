@@ -24,7 +24,7 @@ def create_claims_matrix(
     model_table = tables.get("model_comparison", Table())
     zero_trust_table = tables.get("zero_trust_comparison", Table())
 
-    p1_status = "PROVEN" if _present(status, "prototype1_audit_summary_json") else "PARTIAL"
+    p1_status = "CONTEXT_ONLY"
     p2_status = "PROVEN" if _present(status, "prototype2_audit_summary_json") else "PARTIAL"
     p3_status = (
         "PROVEN"
@@ -86,10 +86,13 @@ def create_claims_matrix(
 
     rows: list[dict[str, Any]] = [
         {
-            "claim": "Prototype 1 established baseline planner-validator-executor architecture.",
+            "claim": "Prototype 1 provides optional early feasibility/context evidence.",
             "status": p1_status,
-            "evidence_source": "Prototype 1 audit summary/table, where present.",
-            "safe_dissertation_wording": "Prototype 1 documents the baseline planner-validator-executor architecture used as the starting point for later prototypes.",
+            "evidence_source": "docs/prototype1_context_note.md; Prototype 1 audit summary/table if present.",
+            "safe_dissertation_wording": (
+                "Prototype 1 may be cited as early feasibility/context for the project sequence, "
+                "but the final dissertation claims do not depend on Prototype 1 audit files."
+            ),
             "unsafe_wording_to_avoid": "Prototype 1 proves final robot safety or deployment readiness.",
         },
         {

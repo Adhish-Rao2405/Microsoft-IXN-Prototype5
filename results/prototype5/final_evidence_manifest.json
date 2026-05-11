@@ -19,8 +19,6 @@
     "prototype4_phase_4_10_extension_audit_summary_json",
     "prototype4_audit_summary_json",
     "prototype4_audit_table_csv",
-    "prototype1_audit_summary_json",
-    "prototype1_audit_table_csv",
     "prototype2_audit_summary_json",
     "prototype2_audit_table_csv"
   ],
@@ -28,6 +26,19 @@
     "prototype3_audit_summary_json",
     "prototype3_quantisation_coverage_table_csv"
   ],
+  "optional_context_files_missing": [
+    "prototype1_audit_summary_json",
+    "prototype1_audit_table_csv"
+  ],
+  "optional_context_evidence": {
+    "prototype_1": {
+      "status": "OPTIONAL_CONTEXT_MISSING",
+      "role": "early feasibility/context only",
+      "core_claim_dependency": false,
+      "safe_interpretation": "Prototype 1 audit files are optional project-history context. Their absence does not affect the core final claims, which are supported by Prototype 3, Prototype 4, and Prototype 5 evidence.",
+      "note_file": "docs/prototype1_context_note.md"
+    }
+  },
   "generated_outputs": [
     "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\final_model_comparison.csv",
     "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\results\\prototype5\\final_zero_trust_comparison.csv",
@@ -43,7 +54,7 @@
     "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\docs\\prototype5\\prototype5_quantisation_metadata_check.md"
   ],
   "prototype_statuses": {
-    "prototype_1_audit": "PRESENT",
+    "prototype_1_audit": "OPTIONAL_CONTEXT_MISSING",
     "prototype_2_audit": "PRESENT",
     "prototype_3_model_evidence": "PARTIAL",
     "prototype_4_zero_trust_evidence": "PRESENT"
@@ -327,7 +338,8 @@
     "GPU/NPU counters were not detected in Mode D, so no hardware acceleration claim is made."
   ],
   "claims_summary": {
-    "PROVEN": 12,
+    "CONTEXT_ONLY": 1,
+    "PROVEN": 11,
     "MISSING": 2,
     "PRESENT": 1
   }

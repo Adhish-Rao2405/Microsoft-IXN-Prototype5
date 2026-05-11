@@ -5,6 +5,13 @@ from src.prototype5.simple_table import Table
 def test_claims_matrix_includes_required_missing_evidence_claims():
     claims = create_claims_matrix()
     claim_text = {row["claim"] for row in claims.rows}
+    p1_row = next(
+        row
+        for row in claims.rows
+        if row["claim"] == "Prototype 1 provides optional early feasibility/context evidence."
+    )
+    assert p1_row["status"] == "CONTEXT_ONLY"
+    assert "do not depend on Prototype 1 audit files" in p1_row["safe_dissertation_wording"]
     assert "FP16/INT8/INT4 quantisation comparison is missing." in claim_text
     assert "Phi-family evaluation is missing." in claim_text
     assert "cloud-vs-local comparison is missing." in claim_text

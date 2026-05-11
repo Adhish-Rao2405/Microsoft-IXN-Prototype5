@@ -1,0 +1,23 @@
+flowchart LR
+    user[User command] --> input[Benchmark or live input]
+    input --> local[Foundry Local SLM]
+    input -. optional baseline .-> cloud[Cloud baseline]
+    local --> raw[Raw model response]
+    cloud -. comparison output .-> raw
+    raw --> parser[Parser]
+    parser --> json[JSON validity]
+    json --> schema[Schema validator]
+    schema --> semantic[Semantic validator]
+    semantic --> ambiguity[Uncertainty / ambiguity gate]
+    ambiguity --> safety[Deterministic safety gate]
+    safety --> decision[Execution eligibility decision]
+    decision --> logger[Evidence logger]
+    decision -. optional .-> pybullet[PyBullet industrial workcell visualiser]
+
+    benchmark[(Benchmark dataset)] --> input
+    taxonomy[(Metric taxonomy)] --> logger
+    claims[(Claims matrix)] --> logger
+    manifest[(Evidence manifest)] --> logger
+    profiler[(Resource profiler)] --> logger
+    comparator[(Local-vs-cloud comparator)] --> logger
+    cards[(Model / run cards)] --> logger

@@ -66,6 +66,7 @@ def build_final_dissertation_metrics_md(
 ) -> str:
     proven = sum(1 for row in claims_matrix.rows if row.get("status") == "PROVEN")
     missing = sum(1 for row in claims_matrix.rows if row.get("status") == "MISSING")
+    context_only = sum(1 for row in claims_matrix.rows if row.get("status") == "CONTEXT_ONLY")
     mode_d = mode_d_evidence or {}
     mode_d_lines = [
         "## Mode D Resource Profiling",
@@ -96,7 +97,10 @@ def build_final_dissertation_metrics_md(
             "",
             "Prototype 5 consolidates existing evidence only. It does not introduce new inference, planning, or robot execution.",
             "",
+            "Prototype 1 is treated as optional early feasibility/context evidence. Missing Prototype 1 audit files are not counted as missing core proof and do not change the final model, zero-trust, local-vs-cloud, resource, quantisation, or physical-execution metrics below.",
+            "",
             f"- Proven claims: {proven}",
+            f"- Context-only claims: {context_only}",
             f"- Missing evidence claims: {missing}",
             f"- Quantisation evidence: {quantisation_status}",
             f"- Phi-family evidence: {phi_status}",
@@ -134,6 +138,7 @@ def build_protocol_doc() -> str:
             "# Prototype 5 Final Evaluation Protocol",
             "",
             "Prototype 5 is a dissertation evidence orchestrator. It reads existing Prototype 3 and Prototype 4 evidence, plus audit references from Prototypes 1-4 where available.",
+            "Prototype 1 audit files are optional context for project history rather than a dependency for final core claims.",
             "",
             "## Scope",
             "",

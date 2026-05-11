@@ -2,7 +2,10 @@
 
 Prototype 5 consolidates existing evidence only. It does not introduce new inference, planning, or robot execution.
 
-- Proven claims: 12
+Prototype 1 is treated as optional early feasibility/context evidence. Missing Prototype 1 audit files are not counted as missing core proof and do not change the final model, zero-trust, local-vs-cloud, resource, quantisation, or physical-execution metrics below.
+
+- Proven claims: 11
+- Context-only claims: 1
 - Missing evidence claims: 2
 - Quantisation evidence: COMPLETE_CUSTOM_EVIDENCE
 - Phi-family evidence: PRESENT

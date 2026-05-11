@@ -3,6 +3,9 @@
 | Claim | Evidence file |
 |---|---|
 | Microsoft IXN final brief closure documented | `docs/dissertation_evidence/microsoft_ixn_brief_closure.md` |
+| Final dissertation evidence dashboard generated | `results/prototype5/final_evidence_dashboard.md` |
+| Microsoft IXN brief alignment matrix generated | `results/prototype5/microsoft_brief_alignment_matrix.md` |
+| Final dissertation pack completion recorded | `results/prototype5/final_pack_completion_report.md` |
 | Prototype 5 final orchestrator completed | `results/prototype5/final_evidence_manifest.json` |
 | Final claims are traceable | `results/prototype5/final_claims_matrix.csv` |
 | Dissertation metrics are summarised | `results/prototype5/final_dissertation_metrics.md` |

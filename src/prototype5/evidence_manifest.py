@@ -7,6 +7,8 @@ from typing import Any
 
 from .evidence_paths import missing_input_names, present_input_names
 
+OPTIONAL_CONTEXT_INPUT_PREFIXES = ("prototype1_",)
+
 
 def _prototype_status(input_status: dict[str, dict[str, str]], prefix: str) -> str:
     relevant = [item for name, item in input_status.items() if name.startswith(prefix)]
@@ -18,6 +20,20 @@ def _prototype_status(input_status: dict[str, dict[str, str]], prefix: str) -> s
     if present:
         return "PARTIAL"
     return "MISSING"
+
+
+def _is_optional_context_input(name: str) -> bool:
+    return any(name.startswith(prefix) for prefix in OPTIONAL_CONTEXT_INPUT_PREFIXES)
+
+
+def _core_missing_input_names(input_status: dict[str, dict[str, str]]) -> list[str]:
+    return [name for name in missing_input_names(input_status) if not _is_optional_context_input(name)]
+
+
+def _optional_context_missing_input_names(
+    input_status: dict[str, dict[str, str]],
+) -> list[str]:
+    return [name for name in missing_input_names(input_status) if _is_optional_context_input(name)]
 
 
 def _detect_quantisation_status(input_status: dict[str, dict[str, str]]) -> str:
@@ -100,10 +116,32 @@ def generate_evidence_manifest(
             )
     return {
         "input_files_present": present_input_names(input_status),
-        "input_files_missing": missing_input_names(input_status),
+        "input_files_missing": _core_missing_input_names(input_status),
+        "optional_context_files_missing": _optional_context_missing_input_names(input_status),
+        "optional_context_evidence": {
+            "prototype_1": {
+                "status": (
+                    "OPTIONAL_CONTEXT_PRESENT"
+                    if _prototype_status(input_status, "prototype1_") == "PRESENT"
+                    else "OPTIONAL_CONTEXT_MISSING"
+                ),
+                "role": "early feasibility/context only",
+                "core_claim_dependency": False,
+                "safe_interpretation": (
+                    "Prototype 1 audit files are optional project-history context. "
+                    "Their absence does not affect the core final claims, which are supported by "
+                    "Prototype 3, Prototype 4, and Prototype 5 evidence."
+                ),
+                "note_file": "docs/prototype1_context_note.md",
+            }
+        },
         "generated_outputs": [str(path) for path in generated_outputs],
         "prototype_statuses": {
-            "prototype_1_audit": _prototype_status(input_status, "prototype1_"),
+            "prototype_1_audit": (
+                "OPTIONAL_CONTEXT_PRESENT"
+                if _prototype_status(input_status, "prototype1_") == "PRESENT"
+                else "OPTIONAL_CONTEXT_MISSING"
+            ),
             "prototype_2_audit": _prototype_status(input_status, "prototype2_"),
             "prototype_3_model_evidence": _prototype_status(input_status, "prototype3_"),
             "prototype_4_zero_trust_evidence": _prototype_status(input_status, "prototype4_"),

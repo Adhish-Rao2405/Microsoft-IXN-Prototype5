@@ -1,6 +1,7 @@
 # Prototype 5 Final Evaluation Protocol
 
 Prototype 5 is a dissertation evidence orchestrator. It reads existing Prototype 3 and Prototype 4 evidence, plus audit references from Prototypes 1-4 where available.
+Prototype 1 audit files are optional context for project history rather than a dependency for final core claims.
 
 ## Scope
 
