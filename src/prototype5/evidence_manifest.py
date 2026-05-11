@@ -33,6 +33,7 @@ def generate_evidence_manifest(
     claims_summary: dict[str, Any] | None = None,
     quantisation_summary: dict[str, Any] | None = None,
     phi_summary: dict[str, Any] | None = None,
+    mode_c_summary: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     quantisation = quantisation_summary or {
         "fp16_evidence": "MISSING",
@@ -48,6 +49,11 @@ def generate_evidence_manifest(
         "output_files_present": [],
         "real_output_count": 0,
         "summary": {},
+    }
+    mode_c = mode_c_summary or {
+        "mode_c_status": "MISSING",
+        "cloud_baseline_status": "MISSING",
+        "output_files_present": [],
     }
     missing_limitations = [
         "Built-in Foundry Local catalogue precision metadata is missing.",
@@ -82,6 +88,10 @@ def generate_evidence_manifest(
         "phi_status": phi["phi_status"],
         "phi_evidence": phi,
         "phi_output_files": phi.get("output_files_present", []),
+        "mode_c_status": mode_c.get("mode_c_status", "MISSING"),
+        "cloud_baseline_status": mode_c.get("cloud_baseline_status", "MISSING"),
+        "mode_c_evidence": mode_c,
+        "mode_c_output_files": mode_c.get("output_files_present", []),
         "final_safe_scope": (
             "Prototype 5 is an orchestration/reporting layer. It consolidates "
             "available Prototype 3 model-comparison evidence, Prototype 4 "

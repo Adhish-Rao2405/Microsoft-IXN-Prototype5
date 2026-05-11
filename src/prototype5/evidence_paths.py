@@ -17,6 +17,7 @@ RESULTS_DIR = PROTOTYPE_5_ROOT / "results" / "prototype5"
 DOCS_DIR = PROTOTYPE_5_ROOT / "docs" / "prototype5"
 CUSTOM_QUANTISATION_DIR = RESULTS_DIR / "recovery" / "custom_quantisation"
 PHI_RECOVERY_DIR = RESULTS_DIR / "recovery" / "phi"
+MODE_C_DIR = RESULTS_DIR / "mode_c"
 
 
 EXPECTED_INPUT_PATHS: dict[str, Path] = {

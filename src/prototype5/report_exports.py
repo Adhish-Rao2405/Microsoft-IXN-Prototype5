@@ -59,6 +59,9 @@ def build_final_dissertation_metrics_md(
     claims_matrix: Table,
     limitations_matrix: Table,
     quantisation_status: str = "MISSING",
+    phi_status: str = "MISSING",
+    mode_c_status: str = "MISSING",
+    cloud_baseline_status: str = "MISSING",
 ) -> str:
     proven = sum(1 for row in claims_matrix.rows if row.get("status") == "PROVEN")
     missing = sum(1 for row in claims_matrix.rows if row.get("status") == "MISSING")
@@ -71,7 +74,9 @@ def build_final_dissertation_metrics_md(
             f"- Proven claims: {proven}",
             f"- Missing evidence claims: {missing}",
             f"- Quantisation evidence: {quantisation_status}",
-            "- Phi-family evidence: MISSING",
+            f"- Phi-family evidence: {phi_status}",
+            f"- Mode C local-vs-cloud status: {mode_c_status}",
+            f"- Cloud baseline status: {cloud_baseline_status}",
             "",
             "## Final Model Comparison",
             _markdown_table(model_comparison),
@@ -216,6 +221,9 @@ def export_all(
                 tables["claims_matrix"],
                 tables["limitations_matrix"],
                 manifest.get("quantisation_status", "MISSING"),
+                manifest.get("phi_status", "MISSING"),
+                manifest.get("mode_c_status", "MISSING"),
+                manifest.get("cloud_baseline_status", "MISSING"),
             ),
             results_dir / "final_dissertation_metrics.md",
         )

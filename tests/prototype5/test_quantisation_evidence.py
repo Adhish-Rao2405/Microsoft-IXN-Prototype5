@@ -79,6 +79,16 @@ def test_run_recovery_prints_summary(capsys, monkeypatch):
         }
 
     monkeypatch.setattr(run_recovery, "run_phi_recovery", fake_run_phi_recovery)
+    monkeypatch.setattr(
+        run_recovery,
+        "run_local_cloud_comparison",
+        lambda: {
+            "summary": {
+                "mode_c_status": "COMPLETE_WITH_CLOUD_NOT_RUN",
+                "cloud_baseline_status": "NOT_RUN_API_KEY_MISSING",
+            }
+        },
+    )
     recovery_main = run_recovery.main
     recovery_main()
     output = capsys.readouterr().out

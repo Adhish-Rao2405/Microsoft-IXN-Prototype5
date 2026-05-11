@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .local_cloud_comparison import run_local_cloud_comparison
 from .phi_recovery_runner import run_phi_recovery
 from .quantisation_evidence import collect_quantisation_evidence
 
@@ -24,6 +25,10 @@ def main() -> None:
     print(f"Phi recovery evidence: {phi_manifest['phi_status']}")
     print(f"Phi model: {phi_manifest.get('selected_model') or ''}")
     print(f"Phi successful requests: {phi_manifest['summary'].get('successful_requests', 0)}")
+    mode_c_result = run_local_cloud_comparison()
+    mode_c_summary = mode_c_result["summary"]
+    print(f"Mode C status: {mode_c_summary['mode_c_status']}")
+    print(f"Cloud baseline status: {mode_c_summary['cloud_baseline_status']}")
 
 
 if __name__ == "__main__":

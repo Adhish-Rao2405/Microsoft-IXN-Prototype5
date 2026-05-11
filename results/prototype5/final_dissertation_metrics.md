@@ -5,7 +5,9 @@ Prototype 5 consolidates existing evidence only. It does not introduce new infer
 - Proven claims: 10
 - Missing evidence claims: 5
 - Quantisation evidence: COMPLETE_CUSTOM_EVIDENCE
-- Phi-family evidence: MISSING
+- Phi-family evidence: PRESENT
+- Mode C local-vs-cloud status: COMPLETE
+- Cloud baseline status: COMPLETE
 
 ## Final Model Comparison
 | model                          | commands_evaluated | schema_valid_rate | execution_eligible_rate | false_accept_count | false_accept_rate | false_reject_count | false_reject_rate | correct_reject_count | mean_latency_ms | evidence_status |

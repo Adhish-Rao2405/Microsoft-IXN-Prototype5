@@ -16,6 +16,7 @@ def create_claims_matrix(
     metric_tables: dict[str, Table] | None = None,
     quantisation_summary: dict[str, Any] | None = None,
     phi_summary: dict[str, Any] | None = None,
+    mode_c_summary: dict[str, Any] | None = None,
 ) -> Table:
     status = input_status or {}
     tables = metric_tables or {}
@@ -79,6 +80,7 @@ def create_claims_matrix(
         "custom_precision_metadata_files": [],
     }
     phi = phi_summary or {"phi_status": "MISSING", "output_files_present": []}
+    mode_c = mode_c_summary or {"cloud_baseline_status": "MISSING", "output_files_present": []}
 
     rows: list[dict[str, Any]] = [
         {
@@ -213,8 +215,39 @@ def create_claims_matrix(
             }
         )
 
+    cloud_status = str(mode_c.get("cloud_baseline_status", "MISSING"))
+    if cloud_status == "NOT_RUN_API_KEY_MISSING":
+        rows.append(
+            {
+                "claim": "Cloud baseline was not run because OPENAI_API_KEY was missing.",
+                "status": "FUTURE_WORK",
+                "evidence_source": "; ".join(mode_c.get("output_files_present", [])),
+                "safe_dissertation_wording": "Prototype 5 Mode C generated local-vs-cloud fallback outputs, but cloud baseline execution was not run because no API key was present.",
+                "unsafe_wording_to_avoid": "Do not claim cloud-vs-local performance comparison from the fallback run.",
+            }
+        )
+    elif cloud_status in {"PRESENT", "PARTIAL"}:
+        rows.append(
+            {
+                "claim": "Cloud baseline request-level evidence is available.",
+                "status": cloud_status,
+                "evidence_source": "; ".join(mode_c.get("output_files_present", [])),
+                "safe_dissertation_wording": "Prototype 5 Mode C records request-level cloud baseline evidence with semantic validity marked NOT_EVALUATED.",
+                "unsafe_wording_to_avoid": "Do not claim semantic equivalence or safety superiority from request-level cloud outputs alone.",
+            }
+        )
+    else:
+        rows.append(
+            {
+                "claim": "cloud-vs-local comparison is missing.",
+                "status": "MISSING",
+                "evidence_source": "; ".join(mode_c.get("output_files_present", [])),
+                "safe_dissertation_wording": "cloud-vs-local comparison is missing.",
+                "unsafe_wording_to_avoid": "Do not claim cloud-vs-local performance or safety comparison.",
+            }
+        )
+
     missing_claims = [
-        ("cloud-vs-local comparison is missing.", "Do not claim cloud-vs-local performance or safety comparison."),
         ("GPU/NPU profiling is missing.", "Do not claim GPU or NPU profiling evidence."),
         ("memory footprint measurement is missing.", "Do not claim measured memory footprint."),
         ("physical robot execution is not proven.", "Do not claim physical robot execution or deployment validation."),
