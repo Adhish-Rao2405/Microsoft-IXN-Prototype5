@@ -17,6 +17,7 @@ def create_claims_matrix(
     quantisation_summary: dict[str, Any] | None = None,
     phi_summary: dict[str, Any] | None = None,
     mode_c_summary: dict[str, Any] | None = None,
+    mode_d_summary: dict[str, Any] | None = None,
 ) -> Table:
     status = input_status or {}
     tables = metric_tables or {}
@@ -81,6 +82,7 @@ def create_claims_matrix(
     }
     phi = phi_summary or {"phi_status": "MISSING", "output_files_present": []}
     mode_c = mode_c_summary or {"cloud_baseline_status": "MISSING", "output_files_present": []}
+    mode_d = mode_d_summary or {"mode_d_status": "MISSING", "output_files_present": []}
 
     rows: list[dict[str, Any]] = [
         {
@@ -226,11 +228,11 @@ def create_claims_matrix(
                 "unsafe_wording_to_avoid": "Do not claim cloud-vs-local performance comparison from the fallback run.",
             }
         )
-    elif cloud_status in {"PRESENT", "PARTIAL"}:
+    elif cloud_status in {"PRESENT", "PARTIAL", "COMPLETE"}:
         rows.append(
             {
                 "claim": "Cloud baseline request-level evidence is available.",
-                "status": cloud_status,
+                "status": "PROVEN" if cloud_status == "COMPLETE" else cloud_status,
                 "evidence_source": "; ".join(mode_c.get("output_files_present", [])),
                 "safe_dissertation_wording": "Prototype 5 Mode C records request-level cloud baseline evidence with semantic validity marked NOT_EVALUATED.",
                 "unsafe_wording_to_avoid": "Do not claim semantic equivalence or safety superiority from request-level cloud outputs alone.",
@@ -247,11 +249,44 @@ def create_claims_matrix(
             }
         )
 
+    if mode_d.get("mode_d_status") == "COMPLETE_LIVE_PROFILE":
+        rows.append(
+            {
+                "claim": "Live Foundry Local resource profiling completed",
+                "status": "PROVEN",
+                "evidence_source": "mode_d_final_evidence_summary.json",
+                "safe_dissertation_wording": (
+                    "Prototype 5 Mode D completed live Foundry Local resource profiling, "
+                    f"with {mode_d.get('live_foundry_successful_requests', 'NOT_AVAILABLE')}/"
+                    f"{mode_d.get('live_foundry_total_commands', 'NOT_AVAILABLE')} successful requests, "
+                    f"JSON-valid rate {mode_d.get('live_foundry_json_valid_rate', 'NOT_AVAILABLE')}, "
+                    f"mean latency {mode_d.get('live_foundry_mean_latency_ms', 'NOT_AVAILABLE')} ms, "
+                    "and normalized mean CPU "
+                    f"{mode_d.get('live_foundry_normalized_mean_cpu_percent', 'NOT_AVAILABLE')}%."
+                ),
+                "unsafe_wording_to_avoid": "Do not generalise Mode D live profiling beyond the measured local machine, Foundry process, and command set.",
+            }
+        )
+    else:
+        rows.append(
+            {
+                "claim": "Live Foundry Local resource profiling is missing.",
+                "status": "MISSING",
+                "evidence_source": "; ".join(mode_d.get("output_files_present", [])),
+                "safe_dissertation_wording": "Live Foundry Local resource profiling is missing.",
+                "unsafe_wording_to_avoid": "Do not claim live local resource utilisation evidence.",
+            }
+        )
+
     missing_claims = [
-        ("GPU/NPU profiling is missing.", "Do not claim GPU or NPU profiling evidence."),
-        ("memory footprint measurement is missing.", "Do not claim measured memory footprint."),
         ("physical robot execution is not proven.", "Do not claim physical robot execution or deployment validation."),
     ]
+    if mode_d.get("mode_d_status") != "COMPLETE_LIVE_PROFILE":
+        missing_claims = [
+            ("GPU/NPU profiling is missing.", "Do not claim GPU or NPU profiling evidence."),
+            ("memory footprint measurement is missing.", "Do not claim measured memory footprint."),
+            *missing_claims,
+        ]
     for claim, unsafe in missing_claims:
         rows.append(
             {

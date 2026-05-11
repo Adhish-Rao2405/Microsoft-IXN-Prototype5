@@ -34,6 +34,7 @@ def generate_evidence_manifest(
     quantisation_summary: dict[str, Any] | None = None,
     phi_summary: dict[str, Any] | None = None,
     mode_c_summary: dict[str, Any] | None = None,
+    mode_d_summary: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     quantisation = quantisation_summary or {
         "fp16_evidence": "MISSING",
@@ -55,6 +56,10 @@ def generate_evidence_manifest(
         "cloud_baseline_status": "MISSING",
         "output_files_present": [],
     }
+    mode_d = mode_d_summary or {
+        "mode_d_status": "MISSING",
+        "output_files_present": [],
+    }
     missing_limitations = [
         "Built-in Foundry Local catalogue precision metadata is missing.",
         "cloud-vs-local comparison evidence is missing.",
@@ -64,6 +69,35 @@ def generate_evidence_manifest(
     ]
     if phi.get("phi_status") not in {"PRESENT", "PARTIAL"}:
         missing_limitations.insert(1, "Phi-family evaluation evidence is missing.")
+    if mode_c.get("mode_c_status") not in {"COMPLETE", "COMPLETE_WITH_CLOUD_NOT_RUN"}:
+        pass
+    else:
+        missing_limitations = [
+            item for item in missing_limitations if item != "cloud-vs-local comparison evidence is missing."
+        ]
+    if mode_d.get("mode_d_status") in {
+        "COMPLETE_LIVE_PROFILE",
+        "COMPLETE_REPLAY_PROFILE",
+        "COMPLETE_WITH_LIMITED_HARDWARE_VISIBILITY",
+        "COMPLETE_WITH_PROFILER_LIMITED",
+    }:
+        missing_limitations = [
+            item
+            for item in missing_limitations
+            if item
+            not in {
+                "GPU/NPU profiling evidence is missing.",
+                "memory footprint measurement evidence is missing.",
+            }
+        ]
+        hardware = mode_d.get("hardware_visibility", {})
+        if hardware.get("gpu_status") in {"NOT_DETECTED", "NOT_AVAILABLE"} or hardware.get(
+            "npu_status"
+        ) in {"NOT_DETECTED", "NOT_AVAILABLE"}:
+            missing_limitations.insert(
+                2,
+                "GPU/NPU counters were not detected in Mode D, so no hardware acceleration claim is made.",
+            )
     return {
         "input_files_present": present_input_names(input_status),
         "input_files_missing": missing_input_names(input_status),
@@ -92,6 +126,21 @@ def generate_evidence_manifest(
         "cloud_baseline_status": mode_c.get("cloud_baseline_status", "MISSING"),
         "mode_c_evidence": mode_c,
         "mode_c_output_files": mode_c.get("output_files_present", []),
+        "mode_d_status": mode_d.get("mode_d_status", "MISSING"),
+        "mode_d_evidence": mode_d,
+        "mode_d_output_files": mode_d.get("output_files_present", []),
+        "live_foundry_profile_status": mode_d.get("live_foundry_profile_status", "MISSING"),
+        "live_foundry_successful_requests": mode_d.get(
+            "live_foundry_successful_requests", "NOT_AVAILABLE"
+        ),
+        "live_foundry_total_commands": mode_d.get("live_foundry_total_commands", "NOT_AVAILABLE"),
+        "live_foundry_json_valid_rate": mode_d.get("live_foundry_json_valid_rate", "NOT_AVAILABLE"),
+        "live_foundry_mean_latency_ms": mode_d.get(
+            "live_foundry_mean_latency_ms", "NOT_AVAILABLE"
+        ),
+        "live_foundry_normalized_mean_cpu_percent": mode_d.get(
+            "live_foundry_normalized_mean_cpu_percent", "NOT_AVAILABLE"
+        ),
         "final_safe_scope": (
             "Prototype 5 is an orchestration/reporting layer. It consolidates "
             "available Prototype 3 model-comparison evidence, Prototype 4 "

@@ -237,8 +237,16 @@ def _missing_extension_row(phase: str, name: str) -> dict[str, str]:
     }
 
 
-def final_limitations_matrix(quantisation_summary: dict[str, Any] | None = None) -> Table:
+def final_limitations_matrix(
+    quantisation_summary: dict[str, Any] | None = None,
+    phi_summary: dict[str, Any] | None = None,
+    mode_c_summary: dict[str, Any] | None = None,
+    mode_d_summary: dict[str, Any] | None = None,
+) -> Table:
     quantisation = quantisation_summary or {"quantisation_overall": "MISSING"}
+    phi = phi_summary or {"phi_status": "MISSING"}
+    mode_c = mode_c_summary or {"mode_c_status": "MISSING", "cloud_baseline_status": "MISSING"}
+    mode_d = mode_d_summary or {"mode_d_status": "MISSING"}
     rows = []
     if quantisation.get("quantisation_overall") == "COMPLETE_CUSTOM_EVIDENCE":
         rows.extend(
@@ -263,11 +271,52 @@ def final_limitations_matrix(quantisation_summary: dict[str, Any] | None = None)
                 "No complete explicit quantisation evidence set proves these variants.",
             )
         )
+    rows.append(
+        (
+            "Phi-family evaluation",
+            "PRESENT" if phi.get("phi_status") in {"PRESENT", "PARTIAL"} else "MISSING",
+            "Phi-family Foundry Local response evidence is present; semantic validity remains NOT_EVALUATED."
+            if phi.get("phi_status") in {"PRESENT", "PARTIAL"}
+            else "No explicit Phi-family result file is present.",
+        )
+    )
+    rows.append(
+        (
+            "cloud-vs-local comparison",
+            "PRESENT" if mode_c.get("mode_c_status") == "COMPLETE" else "MISSING",
+            "Mode C local-vs-cloud benchmark evidence is present; semantic equivalence is not claimed."
+            if mode_c.get("mode_c_status") == "COMPLETE"
+            else "No cloud baseline evidence is present.",
+        )
+    )
+    if mode_d.get("mode_d_status") == "COMPLETE_LIVE_PROFILE":
+        hardware = mode_d.get("hardware_visibility", {})
+        rows.extend(
+            [
+                (
+                    "GPU/NPU profiling",
+                    "LIMITED",
+                    (
+                        "Mode D records hardware visibility, but GPU/NPU counters were "
+                        f"{hardware.get('gpu_status', 'NOT_AVAILABLE')}/"
+                        f"{hardware.get('npu_status', 'NOT_AVAILABLE')}; no hardware acceleration claim is made."
+                    ),
+                ),
+                (
+                    "memory footprint measurement",
+                    "PRESENT",
+                    "Mode D live Foundry profiling records process memory deltas for the measured local run.",
+                ),
+            ]
+        )
+    else:
+        rows.extend(
+            [
+                ("GPU/NPU profiling", "MISSING", "No GPU or NPU profiling evidence is present."),
+                ("memory footprint measurement", "MISSING", "No memory-footprint evidence is present."),
+            ]
+        )
     rows.extend([
-        ("Phi-family evaluation", "MISSING", "No explicit Phi-family result file is present."),
-        ("cloud-vs-local comparison", "MISSING", "No cloud baseline evidence is present."),
-        ("GPU/NPU profiling", "MISSING", "No GPU or NPU profiling evidence is present."),
-        ("memory footprint measurement", "MISSING", "No memory-footprint evidence is present."),
         (
             "physical robot execution",
             "MISSING",

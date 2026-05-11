@@ -62,9 +62,34 @@ def build_final_dissertation_metrics_md(
     phi_status: str = "MISSING",
     mode_c_status: str = "MISSING",
     cloud_baseline_status: str = "MISSING",
+    mode_d_evidence: dict[str, Any] | None = None,
 ) -> str:
     proven = sum(1 for row in claims_matrix.rows if row.get("status") == "PROVEN")
     missing = sum(1 for row in claims_matrix.rows if row.get("status") == "MISSING")
+    mode_d = mode_d_evidence or {}
+    mode_d_lines = [
+        "## Mode D Resource Profiling",
+        f"- Mode D status: {mode_d.get('mode_d_status', 'MISSING')}",
+    ]
+    if mode_d.get("mode_d_status") == "COMPLETE_LIVE_PROFILE":
+        mode_d_lines.extend(
+            [
+                f"- Live Foundry profile: {mode_d.get('live_foundry_profile_status', 'MISSING')}",
+                (
+                    "- Live Foundry successful requests: "
+                    f"{mode_d.get('live_foundry_successful_requests', 'NOT_AVAILABLE')}/"
+                    f"{mode_d.get('live_foundry_total_commands', 'NOT_AVAILABLE')}"
+                ),
+                f"- Live Foundry JSON-valid rate: {mode_d.get('live_foundry_json_valid_rate', 'NOT_AVAILABLE')}",
+                f"- Live Foundry mean latency: {mode_d.get('live_foundry_mean_latency_ms', 'NOT_AVAILABLE')} ms",
+                (
+                    "- Live Foundry normalized mean CPU: "
+                    f"{mode_d.get('live_foundry_normalized_mean_cpu_percent', 'NOT_AVAILABLE')}%"
+                ),
+            ]
+        )
+    else:
+        mode_d_lines.append("- Live Foundry profile: MISSING")
     return "\n".join(
         [
             "# Prototype 5 Final Dissertation Metrics",
@@ -77,6 +102,7 @@ def build_final_dissertation_metrics_md(
             f"- Phi-family evidence: {phi_status}",
             f"- Mode C local-vs-cloud status: {mode_c_status}",
             f"- Cloud baseline status: {cloud_baseline_status}",
+            f"- Mode D resource profiling status: {mode_d.get('mode_d_status', 'MISSING')}",
             "",
             "## Final Model Comparison",
             _markdown_table(model_comparison),
@@ -92,6 +118,8 @@ def build_final_dissertation_metrics_md(
             "",
             "## Quantisation Evidence",
             "Complete custom precision evidence was recovered for FP16, INT8 and INT4 when `quantisation_status` is `COMPLETE_CUSTOM_EVIDENCE`. Built-in Foundry Local catalogue precision metadata remains missing.",
+            "",
+            *mode_d_lines,
             "",
             "## Limitations",
             _markdown_table(limitations_matrix),
@@ -224,6 +252,7 @@ def export_all(
                 manifest.get("phi_status", "MISSING"),
                 manifest.get("mode_c_status", "MISSING"),
                 manifest.get("cloud_baseline_status", "MISSING"),
+                manifest.get("mode_d_evidence", {}),
             ),
             results_dir / "final_dissertation_metrics.md",
         )

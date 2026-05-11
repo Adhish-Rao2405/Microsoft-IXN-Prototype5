@@ -4,6 +4,7 @@ from pathlib import Path
 
 from src.prototype5.mode_d_summary import (
     build_mode_d_summary,
+    collect_mode_d_evidence,
     write_mode_d_summary_outputs,
 )
 
@@ -135,3 +136,39 @@ def test_mode_d_summary_marks_missing_local_evidence():
         docs_dir=TMP_ROOT / "docs",
     )
     assert summary["mode_d_status"] == "MISSING_LOCAL_EVIDENCE"
+
+
+def test_collect_mode_d_evidence_prefers_final_live_summary():
+    shutil.rmtree(TMP_ROOT, ignore_errors=True)
+    mode_d_dir = TMP_ROOT / "mode_d"
+    mode_d_dir.mkdir(parents=True, exist_ok=True)
+    summary_path = mode_d_dir / "mode_d_final_evidence_summary.json"
+    summary_path.write_text(
+        json.dumps(
+            {
+                "final_mode_d_status": "COMPLETE_LIVE_PROFILE",
+                "live_foundry_profile": {
+                    "status": "COMPLETE",
+                    "total_commands": 30,
+                    "successful_requests": 30,
+                    "json_valid_rate": 0.8,
+                    "mean_latency_ms": 7896.97,
+                    "normalized_mean_foundry_cpu_percent_of_total_logical_capacity": 48.31,
+                },
+                "hardware_visibility": {
+                    "gpu_status": "NOT_DETECTED",
+                    "npu_status": "NOT_DETECTED",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    summary = collect_mode_d_evidence(mode_d_dir)
+    assert summary["mode_d_status"] == "COMPLETE_LIVE_PROFILE"
+    assert summary["live_foundry_profile_status"] == "PRESENT"
+    assert summary["live_foundry_successful_requests"] == 30
+    assert summary["live_foundry_total_commands"] == 30
+    assert summary["live_foundry_json_valid_rate"] == 0.8
+    assert summary["live_foundry_mean_latency_ms"] == 7896.97
+    assert summary["live_foundry_normalized_mean_cpu_percent"] == 48.31
+    shutil.rmtree(TMP_ROOT, ignore_errors=True)

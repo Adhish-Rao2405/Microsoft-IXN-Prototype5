@@ -2,12 +2,13 @@
 
 Prototype 5 consolidates existing evidence only. It does not introduce new inference, planning, or robot execution.
 
-- Proven claims: 10
-- Missing evidence claims: 5
+- Proven claims: 12
+- Missing evidence claims: 2
 - Quantisation evidence: COMPLETE_CUSTOM_EVIDENCE
 - Phi-family evidence: PRESENT
 - Mode C local-vs-cloud status: COMPLETE
 - Cloud baseline status: COMPLETE
+- Mode D resource profiling status: COMPLETE_LIVE_PROFILE
 
 ## Final Model Comparison
 | model                          | commands_evaluated | schema_valid_rate | execution_eligible_rate | false_accept_count | false_accept_rate | false_reject_count | false_reject_rate | correct_reject_count | mean_latency_ms | evidence_status |
@@ -42,13 +43,21 @@ Prototype 5 consolidates existing evidence only. It does not introduce new infer
 ## Quantisation Evidence
 Complete custom precision evidence was recovered for FP16, INT8 and INT4 when `quantisation_status` is `COMPLETE_CUSTOM_EVIDENCE`. Built-in Foundry Local catalogue precision metadata remains missing.
 
+## Mode D Resource Profiling
+- Mode D status: COMPLETE_LIVE_PROFILE
+- Live Foundry profile: PRESENT
+- Live Foundry successful requests: 30/30
+- Live Foundry JSON-valid rate: 0.8
+- Live Foundry mean latency: 7896.97 ms
+- Live Foundry normalized mean CPU: 48.31%
+
 ## Limitations
-| limitation                                | status  | safe_interpretation                                                                   |
-| ----------------------------------------- | ------- | ------------------------------------------------------------------------------------- |
-| custom FP16/INT8/INT4 precision artifacts | PRESENT | Explicit Prototype 5 custom metadata proves FP16, INT8, and INT4 precision artifacts. |
-| built-in Foundry Local precision metadata | MISSING | Built-in Foundry catalogue precision metadata is still not proven.                    |
-| Phi-family evaluation                     | MISSING | No explicit Phi-family result file is present.                                        |
-| cloud-vs-local comparison                 | MISSING | No cloud baseline evidence is present.                                                |
-| GPU/NPU profiling                         | MISSING | No GPU or NPU profiling evidence is present.                                          |
-| memory footprint measurement              | MISSING | No memory-footprint evidence is present.                                              |
-| physical robot execution                  | MISSING | Prototype 5 consolidates simulation and execution-record evidence only.               |
+| limitation                                | status  | safe_interpretation                                                                                                              |
+| ----------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| custom FP16/INT8/INT4 precision artifacts | PRESENT | Explicit Prototype 5 custom metadata proves FP16, INT8, and INT4 precision artifacts.                                            |
+| built-in Foundry Local precision metadata | MISSING | Built-in Foundry catalogue precision metadata is still not proven.                                                               |
+| Phi-family evaluation                     | PRESENT | Phi-family Foundry Local response evidence is present; semantic validity remains NOT_EVALUATED.                                  |
+| cloud-vs-local comparison                 | PRESENT | Mode C local-vs-cloud benchmark evidence is present; semantic equivalence is not claimed.                                        |
+| GPU/NPU profiling                         | LIMITED | Mode D records hardware visibility, but GPU/NPU counters were NOT_DETECTED/NOT_DETECTED; no hardware acceleration claim is made. |
+| memory footprint measurement              | PRESENT | Mode D live Foundry profiling records process memory deltas for the measured local run.                                          |
+| physical robot execution                  | MISSING | Prototype 5 consolidates simulation and execution-record evidence only.                                                          |

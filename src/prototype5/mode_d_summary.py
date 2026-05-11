@@ -285,10 +285,40 @@ def write_mode_d_summary_outputs(
 
 
 def collect_mode_d_evidence(output_dir: Path = MODE_D_DIR) -> dict[str, Any]:
-    summary_path = output_dir / "mode_d_summary.json"
+    final_summary_path = output_dir / "mode_d_final_evidence_summary.json"
+    replay_summary_path = output_dir / "mode_d_summary.json"
+    summary_path = final_summary_path if final_summary_path.exists() else replay_summary_path
     if not summary_path.exists():
         return {"mode_d_status": "MISSING", "output_files_present": []}
     summary = json.loads(summary_path.read_text(encoding="utf-8-sig"))
+    if summary_path == final_summary_path:
+        live_profile = summary.get("live_foundry_profile", {})
+        total_commands = live_profile.get("total_commands", 0)
+        successful_requests = live_profile.get("successful_requests", 0)
+        output_paths = [
+            output_dir / "mode_d_final_evidence_summary.json",
+            output_dir / "manual_live_30_command_foundry_process_summary_normalized.json",
+            output_dir / "manual_live_30_command_foundry_process_profile.csv",
+            output_dir / "mode_d_summary.json",
+            DOCS_DIR / "prototype5_mode_d_final_live_profile.md",
+        ]
+        return {
+            **summary,
+            "mode_d_status": summary.get("final_mode_d_status", "MISSING"),
+            "live_foundry_profile_status": "PRESENT"
+            if live_profile.get("status") == "COMPLETE"
+            else "MISSING",
+            "live_foundry_successful_requests": successful_requests,
+            "live_foundry_total_commands": total_commands,
+            "live_foundry_json_valid_rate": live_profile.get("json_valid_rate", "NOT_AVAILABLE"),
+            "live_foundry_mean_latency_ms": live_profile.get("mean_latency_ms", "NOT_AVAILABLE"),
+            "live_foundry_normalized_mean_cpu_percent": live_profile.get(
+                "normalized_mean_foundry_cpu_percent_of_total_logical_capacity",
+                "NOT_AVAILABLE",
+            ),
+            "output_files_present": [str(path) for path in output_paths if path.exists()],
+            "evidence_source": str(final_summary_path),
+        }
     files = [
         output_dir / "resource_profile_samples.csv",
         output_dir / "resource_profile_summary.csv",
@@ -298,5 +328,13 @@ def collect_mode_d_evidence(output_dir: Path = MODE_D_DIR) -> dict[str, Any]:
     ]
     return {
         **summary,
+        "mode_d_status": summary.get("mode_d_status", "MISSING"),
+        "live_foundry_profile_status": "MISSING",
+        "live_foundry_successful_requests": "NOT_AVAILABLE",
+        "live_foundry_total_commands": "NOT_AVAILABLE",
+        "live_foundry_json_valid_rate": "NOT_AVAILABLE",
+        "live_foundry_mean_latency_ms": "NOT_AVAILABLE",
+        "live_foundry_normalized_mean_cpu_percent": "NOT_AVAILABLE",
         "output_files_present": [str(path) for path in files if path.exists()],
+        "evidence_source": str(summary_path),
     }

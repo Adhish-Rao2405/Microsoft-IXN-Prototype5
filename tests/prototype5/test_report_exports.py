@@ -58,5 +58,12 @@ def test_report_exports_create_csv_json_and_markdown_outputs():
 def test_orchestrator_can_run_with_available_local_evidence():
     result, generated = run()
     assert result["manifest"]["quantisation_status"] == "COMPLETE_CUSTOM_EVIDENCE"
+    assert result["manifest"]["mode_d_status"] == "COMPLETE_LIVE_PROFILE"
+    assert result["manifest"]["live_foundry_profile_status"] == "PRESENT"
+    assert result["manifest"]["live_foundry_successful_requests"] == 30
+    assert result["manifest"]["live_foundry_total_commands"] == 30
+    assert result["manifest"]["live_foundry_json_valid_rate"] == 0.8
+    assert result["manifest"]["live_foundry_mean_latency_ms"] == 7896.97
+    assert result["manifest"]["live_foundry_normalized_mean_cpu_percent"] == 48.31
     assert len(generated) >= 12
     assert all(path.exists() for path in generated)
