@@ -32,3 +32,37 @@ Prototype 5 is an orchestration and reporting prototype only.
 It must not modify Prototypes 1–4.
 It must not invent missing quantisation evidence.
 It must explicitly distinguish proven, partial, missing, and future-work claims.
+
+## Final Dissertation Evidence
+
+Prototype 5 is the final evidence-orchestration layer for the UCL Microsoft IXN Foundry Local dissertation.
+
+The final state includes:
+
+- Mode A: final evidence orchestration.
+- Mode B: quantisation and Phi-family recovery.
+- Mode C: local-vs-cloud comparison.
+- Mode D: live Foundry Local resource profiling.
+
+Run tests:
+
+```powershell
+python -m pytest tests/prototype5 -v
+```
+
+Run final orchestrator:
+
+```powershell
+python -m src.prototype5.run_orchestrator
+```
+
+Key documentation:
+
+- `docs/dissertation_evidence/lee_feedback_closure.md`
+- `docs/dissertation_evidence/prototype_io_contracts.md`
+- `docs/dissertation_evidence/evaluation_pipeline.md`
+- `docs/dissertation_evidence/metric_taxonomy.md`
+- `docs/dissertation_evidence/reproducibility_guide.md`
+- `docs/dissertation_evidence/research_questions_and_claims.md`
+- `docs/dissertation_evidence/threats_to_validity.md`
+- `docs/dissertation_evidence/evidence_index.md`
