@@ -1,0 +1,10 @@
+\section{Industrial Robotics Deployment Context}
+\label{sec:industrial_robotics_context}
+
+Industrial robotics and manufacturing automation provide a suitable domain for this work because robot task planning combines natural-language intent, structured action generation, safety constraints and deployment constraints. A factory operator may benefit from a local natural-language interface, but an industrial workcell cannot treat a language model as an authority. The cost of an unsafe or semantically wrong action is too high for direct model-to-execution control.
+
+Local AI matters in this domain because manufacturers may require data locality, offline resilience, reduced cloud dependency and predictable operational boundaries. Microsoft Foundry Local fits this framing by allowing local model serving to be evaluated as part of an edge-oriented architecture. However, local execution alone does not solve reliability or safety. It changes deployment properties, while deterministic validation remains necessary.
+
+Schema validity is insufficient because it checks form rather than meaning. A proposal can contain the right fields and still select the wrong object, enter a restricted zone, ignore ambiguity or violate a safety rule. Zero-trust execution eligibility therefore becomes the central governance decision: a proposal is not execution-eligible until it passes the required parsing, schema, semantic, ambiguity and safety gates.
+
+The deployment implication is that local SLMs are best framed as assistants that produce auditable proposals. The downstream system must log evidence, explain rejection reasons and fail closed when required. Before real factory deployment, the system would require a larger benchmark, scene-state integration, certified safety controls, operator workflow validation, hardware testing and assurance review. The present dissertation provides benchmark-based engineering evidence, not production safety certification.

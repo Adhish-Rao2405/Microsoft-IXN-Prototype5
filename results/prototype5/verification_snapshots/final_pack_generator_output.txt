@@ -1,0 +1,19 @@
+Prototype 5 final dissertation pack generated.
+docs\research_question_mapping.md
+docs\metric_taxonomy.md
+docs\benchmark_card.md
+docs\industry_use_case_industrial_robotics.md
+docs\claim_boundaries.md
+docs\prototype1_context_note.md
+results\prototype5\final_evidence_dashboard.md
+results\prototype5\microsoft_brief_alignment_matrix.md
+docs\model_run_cards\README.md
+docs\model_run_cards\local_qwen_coder_run_card.md
+docs\model_run_cards\local_phi_or_mode_b_run_card.md
+docs\model_run_cards\cloud_baseline_run_card.md
+docs\model_run_cards\resource_profile_run_card.md
+docs\final_architecture_diagram_spec.md
+figures\final_zero_trust_architecture.mmd
+results\prototype5\safety_latency_frontier.csv
+results\prototype5\safety_latency_frontier.md
+results\prototype5\final_pack_completion_report.md

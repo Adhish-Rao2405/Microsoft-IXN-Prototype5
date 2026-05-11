@@ -1,0 +1,34 @@
+\section{Methodology and Evaluation Framework}
+\label{sec:methodology_evaluation_framework}
+
+The methodology uses a controlled benchmark and a layered validation pipeline. The benchmark is designed for industrial robot task-planning proposals and includes ambiguity-stratified natural-language commands. The evaluation does not collapse performance into a single accuracy score. Instead, it records transport success, parse success, JSON validity, schema validity, semantic validity where evaluated, safety validity, execution eligibility, false accepts, false rejects, latency and resource pressure.
+
+The validation pipeline follows a zero-trust sequence: raw model response, parser, JSON validity check, schema validator, semantic validator where available, uncertainty or ambiguity gate, deterministic safety gate, execution eligibility decision and evidence logging. This structure is intended to prevent model-level false accepts from becoming pipeline-level false accepts.
+
+Model and run evidence are consolidated through the final evidence pack. Prototype 3 provides the main model-comparison and benchmark evidence. Prototype 4 provides zero-trust execution evidence, false-accept comparison and safety-latency evidence. Prototype 5 adds custom quantisation metadata, Phi-family response evidence, Mode C local-vs-cloud comparison, Mode D live resource profiling and the final evidence manifest.
+
+The local-vs-cloud comparison is used to discuss deployment trade-offs rather than declare a universal winner. In the detected evidence, cloud inference was faster and more JSON-consistent, while local inference preserved stronger privacy and offline-resilience properties. Resource profiling records host-specific CPU and memory pressure for live local inference. These measurements support deployment discussion but are not hardware-independent cost models.
+
+The safety-latency frontier summarises the trade-off between stricter validation and latency or rejection overhead. Where per-gate latency or rejection-rate data are not available, the evidence pack marks the values as missing or caveated rather than inferring them.
+
+Reproducibility is supported through retained CSV, JSON, JSONL and Markdown evidence files, generated run cards, verification snapshots and a final evidence manifest. The final pack generator is deterministic and reads existing evidence files; it does not require cloud API calls or a running Foundry Local instance.
+
+\begin{longtable}{p{0.22\textwidth}p{0.38\textwidth}p{0.28\textwidth}}
+        \caption{Compressed metric taxonomy used in the evaluation framework.}
+        \label{tab:compressed_metric_taxonomy}\\
+        \toprule
+        Metric & Meaning & Why it matters \\
+        \midrule
+        \endfirsthead
+        \toprule
+        Metric & Meaning & Why it matters \\
+        \midrule
+        \endhead
+        JSON validity & The response is syntactically valid JSON. & First machine-readable output gate. \\
+Schema validity & The JSON conforms to the expected action schema. & Prevents malformed action proposals entering later stages. \\
+Semantic validity & The action matches the intended command where explicitly evaluated. & Separates structural correctness from task correctness. \\
+Safety validity & The proposal passes deterministic safety constraints. & Controls whether a proposal can proceed under the prototype policy. \\
+Execution eligibility & The proposal passes all required gates. & Defines downstream eligibility without claiming real-world robot safety. \\
+Latency and resource pressure & Measured timing and host resource behaviour. & Supports deployment feasibility discussion. \\
+        \bottomrule
+        \end{longtable}

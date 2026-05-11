@@ -1,0 +1,26 @@
+\section{Limitations and Claim Boundaries}
+\label{sec:limitations_claim_boundaries}
+
+The dissertation deliberately uses bounded language. Results indicate behaviour within the evaluated benchmark and validation policy; they do not establish production-grade safety, broad statistical generalisation or factory deployment readiness. Missing or unavailable values are not inferred.
+
+\begin{longtable}{p{0.22\textwidth}p{0.38\textwidth}p{0.28\textwidth}}
+        \caption{Claim boundaries for dissertation interpretation.}
+        \label{tab:claim_boundaries}\\
+        \toprule
+        Claim Area & Supported Claim & Boundary/Caveat \\
+        \midrule
+        \endfirsthead
+        \toprule
+        Claim Area & Supported Claim & Boundary/Caveat \\
+        \midrule
+        \endhead
+        Benchmark & Findings are reported within the evaluated benchmark. & The benchmark is small and controlled; it is not statistically powered for population-level inference. \\
+Model & Detected local models can produce structured proposals. & The evidence does not cover every SLM family, size or hardware target. \\
+Resource profiling & Mode D records host-specific live local resource pressure. & GPU/NPU counters were not detected, and results are hardware-specific. \\
+Local-vs-cloud & Mode C supports deployment trade-off discussion. & It does not establish a universal local or cloud winner; cost was not quantitatively measured. \\
+Simulation/PyBullet & PyBullet may be future visualisation context. & No PyBullet evidence is part of the core proof, and simulation would not prove physical safety. \\
+Safety & Zero-trust reduced unsafe false accepts in available records. & This is not real-world robot safety certification. \\
+Generalisability & Claims are bounded to the evaluated command set and policy. & No statistical generalisation beyond the benchmark is claimed. \\
+Evidence availability & Prototype 3--5 provide core evidence; Prototype 1 is context-only. & Missing Prototype 1 audit files are contextual, not missing core proof. \\
+        \bottomrule
+        \end{longtable}

@@ -1,0 +1,23 @@
+\section{Prototype Evolution and Evidence Contribution}
+\label{sec:prototype_evolution}
+
+The dissertation evidence is organised by contribution rather than as a chronological diary. Earlier prototypes establish context and validation foundations, while the core claims rest on the Prototype 3--5 evidence base. This prevents the final report from depending on early feasibility artefacts that are not required for the final zero-trust evaluation claim.
+
+\begin{longtable}{p{0.14\textwidth}p{0.20\textwidth}p{0.25\textwidth}p{0.14\textwidth}p{0.17\textwidth}}
+        \caption{Prototype contribution and evidence status.}
+        \label{tab:prototype_contribution}\\
+        \toprule
+        Prototype & Purpose & Evidence Contribution & Core/Context Status & Caveat \\
+        \midrule
+        \endfirsthead
+        \toprule
+        Prototype & Purpose & Evidence Contribution & Core/Context Status & Caveat \\
+        \midrule
+        \endhead
+        Prototype 1 & Early local model-to-action feasibility context. & Optional audit/context evidence only. & CONTEXT\_ONLY & Not core proof; does not support final safety or deployment claims. \\
+Prototype 2 & Deterministic validation and fail-closed foundation. & Schema and safety checks informing later validation stages. & Context/supporting & Does not by itself prove semantic safety under all robot tasks. \\
+Prototype 3 & Core Foundry Local benchmark and model evaluation. & Qwen-family model comparison, schema validity, execution eligibility, latency and model-level false accepts. & Core & Covers detected local models and benchmark scope only. \\
+Prototype 4 & Zero-trust execution and safety-latency evaluation. & Baseline versus zero-trust false accepts, execution-grounded safety evidence and extension summaries. & Core & Not physical robot safety certification. \\
+Prototype 5 & Final evidence orchestration and reporting layer. & Claims matrix, evidence manifest, local-vs-cloud comparison, live resource profiling, final dashboard and verification outputs. & Core reporting & Does not introduce new robot-control logic or Prototype 6. \\
+        \bottomrule
+        \end{longtable}

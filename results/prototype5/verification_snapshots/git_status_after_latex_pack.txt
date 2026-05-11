@@ -1,0 +1,5 @@
+## master...origin/master
+?? latex/
+?? results/prototype5/latex_pack_audit.md
+?? results/prototype5/verification_snapshots/
+?? scripts/prototype5/generate_latex_writing_pack.py

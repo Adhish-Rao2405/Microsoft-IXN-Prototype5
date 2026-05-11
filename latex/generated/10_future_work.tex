@@ -1,0 +1,15 @@
+\section{Future Work}
+\label{sec:future_work}
+
+Future work should extend the evidence base without weakening the zero-trust separation between model generation and execution eligibility.
+
+\begin{itemize}
+    \item \textbf{PyBullet visual execution-context demonstrator:} add an optional visual layer that shows execution-eligible proposals moving in a simulated workcell and rejected proposals producing no motion with a logged reason. This should remain visualisation, not core proof.
+    \item \textbf{Safety policy DSL:} define a more expressive policy language for zones, objects, tool states, operator permissions and task constraints.
+    \item \textbf{Clarification recovery loop:} extend ambiguity handling into a live operator clarification workflow while preserving fail-closed behaviour.
+    \item \textbf{Hybrid local/cloud router:} evaluate when local inference, cloud inference or abstention is appropriate under latency, privacy, cost and reliability constraints.
+    \item \textbf{Larger benchmark:} expand command count, ambiguity strata, object types, scene states and manipulation tasks.
+    \item \textbf{Hardware matrix:} run the evaluation across CPU, GPU, NPU and Copilot+ PC-class hardware to compare resource pressure and latency.
+    \item \textbf{Higher-fidelity simulator or real robot validation:} test the validation policy against richer robot state and physical constraints before making deployment claims.
+    \item \textbf{Formal safety and assurance case:} develop a structured assurance case linking hazards, controls, evidence and residual risk.
+\end{itemize}

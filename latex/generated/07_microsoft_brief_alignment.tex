@@ -1,0 +1,31 @@
+\section{Alignment with the Microsoft IXN Brief}
+\label{sec:microsoft_brief_alignment}
+
+The project responds to the Microsoft IXN brief by evaluating local SLM deployment through Microsoft Foundry Local, positioning the work in an industrial use case, comparing local and cloud evidence, and recording latency, reliability, resource and deployment trade-offs. The alignment is evidence-based rather than promotional: requirements are marked as hit, partial or caveated according to detected artefacts.
+
+\begin{longtable}{p{0.22\textwidth}p{0.26\textwidth}p{0.25\textwidth}p{0.17\textwidth}}
+        \caption{Alignment with the Microsoft IXN brief.}
+        \label{tab:microsoft_brief_alignment}\\
+        \toprule
+        Brief Requirement & Project Response & Evidence & Status \\
+        \midrule
+        \endfirsthead
+        \toprule
+        Brief Requirement & Project Response & Evidence & Status \\
+        \midrule
+        \endhead
+        Literature and technology review & Review local model deployment trends, LLMs vs SLMs and Foundry Local capabilities. & `docs/dissertation\_evidence/research\_questions\_and\_claims.md`; dissertation text & PARTIAL \\
+Industry use-case identification & Industrial robot task planning / manufacturing automation. & `docs/industry\_use\_case\_industrial\_robotics.md`; `docs/benchmark\_card.md` & HIT \\
+Application/system architecture & Local SLM proposal generator plus deterministic zero-trust validation pipeline. & `docs/final\_architecture\_diagram\_spec.md`; `figures/final\_zero\_trust\_architecture.mmd` & HIT \\
+Fully on-device Foundry Local prototype & Local Foundry Local inference path used for benchmark evidence. & `results/prototype5/recovery/phi/phi\_recovery\_summary.csv`; `results/prototype5/mode\_d/mode\_d\_final\_evidence\_summary.json` & HIT \\
+Local LLM/SLM integration & Qwen-family and Phi-family local model evidence. & `results/prototype5/final\_model\_comparison.csv`; `results/prototype5/recovery/phi/phi\_recovery\_summary.csv` & HIT \\
+Model size / model-family / quantisation consideration & Qwen model comparison plus custom FP16/INT8/INT4 artifacts. & `results/prototype5/final\_model\_comparison.csv`; `results/prototype5/recovery/custom\_quantisation/` & HIT \\
+Latency benchmarking & Measured model, local, cloud and live profile latencies. & `results/prototype5/final\_model\_comparison.csv`; `results/prototype5/mode\_c/local\_vs\_cloud\_summary.json`; `results/prototype5/mode\_d/mode\_d\_final\_evidence\_summary.json` & HIT \\
+Accuracy/reliability benchmarking & Reliability is decomposed into JSON, schema, semantic/safety and execution eligibility metrics. & `results/prototype5/final\_model\_comparison.csv`; `results/prototype5/final\_zero\_trust\_comparison.csv` & HIT \\
+Resource utilisation benchmarking & Live Foundry Local process profile. & `results/prototype5/mode\_d/mode\_d\_final\_evidence\_summary.json`; profile CSV & HIT \\
+Local-vs-cloud comparison & Same 30-command benchmark compared between local and cloud evidence. & `results/prototype5/mode\_c/local\_vs\_cloud\_summary.json` & HIT \\
+Deployment feasibility discussion & Local-first trade-offs, resource pressure and safety-gate limits. & `docs/claim\_boundaries.md`; `docs/industry\_use\_case\_industrial\_robotics.md` & HIT \\
+Cost/efficiency/maintenance trade-off discussion & Discuss local resource cost versus cloud dependency and maintenance. & `results/prototype5/mode\_c/local\_vs\_cloud\_summary.json`; `docs/claim\_boundaries.md` & PARTIAL \\
+Reproducibility and evidence documentation & Final evidence manifest, claims matrix, audit, final pack docs and tests. & `results/prototype5/final\_evidence\_manifest.json`; `results/prototype5/final\_pack\_audit.md`; `results/prototype5/final\_pack\_completion\_report.md` & HIT \\
+        \bottomrule
+        \end{longtable}

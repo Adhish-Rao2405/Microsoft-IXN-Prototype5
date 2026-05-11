@@ -1,0 +1,53 @@
+\section{Research Aim, Objectives and Questions}
+\label{sec:research_aims_questions}
+
+The main aim is to evaluate whether local SLMs served through Microsoft Foundry Local can support industrial robot task planning when model outputs are treated as untrusted action proposals and subjected to deterministic zero-trust validation before downstream execution.
+
+The objectives are:
+\begin{enumerate}
+    \item Evaluate the structured-output reliability of local SLMs on an industrial robot task-planning benchmark.
+    \item Distinguish JSON and schema validity from semantic validity, safety validity and execution eligibility.
+    \item Measure model-level false accepts and assess whether zero-trust validation prevents them becoming pipeline-level false accepts.
+    \item Compare local Foundry Local evidence with a cloud baseline under the same benchmark prompts.
+    \item Record local resource pressure and deployment trade-offs for the measured local inference path.
+    \item Produce an auditable dissertation evidence pack with explicit claim boundaries and reproducibility artefacts.
+\end{enumerate}
+
+The main research question is:
+
+\begin{quote}
+Can local SLMs served through Microsoft Foundry Local support safe and reliable industrial robot task-planning workflows when their outputs are treated as untrusted action proposals and mediated through deterministic validation before execution?
+\end{quote}
+
+The six sub-questions are:
+\begin{enumerate}
+    \item How reliably can local SLMs generate parseable, JSON-valid and schema-valid industrial robot action plans?
+    \item To what extent does schema validity overestimate semantic correctness, safety validity and execution eligibility?
+    \item How does command ambiguity affect false accepts, rejection behaviour and execution eligibility?
+    \item What trade-offs appear across local model family and size in schema validity, latency, false accepts and execution eligibility?
+    \item How does local Foundry Local inference compare with cloud inference and live local resource profiling?
+    \item What is the safety-latency trade-off associated with stricter deterministic validation?
+\end{enumerate}
+
+These questions are answered through the Prototype 3--5 evidence base. Prototype 1 is cited only as context, while Prototype 3, Prototype 4 and Prototype 5 provide the core benchmark, zero-trust, deployment and reporting evidence.
+
+\begin{longtable}{p{0.22\textwidth}p{0.26\textwidth}p{0.25\textwidth}p{0.17\textwidth}}
+        \caption{Research questions mapped to detected evidence.}
+        \label{tab:rq_to_evidence}\\
+        \toprule
+        Research Question & Evidence Source & Metrics & Current Answer \\
+        \midrule
+        \endfirsthead
+        \toprule
+        Research Question & Evidence Source & Metrics & Current Answer \\
+        \midrule
+        \endhead
+        Main RQ & Final claims matrix; Prototype 3--5 evidence & schema validity, safety validity, execution eligibility & Local SLMs can support the workflow only as untrusted proposal generators mediated by deterministic validation. \\
+RQ1 & final\_model\_comparison.csv; Phi recovery summary & parse\_success, json\_valid, schema\_valid & Local models produced structured proposals, but validity varied by model and evidence source. \\
+RQ2 & final\_model\_comparison.csv; final\_zero\_trust\_comparison.csv & schema\_valid, execution\_eligible, false accepts & Schema validity overestimated execution eligibility within the evaluated benchmark. \\
+RQ3 & Prototype 3 difficulty/category evidence; Prototype 4 ambiguity summaries & ambiguity\_level, rejection\_reason, false\_accept & Ambiguity is treated as a source of rejection and false-accept risk. \\
+RQ4 & final\_model\_comparison.csv; model/run cards & schema-valid rate, latency, false accepts & Model family and size affected reliability and latency within the detected evidence. \\
+RQ5 & Mode C and Mode D summaries & local/cloud latency, JSON validity, privacy/offline categories, CPU profile & Cloud was faster and more JSON-consistent in this run, while local inference preserved stronger privacy and offline-resilience properties. \\
+RQ6 & final\_safety\_latency\_summary.csv; safety\_latency\_frontier.md & false accepts, latency, rejection caveats & Stricter validation reduced unsafe false accepts in available records, with latency/rejection trade-offs requiring cautious interpretation. \\
+        \bottomrule
+        \end{longtable}

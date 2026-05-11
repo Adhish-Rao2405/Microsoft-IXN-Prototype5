@@ -1,0 +1,30 @@
+\section{System Architecture}
+\label{sec:system_architecture}
+
+The final architecture separates model generation from execution eligibility. This separation is the main design response to the finding that schema-valid output is not sufficient evidence of semantic correctness or safety. The local SLM is therefore not a robot controller; it is a proposal generator whose outputs must pass deterministic checks.
+
+\subsection{Layer 1: Local Inference}
+
+The first layer is the local inference layer. Natural-language commands are sent to a local SLM served through Microsoft Foundry Local. The model returns candidate structured action content. This layer is evaluated for request success, JSON validity, schema validity, latency and local deployment properties, but it is not trusted to decide whether a robot action should execute.
+
+\subsection{Layer 2: Zero-Trust Governance}
+
+The second layer is the zero-trust governance layer. It parses raw model output, checks JSON validity, applies schema validation, evaluates semantic validity where evidence exists, applies uncertainty or ambiguity handling, and then applies deterministic safety checks. A proposal becomes execution-eligible only if it passes the required gates under the defined validation policy. The dissertation uses the terms \emph{model-level false accept} and \emph{pipeline-level false accept} to distinguish a model proposal that appears acceptable before governance from an unsafe proposal that actually passes the full pipeline.
+
+\subsection{Layer 3: Optional Execution-Context Visualisation}
+
+The third layer is optional downstream execution-context visualisation. PyBullet, if added in future work, should be used only to visualise accepted and rejected proposals in a simulated workcell. It is not part of the core proof in this dissertation and must not be interpreted as real-world robot safety validation.
+
+\subsection{Evidence Logging}
+
+The evidence logger records model outputs, validation decisions, metrics, limitations and generated dissertation artefacts. Prototype 5 operationalises this reporting layer by producing the final evidence dashboard, claims matrix, limitations matrix, evidence manifest, safety-latency frontier and verification snapshots.
+
+\begin{figure}[htbp]
+    \centering
+    % Export figures/final_zero_trust_architecture.mmd manually to PDF before final Overleaf compilation.
+    \includegraphics[width=0.95\linewidth]{figures/final_zero_trust_architecture.pdf}
+    \caption{Local-first zero-trust evaluation architecture for industrial robot task-planning proposals.}
+    \label{fig:zero_trust_architecture}
+\end{figure}
+
+The Mermaid source for Figure~\ref{fig:zero_trust_architecture} is stored at \texttt{figures/final\_zero\_trust\_architecture.mmd}. If a rendered PDF is not available, the figure can be exported manually from Mermaid for Overleaf.

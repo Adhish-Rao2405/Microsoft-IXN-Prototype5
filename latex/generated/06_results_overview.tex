@@ -1,0 +1,42 @@
+\section{Results Overview}
+\label{sec:results_overview}
+
+\subsection{Foundry Local Inference Feasibility}
+
+The detected evidence indicates that local Foundry Local inference was feasible for the evaluated benchmark. Phi-family local evidence completed 30/30 requests. Mode D recorded 30/30 successful live Foundry Local requests. This supports feasibility for the measured local host and model, not for all deployment environments.
+
+\subsection{Structured-Output Reliability}
+
+The model comparison evidence shows that local models can produce structured robot action proposals, but reliability varies across model rows. JSON validity and schema validity are useful early gates, but neither is sufficient to establish semantic correctness, safety validity or execution eligibility.
+
+\subsection{Schema Validity Versus Execution Eligibility}
+
+Across the detected model-comparison rows, schema-valid rates exceeded execution-eligible rates. This supports the central dissertation claim that schema validity is not enough. A model response may be structurally acceptable while still being semantically wrong, unsafe or unsuitable for execution under the validation policy.
+
+\subsection{Ambiguity and False Accepts}
+
+Ambiguity is treated as a risk factor in the evaluation. Prototype 3 difficulty/category evidence and Prototype 4 ambiguity summaries support the interpretation that ambiguous commands require clarification, rejection or stricter gating rather than direct execution. Per-ambiguity raw evidence may live in prior prototype repositories and should be cited with the caveat that availability can vary by checkout.
+
+\subsection{Model Family and Size Trade-Offs}
+
+The Qwen-family model rows show model-dependent differences in schema-valid rate, execution-eligible rate, false accepts and mean latency. These results indicate trade-offs within the evaluated benchmark, but they do not generalise to all SLM families, all model sizes or all hardware targets.
+
+\subsection{Zero-Trust Gating and False-Accept Prevention}
+
+The zero-trust comparison records a baseline trust mode with 76 unsafe false accepts and a zero-trust pipeline with 0 unsafe false accepts in the available execution records. This indicates that deterministic validation prevented model-level false accepts from becoming pipeline-level false accepts under the evaluated policy. It does not prove real-world robot safety.
+
+\subsection{Local-vs-Cloud Deployment Trade-Off}
+
+Mode C reports cloud mean latency of 1749.28 ms and local mean latency of 7028.0 ms. Cloud JSON-valid rate was 1.0, while local JSON-valid rate was 0.7333. In this benchmark, cloud inference was faster and more JSON-consistent, while local inference retained stronger privacy and offline-resilience properties. Cost was structurally discussed but not quantitatively measured.
+
+\subsection{Resource Profiling}
+
+Mode D recorded live Foundry Local resource profiling with mean latency 7896.97 ms and normalised mean CPU 48.31\%. GPU and NPU counters were not detected, so no hardware acceleration claim is made. The resource profile is host-specific.
+
+\subsection{Safety-Latency Frontier}
+
+The safety-latency frontier indicates that stricter validation reduced unsafe false accepts in the available records. Some per-gate latency and rejection-rate values are not available in detected evidence, so the dissertation should discuss the frontier as bounded engineering evidence rather than a complete deployment optimisation curve.
+
+\subsection{Summary Against Research Questions}
+
+The results support the main research question within the evaluated benchmark: local SLMs can contribute to industrial robot task planning only when treated as untrusted proposal generators and mediated by deterministic validation. The evidence supports structured-output feasibility, highlights the insufficiency of schema validity, shows zero-trust false-accept prevention in available execution records, and documents local-vs-cloud and resource trade-offs. The claims remain prototype-scoped and benchmark-scoped.
