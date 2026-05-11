@@ -58,6 +58,7 @@ python -m src.prototype5.run_orchestrator
 
 Key documentation:
 
+- `docs/dissertation_evidence/microsoft_ixn_brief_closure.md`
 - `docs/dissertation_evidence/lee_feedback_closure.md`
 - `docs/dissertation_evidence/prototype_io_contracts.md`
 - `docs/dissertation_evidence/evaluation_pipeline.md`
