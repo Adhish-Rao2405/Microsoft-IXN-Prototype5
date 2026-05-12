@@ -118,6 +118,15 @@ Mode E0.2 replays deterministic validation over recorded E0.1 raw outputs. It is
 
 Mode E0.3 checks whether Prototype 5 has a repo-local callable original Prototype 3 action-envelope live runner. In the current repo it is `E0_3_NOT_RUN`; this is intentional and prevents overclaiming schema-valid versus execution-eligible repeatability until that full live path exists.
 
+## Post-E0 Consolidation
+
+The post-E0 audit layer consolidates supervisor-facing and dissertation-facing evidence after repeatability hardening. It summarises how Lee's reproducibility concerns were addressed, what E0.4 proves under the tested conditions, what should be written in the dissertation, and which gaps should remain bounded rather than turned into feature creep.
+
+- `docs/prototype5/post_e0_supervisor_feedback_response.md`
+- `docs/prototype5/post_e0_evidence_audit.md`
+- `docs/prototype5/post_e0_dissertation_wording.md`
+- `docs/prototype5/post_e0_gap_register.md`
+
 Key documentation:
 
 - `docs/dissertation_evidence/microsoft_ixn_brief_closure.md`

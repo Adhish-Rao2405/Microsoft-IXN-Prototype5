@@ -52,3 +52,23 @@ def test_mode_e0_docs_include_required_bounded_language():
     assert "not claimed to be exhaustive" in benchmark_doc
     assert "controlled exploratory benchmark" in benchmark_doc
     assert "not designed to prove that a local SLM is a safe robot controller" in evaluation_doc
+
+
+def test_post_e0_consolidation_docs_exist_and_are_bounded():
+    required_docs = [
+        ROOT / "docs" / "prototype5" / "post_e0_supervisor_feedback_response.md",
+        ROOT / "docs" / "prototype5" / "post_e0_evidence_audit.md",
+        ROOT / "docs" / "prototype5" / "post_e0_dissertation_wording.md",
+        ROOT / "docs" / "prototype5" / "post_e0_gap_register.md",
+    ]
+    assert [path for path in required_docs if not path.exists()] == []
+
+    combined_text = "\n".join(path.read_text(encoding="utf-8") for path in required_docs).lower()
+    for phrase in [
+        "under the tested conditions",
+        "does not prove production robot safety",
+        "fixed 30-command benchmark",
+        "deterministic validation policy",
+        "single local model",
+    ]:
+        assert phrase in combined_text

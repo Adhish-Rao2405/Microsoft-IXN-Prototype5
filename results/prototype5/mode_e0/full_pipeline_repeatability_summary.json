@@ -2,7 +2,7 @@
   "mode": "E0.3",
   "name": "Full Live Pipeline Repeatability Under Prototype 3 Prompt",
   "status": "E0_3_NOT_RUN",
-  "checked_at": "2026-05-12T11:28:43.273902+00:00",
+  "checked_at": "2026-05-12T11:40:47.520116+00:00",
   "reason": "Prototype 5 does not currently contain a repo-local callable live runner that combines the original Prototype 3 action-envelope prompt, fixed 30-command benchmark and deterministic validation pipeline.",
   "repo_local_interfaces_checked": {
     "src/prototype5/full_pipeline_live_runner.py": false,
