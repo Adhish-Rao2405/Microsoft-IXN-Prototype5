@@ -1,0 +1,34 @@
+{
+  "mode": "E0",
+  "name": "Reproducibility and Evaluation Rigour Audit",
+  "status": "COMPLETE",
+  "checked_at": "2026-05-12T01:18:15.952972+00:00",
+  "repository_root": "C:\\Users\\reach\\Microsoft-IXN-Prototype5",
+  "required_documents": {
+    "total": 5,
+    "present": 5,
+    "missing": []
+  },
+  "required_result_files": {
+    "total": 3,
+    "present": 3,
+    "missing": []
+  },
+  "evidence_files_checked": {
+    "total": 13,
+    "present": 13,
+    "missing": []
+  },
+  "claim_traceability": {
+    "total_claims": 10,
+    "proven": 7,
+    "supported": 2,
+    "partial": 0,
+    "future_work": 0,
+    "limited": 1
+  },
+  "notes": [
+    "Mode E0 checks documentation and evidence traceability. It does not rerun live Foundry Local benchmarks by itself.",
+    "Repeatability is defined as a protocol until live repeated runs are intentionally executed."
+  ]
+}

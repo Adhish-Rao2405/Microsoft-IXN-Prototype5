@@ -62,6 +62,29 @@ Generate final dissertation evidence pack:
 python -m src.prototype5.generate_final_dissertation_pack
 ```
 
+## Mode E0 — Reproducibility and Evaluation Rigour
+
+Mode E0 hardens Prototype 5 in response to supervisor feedback about practical reproducibility, evaluation justification, repeatability and claim-to-evidence traceability. It does not add new robot-control functionality, rerun cloud APIs, or change locked metrics.
+
+Mode E0 files:
+
+- `docs/prototype5/reproducibility_guide.md`
+- `docs/prototype5/evaluation_design_justification.md`
+- `docs/prototype5/benchmark_representativeness.md`
+- `docs/prototype5/repeatability_and_variance_plan.md`
+- `docs/prototype5/claim_to_evidence_traceability.md`
+- `results/prototype5/mode_e0/reproducibility_check_summary.json`
+- `results/prototype5/mode_e0/claim_to_evidence_traceability.csv`
+- `results/prototype5/mode_e0/repeatability_summary.csv`
+
+Run Mode E0:
+
+```powershell
+python scripts/prototype5/run_reproducibility_check.py
+```
+
+Mode E0 documents the clone-and-run path, explains why the 30-command benchmark and metrics are appropriate for bounded MSc evaluation, defines a repeatability protocol, and checks that major claims point to evidence files. Live Foundry Local reproduction remains machine-dependent; retained evidence artefacts are used when live reproduction is not available.
+
 Key documentation:
 
 - `docs/dissertation_evidence/microsoft_ixn_brief_closure.md`
