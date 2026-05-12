@@ -1,0 +1,103 @@
+{
+  "mode": "E0.2",
+  "name": "Full Validation Pipeline Repeatability Replay",
+  "status": "COMPLETE_PIPELINE_REPLAY_ON_MINIMAL_PROMPT_OUTPUTS",
+  "checked_at": "2026-05-12T11:28:44.278324+00:00",
+  "source_raw_files": [
+    "results/prototype5/mode_e0/e0_1_live_run_01_20260512T015715Z_raw.jsonl",
+    "results/prototype5/mode_e0/e0_1_live_run_02_20260512T020120Z_raw.jsonl",
+    "results/prototype5/mode_e0/e0_1_live_run_03_20260512T020509Z_raw.jsonl"
+  ],
+  "records_file": "results/prototype5/mode_e0/pipeline_repeatability_records.jsonl",
+  "summary_csv": "results/prototype5/mode_e0/pipeline_repeatability_summary.csv",
+  "runs_evaluated": 3,
+  "commands_per_run": 30,
+  "metric_variance": {
+    "schema_valid_rate": {
+      "values": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "semantic_valid_rate": {
+      "values": [
+        0.5667,
+        0.5667,
+        0.5667
+      ],
+      "mean": 0.5667,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "safety_valid_rate": {
+      "values": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "execution_eligible_rate": {
+      "values": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "model_false_accepts": {
+      "values": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "pipeline_false_accepts": {
+      "values": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "correct_rejects": {
+      "values": [
+        17.0,
+        17.0,
+        17.0
+      ],
+      "mean": 17.0,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "false_rejects": {
+      "values": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "std": 0.0,
+      "stable": "STABLE"
+    }
+  },
+  "central_findings": {
+    "schema_valid_greater_than_execution_eligible": "NOT_OBSERVED",
+    "pipeline_false_accepts_bounded": "STABLE_ZERO"
+  },
+  "claim_boundary": "E0.2 is an offline deterministic replay over E0.1 live outputs. It does not replace the locked Prototype 3/4 benchmark evidence and does not prove real-world robot safety.",
+  "important_caveat": "The E0.1 live prompt requested a minimal JSON action object, not necessarily the full Prototype 3 actions envelope. Low schema-valid rates in this replay therefore measure compatibility with the full pipeline contract, not a change to locked Prototype 3 metrics."
+}

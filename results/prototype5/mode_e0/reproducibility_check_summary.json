@@ -2,7 +2,7 @@
   "mode": "E0",
   "name": "Reproducibility and Evaluation Rigour Audit",
   "status": "COMPLETE",
-  "checked_at": "2026-05-12T01:18:15.952972+00:00",
+  "checked_at": "2026-05-12T11:28:46.566337+00:00",
   "repository_root": "C:\\Users\\reach\\Microsoft-IXN-Prototype5",
   "required_documents": {
     "total": 5,
@@ -10,25 +10,58 @@
     "missing": []
   },
   "required_result_files": {
-    "total": 3,
-    "present": 3,
+    "total": 16,
+    "present": 16,
     "missing": []
   },
   "evidence_files_checked": {
-    "total": 13,
-    "present": 13,
+    "total": 28,
+    "present": 28,
     "missing": []
   },
   "claim_traceability": {
-    "total_claims": 10,
-    "proven": 7,
+    "total_claims": 14,
+    "proven": 9,
     "supported": 2,
-    "partial": 0,
-    "future_work": 0,
+    "partial": 1,
+    "future_work": 1,
     "limited": 1
+  },
+  "repeatability_variance": {
+    "mode": "E0.1",
+    "status": "COMPLETE_LIVE_OUTPUT_REPEATABILITY",
+    "target_run_count": 3,
+    "completed_run_count": 3,
+    "schema_valid_greater_than_execution_eligible": "NOT_EVALUATED",
+    "pipeline_false_accepts_bounded": "NOT_EVALUATED"
+  },
+  "pipeline_repeatability_replay": {
+    "mode": "E0.2",
+    "status": "COMPLETE_PIPELINE_REPLAY_ON_MINIMAL_PROMPT_OUTPUTS",
+    "runs_evaluated": 3,
+    "schema_valid_greater_than_execution_eligible": "NOT_OBSERVED",
+    "pipeline_false_accepts_bounded": "STABLE_ZERO"
+  },
+  "full_pipeline_live_repeatability": {
+    "mode": "E0.3",
+    "status": "E0_3_NOT_RUN",
+    "claim_boundary": "Schema-valid versus execution-eligible repeatability is not proven by E0.3 because the full action-envelope live runner is not available inside Prototype 5 yet.",
+    "reason": "Prototype 5 does not currently contain a repo-local callable live runner that combines the original Prototype 3 action-envelope prompt, fixed 30-command benchmark and deterministic validation pipeline."
+  },
+  "repo_local_full_pipeline_live_repeatability": {
+    "mode": "E0.4",
+    "status": "COMPLETE_FULL_LIVE_PIPELINE_REPEATABILITY",
+    "runs_evaluated": 3,
+    "schema_valid_greater_than_execution_eligible": "STABLE_OBSERVED",
+    "pipeline_false_accepts_bounded": "STABLE_ZERO",
+    "claim_boundary": "E0.4 measures full live pipeline repeatability only for the repo-local 30-command benchmark, action-envelope prompt, selected Foundry Local model and deterministic validation policy. It does not change locked Prototype 3/4 evidence and does not prove real-world robot safety or general model reliability.",
+    "reason": ""
   },
   "notes": [
     "Mode E0 checks documentation and evidence traceability. It does not rerun live Foundry Local benchmarks by itself.",
-    "Repeatability is defined as a protocol until live repeated runs are intentionally executed."
+    "Mode E0.1 records repeatability-run availability and variance summaries without inventing measurements.",
+    "Mode E0.2 records offline deterministic pipeline replay over E0.1 raw outputs when those artefacts are present.",
+    "Mode E0.3 remains not-run until a repo-local original Prototype 3 action-envelope live runner is available.",
+    "Mode E0.4 adds that repo-local action-envelope adapter; its evidence is bounded to the recorded E0.4 summary status."
   ]
 }

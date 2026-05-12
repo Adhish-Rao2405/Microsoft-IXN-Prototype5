@@ -1,0 +1,154 @@
+{
+  "mode": "E0.4",
+  "name": "Repo-Local Full Pipeline Repeatability Adapter",
+  "status": "COMPLETE_FULL_LIVE_PIPELINE_REPEATABILITY",
+  "checked_at": "2026-05-12T11:28:43.688383+00:00",
+  "runs_evaluated": 3,
+  "minimum_live_target": 3,
+  "benchmark_path": "configs/prototype5/benchmark_v1.json",
+  "prompt_path": "configs/prototype5/action_envelope_prompt.txt",
+  "runs_csv": "results/prototype5/mode_e0/full_pipeline_live_repeatability_runs.csv",
+  "raw_output_files": [
+    "results/prototype5/mode_e0/e0_4_full_pipeline_run_01_raw.jsonl",
+    "results/prototype5/mode_e0/e0_4_full_pipeline_run_02_raw.jsonl",
+    "results/prototype5/mode_e0/e0_4_full_pipeline_run_03_raw.jsonl"
+  ],
+  "metric_variance": {
+    "request_success_rate": {
+      "values": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "parse_success_rate": {
+      "values": [
+        0.8667,
+        0.8667,
+        0.8667
+      ],
+      "mean": 0.8667,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "json_valid_rate": {
+      "values": [
+        0.8667,
+        0.8667,
+        0.8667
+      ],
+      "mean": 0.8667,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "schema_valid_rate": {
+      "values": [
+        0.8667,
+        0.8667,
+        0.8667
+      ],
+      "mean": 0.8667,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "semantic_valid_rate": {
+      "values": [
+        0.2,
+        0.2,
+        0.2
+      ],
+      "mean": 0.2,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "safety_valid_rate": {
+      "values": [
+        0.1,
+        0.1,
+        0.1
+      ],
+      "mean": 0.1,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "execution_eligible_rate": {
+      "values": [
+        0.1,
+        0.1,
+        0.1
+      ],
+      "mean": 0.1,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "model_false_accepts": {
+      "values": [
+        16.0,
+        16.0,
+        16.0
+      ],
+      "mean": 16.0,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "pipeline_false_accepts": {
+      "values": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "correct_rejects": {
+      "values": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "mean_latency_ms": {
+      "values": [
+        26434.28,
+        25676.98,
+        24020.29
+      ],
+      "mean": 25377.1833,
+      "std": 1234.6034,
+      "stable": "VARIABLE"
+    },
+    "std_latency_ms": {
+      "values": [
+        10100.61,
+        18358.78,
+        18425.85
+      ],
+      "mean": 15628.4133,
+      "std": 4787.3356,
+      "stable": "VARIABLE"
+    },
+    "schema_valid_minus_execution_eligible_gap": {
+      "values": [
+        0.7667,
+        0.7667,
+        0.7667
+      ],
+      "mean": 0.7667,
+      "std": 0.0,
+      "stable": "STABLE"
+    }
+  },
+  "central_findings": {
+    "schema_valid_greater_than_execution_eligible": "STABLE_OBSERVED",
+    "pipeline_false_accepts_bounded": "STABLE_ZERO"
+  },
+  "reason": "",
+  "claim_boundary": "E0.4 measures full live pipeline repeatability only for the repo-local 30-command benchmark, action-envelope prompt, selected Foundry Local model and deterministic validation policy. It does not change locked Prototype 3/4 evidence and does not prove real-world robot safety or general model reliability."
+}

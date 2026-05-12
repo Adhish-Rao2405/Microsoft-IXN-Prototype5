@@ -76,6 +76,15 @@ Mode E0 files:
 - `results/prototype5/mode_e0/reproducibility_check_summary.json`
 - `results/prototype5/mode_e0/claim_to_evidence_traceability.csv`
 - `results/prototype5/mode_e0/repeatability_summary.csv`
+- `results/prototype5/mode_e0/repeatability_live_runs.csv`
+- `results/prototype5/mode_e0/repeatability_variance_summary.json`
+- `results/prototype5/mode_e0/repeatability_variance_summary.md`
+- `results/prototype5/mode_e0/pipeline_repeatability_summary.csv`
+- `results/prototype5/mode_e0/pipeline_repeatability_variance_summary.json`
+- `results/prototype5/mode_e0/pipeline_repeatability_variance_summary.md`
+- `results/prototype5/mode_e0/full_pipeline_repeatability_live_runs.csv`
+- `results/prototype5/mode_e0/full_pipeline_repeatability_summary.json`
+- `results/prototype5/mode_e0/full_pipeline_repeatability_summary.md`
 
 Run Mode E0:
 
@@ -83,7 +92,31 @@ Run Mode E0:
 python scripts/prototype5/run_reproducibility_check.py
 ```
 
+Run Mode E0.1 repeatability summary refresh:
+
+```powershell
+python scripts/prototype5/run_repeatability_analysis.py
+```
+
+Run Mode E0.2 pipeline replay:
+
+```powershell
+python scripts/prototype5/run_pipeline_repeatability_analysis.py
+```
+
+Run Mode E0.3 full live pipeline gate:
+
+```powershell
+python scripts/prototype5/run_full_pipeline_repeatability_live.py
+```
+
 Mode E0 documents the clone-and-run path, explains why the 30-command benchmark and metrics are appropriate for bounded MSc evaluation, defines a repeatability protocol, and checks that major claims point to evidence files. Live Foundry Local reproduction remains machine-dependent; retained evidence artefacts are used when live reproduction is not available.
+
+Mode E0.1 adds explicit repeatability/variance artefacts. If live repeated benchmark runs are not available, the artefacts are marked `NOT_RUN` and metric fields remain blank. This prevents the dissertation from claiming cross-run stability until repeated-run evidence exists.
+
+Mode E0.2 replays deterministic validation over recorded E0.1 raw outputs. It is classified as `COMPLETE_PIPELINE_REPLAY_ON_MINIMAL_PROMPT_OUTPUTS`, not full live pipeline repeatability.
+
+Mode E0.3 checks whether Prototype 5 has a repo-local callable original Prototype 3 action-envelope live runner. In the current repo it is `E0_3_NOT_RUN`; this is intentional and prevents overclaiming schema-valid versus execution-eligible repeatability until that full live path exists.
 
 Key documentation:
 

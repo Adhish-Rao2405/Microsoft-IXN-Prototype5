@@ -16,6 +16,16 @@ def test_required_mode_e0_files_exist():
         MODE_E0_DIR / "reproducibility_check_summary.json",
         MODE_E0_DIR / "claim_to_evidence_traceability.csv",
         MODE_E0_DIR / "repeatability_summary.csv",
+        MODE_E0_DIR / "repeatability_live_runs.csv",
+        MODE_E0_DIR / "repeatability_variance_summary.json",
+        MODE_E0_DIR / "repeatability_variance_summary.md",
+        MODE_E0_DIR / "pipeline_repeatability_records.jsonl",
+        MODE_E0_DIR / "pipeline_repeatability_summary.csv",
+        MODE_E0_DIR / "pipeline_repeatability_variance_summary.json",
+        MODE_E0_DIR / "pipeline_repeatability_variance_summary.md",
+        MODE_E0_DIR / "full_pipeline_repeatability_live_runs.csv",
+        MODE_E0_DIR / "full_pipeline_repeatability_summary.json",
+        MODE_E0_DIR / "full_pipeline_repeatability_summary.md",
     ]
     assert [path for path in required if not path.exists()] == []
 

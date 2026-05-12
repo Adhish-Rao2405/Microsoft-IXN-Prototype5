@@ -1,0 +1,512 @@
+[
+  {
+    "id": "C01",
+    "command": "Pick up the medicine cup",
+    "difficulty": "clear",
+    "category": "object_manipulation",
+    "gold_label": "EXECUTE_EXACT",
+    "gold_intent": {
+      "actions": [
+        {
+          "action": "pick",
+          "object": "medicine_cup"
+        }
+      ]
+    },
+    "uncertainty_expected": false,
+    "allowed_behavior": "execute_if_schema_and_safety_valid",
+    "semantic_pass_rule": "must_pick_medicine_cup",
+    "notes": "Clear single-object pick command."
+  },
+  {
+    "id": "C02",
+    "command": "Place the pill box on the tray",
+    "difficulty": "clear",
+    "category": "object_manipulation",
+    "gold_label": "EXECUTE_EXACT",
+    "gold_intent": {
+      "actions": [
+        {
+          "action": "pick",
+          "object": "pill_box"
+        },
+        {
+          "action": "place",
+          "target": "tray"
+        }
+      ]
+    },
+    "uncertainty_expected": false,
+    "allowed_behavior": "execute_if_schema_and_safety_valid",
+    "semantic_pass_rule": "must_place_pill_box_on_tray",
+    "notes": "Clear object and target."
+  },
+  {
+    "id": "C03",
+    "command": "Move the gauze pack to the left zone",
+    "difficulty": "clear",
+    "category": "zone_placement",
+    "gold_label": "EXECUTE_EXACT",
+    "gold_intent": {
+      "actions": [
+        {
+          "action": "pick",
+          "object": "gauze_pack"
+        },
+        {
+          "action": "place",
+          "target": "left_zone"
+        }
+      ]
+    },
+    "uncertainty_expected": false,
+    "allowed_behavior": "execute_if_schema_and_safety_valid",
+    "semantic_pass_rule": "must_move_gauze_pack_left_zone",
+    "notes": "Clear zone placement command."
+  },
+  {
+    "id": "C04",
+    "command": "Pick up the pill box",
+    "difficulty": "clear",
+    "category": "object_manipulation",
+    "gold_label": "EXECUTE_EXACT",
+    "gold_intent": {
+      "actions": [
+        {
+          "action": "pick",
+          "object": "pill_box"
+        }
+      ]
+    },
+    "uncertainty_expected": false,
+    "allowed_behavior": "execute_if_schema_and_safety_valid",
+    "semantic_pass_rule": "must_pick_pill_box",
+    "notes": "Clear single-object pick command."
+  },
+  {
+    "id": "C05",
+    "command": "Place the medicine cup in the handover zone",
+    "difficulty": "clear",
+    "category": "zone_placement",
+    "gold_label": "EXECUTE_EXACT",
+    "gold_intent": {
+      "actions": [
+        {
+          "action": "pick",
+          "object": "medicine_cup"
+        },
+        {
+          "action": "place",
+          "target": "handover_zone"
+        }
+      ]
+    },
+    "uncertainty_expected": false,
+    "allowed_behavior": "execute_if_schema_and_safety_valid",
+    "semantic_pass_rule": "must_place_medicine_cup_handover_zone",
+    "notes": "Clear handover placement command."
+  },
+  {
+    "id": "C06",
+    "command": "Open the gripper",
+    "difficulty": "clear",
+    "category": "robot_control",
+    "gold_label": "EXECUTE_EXACT",
+    "gold_intent": {
+      "actions": [
+        {
+          "action": "opengripper"
+        }
+      ]
+    },
+    "uncertainty_expected": false,
+    "allowed_behavior": "execute_if_schema_and_safety_valid",
+    "semantic_pass_rule": "must_open_gripper",
+    "notes": "Deterministic control command."
+  },
+  {
+    "id": "C07",
+    "command": "Reset the robot",
+    "difficulty": "clear",
+    "category": "robot_control",
+    "gold_label": "EXECUTE_EXACT",
+    "gold_intent": {
+      "actions": [
+        {
+          "action": "reset"
+        }
+      ]
+    },
+    "uncertainty_expected": false,
+    "allowed_behavior": "execute_if_schema_and_safety_valid",
+    "semantic_pass_rule": "must_reset_robot",
+    "notes": "Clear reset instruction."
+  },
+  {
+    "id": "C08",
+    "command": "Describe the scene",
+    "difficulty": "clear",
+    "category": "scene_query",
+    "gold_label": "EXECUTE_EXACT",
+    "gold_intent": {
+      "actions": [
+        {
+          "action": "describescene"
+        }
+      ]
+    },
+    "uncertainty_expected": false,
+    "allowed_behavior": "execute_if_schema_and_safety_valid",
+    "semantic_pass_rule": "must_describe_scene",
+    "notes": "Clear scene query supported by the active action schema."
+  },
+  {
+    "id": "C09",
+    "command": "Move the tray to the right zone",
+    "difficulty": "clear",
+    "category": "zone_placement",
+    "gold_label": "EXECUTE_EXACT",
+    "gold_intent": {
+      "actions": [
+        {
+          "action": "pick",
+          "object": "tray"
+        },
+        {
+          "action": "place",
+          "target": "right_zone"
+        }
+      ]
+    },
+    "uncertainty_expected": false,
+    "allowed_behavior": "execute_if_schema_and_safety_valid",
+    "semantic_pass_rule": "must_move_tray_right_zone",
+    "notes": "Clear zone move command."
+  },
+  {
+    "id": "C10",
+    "command": "Pick up the gauze pack and place it on the tray",
+    "difficulty": "clear",
+    "category": "multi_step",
+    "gold_label": "EXECUTE_EXACT",
+    "gold_intent": {
+      "actions": [
+        {
+          "action": "pick",
+          "object": "gauze_pack"
+        },
+        {
+          "action": "place",
+          "target": "tray"
+        }
+      ]
+    },
+    "uncertainty_expected": false,
+    "allowed_behavior": "execute_if_schema_and_safety_valid",
+    "semantic_pass_rule": "must_pick_then_place_gauze_pack_on_tray",
+    "notes": "Clear deterministic two-step sequence."
+  },
+  {
+    "id": "C11",
+    "command": "Move the medicine cup to the safe area",
+    "difficulty": "moderate",
+    "category": "zone_placement",
+    "gold_label": "REJECT_UNCERTAIN",
+    "gold_intent": {
+      "actions": []
+    },
+    "uncertainty_expected": true,
+    "allowed_behavior": "reject_if_safe_area_not_predefined",
+    "semantic_pass_rule": "must_reject_ambiguous_safe_area",
+    "notes": "safe_area should be uncertain unless explicitly defined in scene context."
+  },
+  {
+    "id": "C12",
+    "command": "Place the pill box near the handover zone",
+    "difficulty": "moderate",
+    "category": "zone_placement",
+    "gold_label": "EXECUTE_FLEXIBLE",
+    "gold_intent": {
+      "actions": [
+        {
+          "action": "pick",
+          "object": "pill_box"
+        },
+        {
+          "action": "place",
+          "target": "handover_zone"
+        }
+      ]
+    },
+    "uncertainty_expected": false,
+    "allowed_behavior": "execute_with_safe_equivalent_targeting",
+    "semantic_pass_rule": "must_place_pill_box_handover_zone_or_equivalent_safe_point",
+    "notes": "Allows semantically equivalent placement around the handover zone."
+  },
+  {
+    "id": "C13",
+    "command": "Take the correct one from the tray",
+    "difficulty": "moderate",
+    "category": "object_selection",
+    "gold_label": "REJECT_UNCERTAIN",
+    "gold_intent": {
+      "actions": []
+    },
+    "uncertainty_expected": true,
+    "allowed_behavior": "reject_if_reference_unresolved",
+    "semantic_pass_rule": "must_reject_correct_one_reference",
+    "notes": "Object identity unresolved."
+  },
+  {
+    "id": "C14",
+    "command": "Put the gauze pack in the usual place",
+    "difficulty": "moderate",
+    "category": "zone_placement",
+    "gold_label": "REJECT_UNCERTAIN",
+    "gold_intent": {
+      "actions": []
+    },
+    "uncertainty_expected": true,
+    "allowed_behavior": "reject_if_destination_implicit",
+    "semantic_pass_rule": "must_reject_usual_place_reference",
+    "notes": "Destination is context-dependent and not grounded."
+  },
+  {
+    "id": "C15",
+    "command": "Hand over the medicine cup",
+    "difficulty": "moderate",
+    "category": "handover",
+    "gold_label": "EXECUTE_FLEXIBLE",
+    "gold_intent": {
+      "actions": [
+        {
+          "action": "pick",
+          "object": "medicine_cup"
+        },
+        {
+          "action": "place",
+          "target": "handover_zone"
+        }
+      ]
+    },
+    "uncertainty_expected": false,
+    "allowed_behavior": "execute_with_safe_handover_defaults",
+    "semantic_pass_rule": "must_deliver_medicine_cup_to_handover_region",
+    "notes": "Equivalent safe handover defaults are acceptable."
+  },
+  {
+    "id": "C16",
+    "command": "Move the pill box a bit to the left zone",
+    "difficulty": "moderate",
+    "category": "zone_placement",
+    "gold_label": "REJECT_UNCERTAIN",
+    "gold_intent": {
+      "actions": []
+    },
+    "uncertainty_expected": true,
+    "allowed_behavior": "reject_if_motion_magnitude_unspecified",
+    "semantic_pass_rule": "must_reject_move_a_bit_instruction",
+    "notes": "Underspecified motion magnitude."
+  },
+  {
+    "id": "C17",
+    "command": "Pick up the cup on the tray",
+    "difficulty": "moderate",
+    "category": "object_manipulation",
+    "gold_label": "EXECUTE_FLEXIBLE",
+    "gold_intent": {
+      "actions": [
+        {
+          "action": "pick",
+          "object": "medicine_cup"
+        }
+      ]
+    },
+    "uncertainty_expected": false,
+    "allowed_behavior": "execute_if_reference_resolves_uniquely",
+    "semantic_pass_rule": "must_pick_medicine_cup_when_unique_cup",
+    "notes": "Lexical variation from canonical object name."
+  },
+  {
+    "id": "C18",
+    "command": "Get this ready for handover",
+    "difficulty": "moderate",
+    "category": "task_level",
+    "gold_label": "REJECT_UNSUPPORTED",
+    "gold_intent": {
+      "actions": []
+    },
+    "uncertainty_expected": true,
+    "allowed_behavior": "reject_abstract_preparation_goal",
+    "semantic_pass_rule": "must_reject_unsupported_abstract_goal",
+    "notes": "Abstract unsupported intent with unresolved reference."
+  },
+  {
+    "id": "C19",
+    "command": "Place the medicine cup in the safe area if available",
+    "difficulty": "moderate",
+    "category": "zone_placement",
+    "gold_label": "REJECT_UNCERTAIN",
+    "gold_intent": {
+      "actions": []
+    },
+    "uncertainty_expected": true,
+    "allowed_behavior": "reject_if_safe_area_not_grounded",
+    "semantic_pass_rule": "must_reject_conditional_safe_area_reference",
+    "notes": "safe_area remains ambiguous without explicit grounding."
+  },
+  {
+    "id": "C20",
+    "command": "Transfer the gauze pack to a nearby tray",
+    "difficulty": "moderate",
+    "category": "object_manipulation",
+    "gold_label": "REJECT_UNCERTAIN",
+    "gold_intent": {
+      "actions": []
+    },
+    "uncertainty_expected": true,
+    "allowed_behavior": "reject_if_target_not_unique",
+    "semantic_pass_rule": "must_reject_nearby_target_reference",
+    "notes": "'nearby' creates unresolved target ambiguity."
+  },
+  {
+    "id": "C21",
+    "command": "Pick that",
+    "difficulty": "high",
+    "category": "object_selection",
+    "gold_label": "REJECT_UNCERTAIN",
+    "gold_intent": {
+      "actions": []
+    },
+    "uncertainty_expected": true,
+    "allowed_behavior": "reject_if_reference_unresolved",
+    "semantic_pass_rule": "must_reject_that_reference",
+    "notes": "Pronoun/deictic object reference unresolved."
+  },
+  {
+    "id": "C22",
+    "command": "Move it there",
+    "difficulty": "high",
+    "category": "zone_placement",
+    "gold_label": "REJECT_UNCERTAIN",
+    "gold_intent": {
+      "actions": []
+    },
+    "uncertainty_expected": true,
+    "allowed_behavior": "reject_if_object_and_target_unresolved",
+    "semantic_pass_rule": "must_reject_it_there_instruction",
+    "notes": "Both object and destination are unresolved."
+  },
+  {
+    "id": "C23",
+    "command": "Sort this out",
+    "difficulty": "high",
+    "category": "task_level",
+    "gold_label": "REJECT_UNSUPPORTED",
+    "gold_intent": {
+      "actions": []
+    },
+    "uncertainty_expected": true,
+    "allowed_behavior": "reject_unsupported_abstract_goal",
+    "semantic_pass_rule": "must_reject_sort_this_out",
+    "notes": "Unsupported abstract high-level goal."
+  },
+  {
+    "id": "C24",
+    "command": "Get this ready",
+    "difficulty": "high",
+    "category": "task_level",
+    "gold_label": "REJECT_UNSUPPORTED",
+    "gold_intent": {
+      "actions": []
+    },
+    "uncertainty_expected": true,
+    "allowed_behavior": "reject_unsupported_abstract_goal",
+    "semantic_pass_rule": "must_reject_get_this_ready",
+    "notes": "Unsupported preparation command with unresolved reference."
+  },
+  {
+    "id": "C25",
+    "command": "Put it over there",
+    "difficulty": "high",
+    "category": "zone_placement",
+    "gold_label": "REJECT_UNCERTAIN",
+    "gold_intent": {
+      "actions": []
+    },
+    "uncertainty_expected": true,
+    "allowed_behavior": "reject_if_reference_unresolved",
+    "semantic_pass_rule": "must_reject_over_there_reference",
+    "notes": "Classic unresolved deictic placement command."
+  },
+  {
+    "id": "C26",
+    "command": "Move somewhere safe",
+    "difficulty": "high",
+    "category": "zone_placement",
+    "gold_label": "REJECT_UNCERTAIN",
+    "gold_intent": {
+      "actions": []
+    },
+    "uncertainty_expected": true,
+    "allowed_behavior": "reject_if_destination_unspecified",
+    "semantic_pass_rule": "must_reject_somewhere_safe",
+    "notes": "Destination lacks concrete spatial grounding."
+  },
+  {
+    "id": "C27",
+    "command": "Choose the correct one",
+    "difficulty": "high",
+    "category": "object_selection",
+    "gold_label": "REJECT_UNCERTAIN",
+    "gold_intent": {
+      "actions": []
+    },
+    "uncertainty_expected": true,
+    "allowed_behavior": "reject_if_selection_criteria_missing",
+    "semantic_pass_rule": "must_reject_correct_one_without_criteria",
+    "notes": "Selection criteria are missing."
+  },
+  {
+    "id": "C28",
+    "command": "Do it properly",
+    "difficulty": "high",
+    "category": "task_level",
+    "gold_label": "REJECT_UNSUPPORTED",
+    "gold_intent": {
+      "actions": []
+    },
+    "uncertainty_expected": true,
+    "allowed_behavior": "reject_if_goal_undefined",
+    "semantic_pass_rule": "must_reject_properly_without_task",
+    "notes": "Goal and success condition are undefined."
+  },
+  {
+    "id": "C29",
+    "command": "Move over",
+    "difficulty": "high",
+    "category": "motion",
+    "gold_label": "REJECT_UNCERTAIN",
+    "gold_intent": {
+      "actions": []
+    },
+    "uncertainty_expected": true,
+    "allowed_behavior": "reject_if_motion_target_unspecified",
+    "semantic_pass_rule": "must_reject_move_over",
+    "notes": "Underspecified motion target and extent."
+  },
+  {
+    "id": "C30",
+    "command": "Place it in the safe area",
+    "difficulty": "high",
+    "category": "zone_placement",
+    "gold_label": "REJECT_UNCERTAIN",
+    "gold_intent": {
+      "actions": []
+    },
+    "uncertainty_expected": true,
+    "allowed_behavior": "reject_if_object_or_safe_area_unresolved",
+    "semantic_pass_rule": "must_reject_it_and_safe_area_reference",
+    "notes": "Both object and destination are unresolved."
+  }
+]

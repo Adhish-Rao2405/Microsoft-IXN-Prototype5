@@ -1,0 +1,156 @@
+{
+  "mode": "E0.1",
+  "name": "Live Repeatability and Variance Evidence",
+  "status": "COMPLETE_LIVE_OUTPUT_REPEATABILITY",
+  "checked_at": "2026-05-12T11:28:46.555575+00:00",
+  "target_run_count": 3,
+  "ideal_run_count": 5,
+  "completed_run_count": 3,
+  "live_runs_file": "results/prototype5/mode_e0/repeatability_live_runs.csv",
+  "repeatability_summary_file": "results/prototype5/mode_e0/repeatability_summary.csv",
+  "live_execution_probe": {
+    "attempted": true,
+    "base_url": "http://127.0.0.1:54701",
+    "models_endpoint": "http://127.0.0.1:54701/v1/models",
+    "request_success": false,
+    "model_count": 0,
+    "phi_model_count": 0,
+    "error": "<urlopen error timed out>"
+  },
+  "metric_variance": {
+    "request_success_rate": {
+      "values": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "parse_success_rate": {
+      "values": [
+        0.7333,
+        0.7333,
+        0.7333
+      ],
+      "mean": 0.7333,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "json_valid_rate": {
+      "values": [
+        0.7333,
+        0.7333,
+        0.7333
+      ],
+      "mean": 0.7333,
+      "std": 0.0,
+      "stable": "STABLE"
+    },
+    "schema_valid_rate": {
+      "values": [],
+      "mean": null,
+      "std": null,
+      "stable": "NOT_EVALUATED"
+    },
+    "semantic_valid_rate": {
+      "values": [],
+      "mean": null,
+      "std": null,
+      "stable": "NOT_EVALUATED"
+    },
+    "safety_valid_rate": {
+      "values": [],
+      "mean": null,
+      "std": null,
+      "stable": "NOT_EVALUATED"
+    },
+    "execution_eligible_rate": {
+      "values": [],
+      "mean": null,
+      "std": null,
+      "stable": "NOT_EVALUATED"
+    },
+    "model_false_accepts": {
+      "values": [],
+      "mean": null,
+      "std": null,
+      "stable": "NOT_EVALUATED"
+    },
+    "pipeline_false_accepts": {
+      "values": [],
+      "mean": null,
+      "std": null,
+      "stable": "NOT_EVALUATED"
+    },
+    "mean_latency_ms": {
+      "values": [
+        8164.26,
+        7644.35,
+        8043.13
+      ],
+      "mean": 7950.58,
+      "std": 272.0307,
+      "stable": "STABLE"
+    },
+    "std_latency_ms": {
+      "values": [
+        2329.34,
+        1515.74,
+        1472.02
+      ],
+      "mean": 1772.3667,
+      "std": 482.8481,
+      "stable": "VARIABLE"
+    }
+  },
+  "central_findings": {
+    "schema_valid_greater_than_execution_eligible": {
+      "status": "NOT_EVALUATED",
+      "claim": "The schema-valid versus execution-eligible gap is stable only if repeated live runs show schema_valid_rate > execution_eligible_rate in each run."
+    },
+    "pipeline_false_accepts_bounded": {
+      "status": "NOT_EVALUATED",
+      "claim": "Pipeline-level false accepts are stable only if repeated live runs show zero or bounded counts under the same policy."
+    }
+  },
+  "evaluated_scope": [
+    "Foundry Local request success",
+    "parse success",
+    "JSON validity",
+    "latency variation"
+  ],
+  "not_evaluated_scope": [
+    "full deterministic validation pipeline repeatability",
+    "schema validity repeatability",
+    "semantic validity repeatability",
+    "safety validity repeatability",
+    "execution eligibility repeatability",
+    "model-level false accept repeatability",
+    "pipeline-level false accept repeatability"
+  ],
+  "full_pipeline_live_repeatability": {
+    "mode": "E0.3",
+    "status": "E0_3_NOT_RUN",
+    "claim_boundary": "Schema-valid versus execution-eligible repeatability is not proven by E0.3 because the full action-envelope live runner is not available inside Prototype 5 yet.",
+    "reason": "Prototype 5 does not currently contain a repo-local callable live runner that combines the original Prototype 3 action-envelope prompt, fixed 30-command benchmark and deterministic validation pipeline."
+  },
+  "repo_local_full_pipeline_live_repeatability": {
+    "mode": "E0.4",
+    "status": "COMPLETE_FULL_LIVE_PIPELINE_REPEATABILITY",
+    "runs_evaluated": 3,
+    "schema_valid_greater_than_execution_eligible": "STABLE_OBSERVED",
+    "pipeline_false_accepts_bounded": "STABLE_ZERO",
+    "claim_boundary": "E0.4 measures full live pipeline repeatability only for the repo-local 30-command benchmark, action-envelope prompt, selected Foundry Local model and deterministic validation policy. It does not change locked Prototype 3/4 evidence and does not prove real-world robot safety or general model reliability.",
+    "reason": ""
+  },
+  "claim_boundary": "E0.1 does not support full zero-trust pipeline repeatability or a general model-reliability claim. It supports only live Foundry output repeatability for request success, parse success, JSON validity and latency under the tested benchmark and configuration.",
+  "notes": [
+    "No repeatability metrics are inferred from single-run evidence.",
+    "Run rows with status NOT_RUN intentionally leave metric fields blank.",
+    "Schema, semantic, safety, execution eligibility and false-accept repeatability remain NOT_EVALUATED in E0.1.",
+    "Live Foundry Local repeated runs require the local service, model alias, fixed benchmark and validation pipeline to be available.",
+    "Mode E0.4 is the repo-local full pipeline adapter and is reported separately from the older E0.3 not-run gate."
+  ]
+}
