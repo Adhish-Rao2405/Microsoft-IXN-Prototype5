@@ -127,6 +127,25 @@ The post-E0 audit layer consolidates supervisor-facing and dissertation-facing e
 - `docs/prototype5/post_e0_dissertation_wording.md`
 - `docs/prototype5/post_e0_gap_register.md`
 
+## Prototype 5 Mode E — Industrial Benchmark Extension
+
+Mode E extends the original 30-command benchmark with 30 additional industrially motivated commands across pick-and-place, conveyor/sorting, inspection, warehouse transfer, human-proximity, and restricted-zone scenarios. Its purpose is to test whether the schema-valid vs execution-eligible gap remains observable beyond the original benchmark.
+
+Mode E is bounded: it improves benchmark coverage but does not prove production robot safety, full industrial generalisation, or general local SLM reliability.
+
+- `configs/prototype5/mode_e_industrial_benchmark.json`
+- `docs/prototype5/mode_e_benchmark_representativeness.md`
+- `docs/prototype5/mode_e_evidence_summary.md`
+- `docs/prototype5/mode_e_dissertation_wording.md`
+- `results/prototype5/mode_e/mode_e_benchmark_audit.json`
+- `results/prototype5/mode_e/mode_e_benchmark_audit.md`
+
+Run Mode E benchmark audit:
+
+```powershell
+python scripts/prototype5/run_mode_e_benchmark_audit.py
+```
+
 Key documentation:
 
 - `docs/dissertation_evidence/microsoft_ixn_brief_closure.md`

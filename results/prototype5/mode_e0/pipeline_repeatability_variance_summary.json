@@ -2,7 +2,7 @@
   "mode": "E0.2",
   "name": "Full Validation Pipeline Repeatability Replay",
   "status": "COMPLETE_PIPELINE_REPLAY_ON_MINIMAL_PROMPT_OUTPUTS",
-  "checked_at": "2026-05-12T11:40:48.434185+00:00",
+  "checked_at": "2026-05-12T11:58:30.903364+00:00",
   "source_raw_files": [
     "results/prototype5/mode_e0/e0_1_live_run_01_20260512T015715Z_raw.jsonl",
     "results/prototype5/mode_e0/e0_1_live_run_02_20260512T020120Z_raw.jsonl",

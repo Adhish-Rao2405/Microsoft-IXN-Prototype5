@@ -2,7 +2,7 @@
   "mode": "E0.4",
   "name": "Repo-Local Full Pipeline Repeatability Adapter",
   "status": "COMPLETE_FULL_LIVE_PIPELINE_REPEATABILITY",
-  "checked_at": "2026-05-12T11:40:47.870045+00:00",
+  "checked_at": "2026-05-12T11:58:30.356213+00:00",
   "runs_evaluated": 3,
   "minimum_live_target": 3,
   "benchmark_path": "configs/prototype5/benchmark_v1.json",

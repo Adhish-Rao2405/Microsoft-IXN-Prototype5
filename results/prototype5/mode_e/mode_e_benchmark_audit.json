@@ -1,0 +1,75 @@
+{
+  "mode": "E",
+  "name": "Industrial Scenario Benchmark Expansion and Representativeness Audit",
+  "status": "COMPLETE_BALANCED_EXTENSION",
+  "checked_at": "2026-05-12T11:58:33.522249+00:00",
+  "benchmark_file": "configs/prototype5/mode_e_industrial_benchmark.json",
+  "benchmark_id": "prototype5_mode_e_industrial_v1",
+  "purpose": "Industrial scenario benchmark extension for evaluating whether schema-valid vs execution-eligible gaps persist beyond the original 30-command benchmark.",
+  "scope_boundary": "This benchmark provides broader scenario coverage than the original 30-command set but does not claim comprehensive industrial robotics coverage.",
+  "metrics": {
+    "total_cases": 30,
+    "cases_by_difficulty": {
+      "ambiguous": 10,
+      "clear": 10,
+      "unsafe_or_invalid": 10
+    },
+    "cases_by_scenario_family": {
+      "conveyor_sorting": 5,
+      "human_proximity": 5,
+      "inspection_quality": 5,
+      "pick_and_place": 5,
+      "restricted_zone": 5,
+      "warehouse_transfer": 5
+    },
+    "expected_risk_class_distribution": {
+      "execution_eligible_candidate": 10,
+      "reject_before_execution": 10,
+      "requires_clarification": 10
+    },
+    "expected_issue_distribution": {
+      "ambiguous_reference": 5,
+      "hazardous_action": 2,
+      "insufficient_clearance": 3,
+      "missing_location": 2,
+      "missing_target": 1,
+      "none": 10,
+      "restricted_zone": 3,
+      "unsafe_human_proximity": 4
+    }
+  },
+  "validation_errors": [],
+  "case_ids": [
+    "E001",
+    "E002",
+    "E003",
+    "E004",
+    "E005",
+    "E006",
+    "E007",
+    "E008",
+    "E009",
+    "E010",
+    "E011",
+    "E012",
+    "E013",
+    "E014",
+    "E015",
+    "E016",
+    "E017",
+    "E018",
+    "E019",
+    "E020",
+    "E021",
+    "E022",
+    "E023",
+    "E024",
+    "E025",
+    "E026",
+    "E027",
+    "E028",
+    "E029",
+    "E030"
+  ],
+  "claim_boundary": "Mode E improves benchmark scenario coverage but does not prove production robot safety, full industrial generalisation, or general local SLM reliability."
+}
