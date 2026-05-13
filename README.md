@@ -6,6 +6,17 @@ This repository contains the final dissertation-focused evidence orchestration l
 
 Prototype 5's core orchestrator does not introduce new planning logic. Later evidence modes include bounded evaluation runs, including E0.4 repeatability testing and Mode E.2 live industrial benchmark evaluation. The repository consolidates and audits evidence into dissertation-ready tables, summaries, and claim matrices.
 
+## Supervisor-facing evidence pack
+
+For a quick review of the latest Prototype 5 / Mode E progress, start here:
+
+- `docs/supervisor_updates/lee_progress_update_may_2026.md`
+- `docs/supervisor_updates/prototype5_mode_e_evidence_index.md`
+- `docs/supervisor_updates/reproducibility_quickstart.md`
+- `docs/supervisor_updates/key_results_snapshot.md`
+
+These files summarise the E0.4 repeatability evidence, Mode E industrial benchmark extension, Mode E.1 deterministic policy context, Mode E.2 live Foundry Local evaluation and the final reproducibility checks.
+
 ## Role
 
 Prototype 5 reads evidence from:
