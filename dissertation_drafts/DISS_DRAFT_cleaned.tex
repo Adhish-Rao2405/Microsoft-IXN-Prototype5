@@ -53,71 +53,99 @@ This dissertation investigates whether local small language models (SLMs), serve
 
 \section{Introduction}
 
-\subsection{Project Overview and Current Evidence Baseline}
-\label{sec:project_overview_current_baseline}
+\subsection{Motivation}
+\label{sec:introduction_motivation}
 
-This dissertation, titled \emph{Schema Validity Is Not Enough: Zero-Trust Evaluation of Local SLMs for Industrial Robot Task Planning with Microsoft Foundry Local}, investigates whether local small language models (SLMs) can support industrial robot task-planning workflows when their outputs are treated as untrusted action proposals rather than executable commands. The central claim is deliberately bounded: within the evaluated benchmark and under the defined validation policy, local SLMs can contribute to robot task planning only when deterministic validation mediates every model-generated proposal before any downstream execution context is reached.
+Industrial robot task planning is an attractive setting for local language-model deployment because natural-language instructions can make robotic workcells easier to configure, inspect and supervise. A factory operator may want to issue an instruction such as moving a component to a fixture, transferring a package to an inspection station or rejecting a movement through a restricted zone. Small language models (SLMs) served locally through Microsoft Foundry Local offer a practical way to explore this interaction pattern while keeping prompts and task context on the local machine \cite{microsoft_foundry_local_docs}.
 
-The work is positioned in industrial robotics and manufacturing automation. In the target use case, a factory operator gives a natural-language instruction to a local workcell assistant. A local SLM proposes a structured robot action, and a zero-trust validation layer evaluates whether the proposal is parseable, JSON-valid, schema-valid, semantically valid, safety-valid and execution-eligible. This separation is essential because a schema-valid output can still be semantically incorrect, unsafe, ambiguous or unsupported by the current workcell state.
+However, robot task planning is not a normal text-generation problem. A fluent or syntactically well-formed response can still describe a task that is ambiguous, semantically wrong, unsafe or unsupported by the current workcell context. The key distinction in this dissertation is therefore between a model output that is merely \emph{schema-valid} and a proposal that is genuinely \emph{execution-eligible} under a deterministic validation policy. The model is not treated as a robot controller. It is treated as a proposal generator whose outputs must be checked before they can be considered for any downstream execution context.
 
-Microsoft Foundry Local provides the local inference framing for the project. It offers a practical route for evaluating local model serving, privacy, offline resilience and deployment trade-offs without treating the model itself as a trusted robot controller \cite{microsoft_foundry_local_docs}. The dissertation therefore evaluates Foundry Local as part of a local-first evidence chain, not as a production-certified robot-control platform.
+\subsection{Problem Statement}
+\label{sec:introduction_problem}
 
-The implemented system evolved through a series of prototypes, but Prototype 5 now acts as the final evidence orchestration and reporting layer. It consolidates prior evidence, records claim boundaries, generates the final claims matrix and evidence manifest, and adds final-stage evidence for model-family and precision behaviour, local-vs-cloud comparison and live local resource profiling. Prototype 1 is retained only as optional early feasibility context; its absence from core audit evidence is treated as a contextual documentation limitation rather than a missing proof for the final claims.
+Many evaluations of language-model planning focus on whether the model can produce a structured or schema-conforming output. Schema validity is useful because it allows a downstream system to parse the proposal, check required fields and reject malformed responses. For robotics, though, schema validity is not enough. A proposal can satisfy the action-envelope schema while still selecting the wrong object, referring ambiguously to ``it'' or ``there'', entering a restricted zone, moving toward a human work area or attempting an unsupported action.
 
-The current evidence baseline is complete for the dissertation pack. The Prototype 5 test suite passed, the final orchestrator completed, and the final dissertation pack generator completed. The evidence remains benchmark-based and prototype-scoped: it does not establish real-world robot safety, factory deployment readiness, clinical or production-grade assurance, or statistical generalisation beyond the evaluated command set.
+This creates a zero-trust evaluation problem. If local SLM outputs are passed forward because they are syntactically valid, then unsafe or semantically invalid proposals can be mistaken for executable commands. If they are treated as untrusted proposals and filtered through deterministic validation, then a larger set of model outputs can be narrowed into a smaller execution-eligible subset. This dissertation studies that gap directly.
 
-\subsection{Research Aim, Objectives and Questions}
-\label{sec:research_aims_questions}
+\subsection{Research Gap}
+\label{sec:introduction_gap}
 
-The main aim is to evaluate whether local SLMs served through Microsoft Foundry Local can support industrial robot task planning when model outputs are treated as untrusted action proposals and subjected to deterministic zero-trust validation before downstream execution.
+The research gap addressed here is not whether a language model can produce plausible robot-task text. The gap is whether local SLM-generated robot task proposals can be evaluated in a way that separates structured output from execution readiness. The project therefore combines Foundry Local deployment, benchmark-based evaluation, deterministic validation, repeatability analysis and an industrial benchmark extension.
+
+The resulting evidence is deliberately bounded. It evaluates proposal generation and pre-execution validation under defined benchmark, model and runtime conditions. It does not claim production robot safety, real robot validation, universal local SLM reliability or general industrial deployment readiness.
+
+\subsection{Aim and Objectives}
+\label{sec:introduction_aim_objectives}
+
+The aim of this dissertation is to evaluate whether local SLMs deployed through Microsoft Foundry Local can generate robot task proposals that are not merely syntactically valid but also safety-valid, semantically grounded and execution-eligible under deterministic zero-trust validation.
 
 The objectives are:
 \begin{enumerate}
-    \item Evaluate the structured-output reliability of local SLMs on an industrial robot task-planning benchmark.
-    \item Distinguish JSON and schema validity from semantic validity, safety validity and execution eligibility.
-    \item Measure model-level false accepts and assess whether zero-trust validation prevents them becoming pipeline-level false accepts.
-    \item Compare local Foundry Local evidence with a cloud baseline under the same benchmark prompts.
-    \item Record local resource pressure and deployment trade-offs for the measured local inference path.
-    \item Produce an auditable dissertation evidence pack with explicit claim boundaries and reproducibility artefacts.
+    \item Evaluate whether local SLMs can generate structured robot task proposals from natural-language commands.
+    \item Measure the gap between schema validity and execution eligibility.
+    \item Assess whether deterministic zero-trust validation reduces unsafe or ambiguous proposals before execution.
+    \item Examine local-first deployment trade-offs, including latency, privacy, reproducibility and reliability.
+    \item Test whether the schema-valid versus execution-eligible gap persists under a broader industrial benchmark with deterministic vocabulary and policy context.
+    \item Produce an auditable claim-to-evidence trail with explicit boundaries for each major result.
 \end{enumerate}
 
-The main research question is:
+\subsection{Research Questions}
+\label{sec:introduction_research_questions}
 
-\begin{quote}
-Can local SLMs served through Microsoft Foundry Local support safe and reliable industrial robot task-planning workflows when their outputs are treated as untrusted action proposals and mediated through deterministic validation before execution?
-\end{quote}
+The dissertation is structured around five research questions:
 
-The six sub-questions are:
 \begin{enumerate}
-    \item How reliably can local SLMs generate parseable, JSON-valid and schema-valid industrial robot action plans?
-    \item To what extent does schema validity overestimate semantic correctness, safety validity and execution eligibility?
-    \item How does command ambiguity affect false accepts, rejection behaviour and execution eligibility?
-    \item What trade-offs appear across local model family and size in schema validity, latency, false accepts and execution eligibility?
-    \item How does local Foundry Local inference compare with cloud inference and live local resource profiling?
-    \item What is the safety-latency trade-off associated with stricter deterministic validation?
+    \item \textbf{RQ1 -- Feasibility:} Can a local SLM deployed through Microsoft Foundry Local generate structured robot task proposals from natural-language commands?
+    \item \textbf{RQ2 -- Validity gap:} To what extent does schema validity differ from true execution eligibility in local SLM-generated robot task plans?
+    \item \textbf{RQ3 -- Zero-trust validation:} Can deterministic zero-trust validation reduce unsafe or ambiguous model proposals before execution?
+    \item \textbf{RQ4 -- Local deployment trade-offs:} What are the practical trade-offs of local-first SLM planning compared with cloud or unconstrained model use, particularly in latency, privacy, reproducibility and reliability?
+    \item \textbf{RQ5 -- Industrial generalisation boundary:} Does the schema-valid versus execution-eligible gap persist under a broader industrial benchmark with domain-specific vocabulary and policy context?
 \end{enumerate}
-
-These questions are answered through the Prototype 3--5 evidence base. Prototype 1 is cited only as context, while Prototype 3, Prototype 4 and Prototype 5 provide the core benchmark, zero-trust, deployment and reporting evidence.
 
 \begin{table*}[t]
 \centering
-\caption{Research questions mapped to detected evidence.}
+\caption{Research questions mapped to dissertation evidence.}
 \label{tab:rq_to_evidence}
 \footnotesize
-\begin{tabularx}{\textwidth}{L{0.13\textwidth}Y Y Y}
+\begin{tabularx}{\textwidth}{L{0.12\textwidth}Y Y Y}
 \toprule
-Research Question & Evidence Source & Metrics & Current Answer \\
+Research question & Primary evidence & Key result & Boundary \\
 \midrule
-Main RQ & Final claims matrix; Prototype 3--5 evidence & Schema validity, safety validity, execution eligibility & Local SLMs can support the workflow only as untrusted proposal generators mediated by deterministic validation. \\
-RQ1 & Final model comparison; Phi recovery summary & \texttt{parse\_success}, \texttt{json\_valid}, \texttt{schema\_valid} & Local models produced structured proposals, but validity varied by model and evidence source. \\
-RQ2 & Model comparison; zero-trust comparison & \texttt{schema\_valid}, \texttt{execution\_eligible}, false accepts & Schema validity overestimated execution eligibility within the evaluated benchmark. \\
-RQ3 & Prototype 3 category evidence; Prototype 4 ambiguity summaries & \texttt{ambiguity\_level}, \texttt{rejection\_reason}, false accepts & Ambiguity is treated as a source of rejection and false-accept risk. \\
-RQ4 & Model comparison; run cards & Schema-valid rate, latency, false accepts & Model family and size affected reliability and latency within the detected evidence. \\
-RQ5 & Mode C and Mode D summaries & Local/cloud latency, JSON validity, CPU profile & Cloud was faster and more JSON-consistent in this run, while local inference preserved stronger privacy and offline-resilience properties. \\
-RQ6 & Safety-latency summary & False accepts, latency, rejection caveats & Stricter validation reduced unsafe false accepts in available records, with latency and rejection trade-offs requiring cautious interpretation. \\
+RQ1 & Prototype 3 benchmark; Prototype 5 Mode B evidence & Local models can produce structured task proposals under benchmark conditions. & Proposal-level feasibility only; not execution readiness. \\
+RQ2 & Prototype 3, Prototype 4, E0.4 and Mode E.2 & E0.4 reports schema-valid rate 0.8667 and execution-eligible rate 0.1; Mode E.2 reports 0.6333 and 0.1 respectively. & Descriptive benchmark evidence under tested conditions. \\
+RQ3 & Prototype 4 zero-trust comparison; E0.4; Mode E.2 & Baseline model false accepts were reduced to zero pipeline false accepts in the tested deterministic pipeline settings. & Not certified robot safety and not evidence of safe real-world execution. \\
+RQ4 & Mode C, Mode D, E0.4 and Mode E.2 & Local-first deployment supports privacy and offline control, but CPU latency constrains the use case. & Supervisory/offline proposal generation, not low-latency closed-loop control. \\
+RQ5 & Mode E benchmark; Mode E.1 policy context; Mode E.2 live evaluation & Mode E.2 reports a schema-valid minus execution-eligible gap of 0.5333 and zero pipeline false accepts. & Curated industrial benchmark and deterministic policy context only. \\
 \bottomrule
 \end{tabularx}
 \end{table*}
+
+\subsection{Contribution Summary}
+\label{sec:introduction_contributions}
+
+The contribution of this dissertation is not a new robot controller or a claim that local SLMs are ready for autonomous industrial deployment. Instead, the contribution is a zero-trust evaluation framework for local SLM-generated robot task proposals.
+
+The dissertation contributes:
+\begin{enumerate}
+    \item a benchmark-driven evaluation of local SLM structured-output reliability for robot task proposals;
+    \item a clear separation between JSON validity, schema validity, semantic validity, safety validity and execution eligibility;
+    \item deterministic zero-trust validation evidence showing that model-level false accepts need not become pipeline-level false accepts under the tested policy;
+    \item repeatability evidence for the original action-envelope benchmark through E0.4;
+    \item a curated industrial benchmark extension, with deterministic vocabulary and policy context, through Mode E, E.1 and E.2;
+    \item a local-first deployment discussion covering privacy, offline control, latency, resource pressure and reproducibility.
+\end{enumerate}
+
+\subsection{Scope and Limitations}
+\label{sec:introduction_scope}
+
+The scope is pre-execution task-proposal evaluation. No real robot execution is performed. The deterministic validation policy is a benchmark-validation context, not a certified industrial robot safety system. The live evidence is bounded to the tested benchmark conditions, model aliases, local runtime and machine context. The benchmark is curated rather than sampled from deployed industrial logs. The latency evidence also constrains deployment interpretation: the credible use case is local-first supervisory task proposal and validation, not low-latency closed-loop robot control.
+
+These boundaries are not incidental caveats; they define the research claim. The dissertation evaluates whether local SLM-generated proposals can be made more credible through deterministic validation. It does not prove production robot safety, universal local SLM reliability or general industrial deployment readiness.
+
+\subsection{Dissertation Structure}
+\label{sec:introduction_structure}
+
+The remainder of the dissertation is organised as follows. Section 2 reviews background work on language-model robot planning, local SLM deployment, schema-constrained generation, deterministic validation and benchmark-based evaluation. Section 3 describes the methodology, including prototype evolution, benchmark construction, Foundry Local setup, validation pipeline, metrics and reproducibility controls. Section 4 presents the results, including the schema-valid versus execution-eligible gap, zero-trust validation results, repeatability evidence, Mode E industrial benchmark evidence and latency/resource findings. Section 5 discusses the findings against RQ1--RQ5, including Microsoft IXN relevance, contribution boundaries, limitations and future work. Section 6 concludes the dissertation.
 
 \section{Background and Related Work}
 
@@ -353,30 +381,10 @@ This report has presented the current evidence baseline for a local-first zero-t
 \section*{Acknowledgements}
 This work was conducted as part of the UCL Microsoft IXN dissertation project.
 
-\appendix
 
-\section{Verification Evidence}
-\label{sec:appendix_verification_evidence}
 
-This appendix records the verification evidence for the final writing pack. These outputs confirm that the reporting layer can be regenerated from existing evidence files; they are not new model-evaluation results.
-
-\begin{itemize}
-    \item Test command: \texttt{python -m pytest tests/prototype5 -v}. Key output: \texttt{62 passed}.
-    \item Orchestrator command: \texttt{python -m src.prototype5.run\_orchestrator}. Key output: \texttt{Prototype 5 Final Evidence Orchestrator: COMPLETE}.
-    \item Final pack generator command: \texttt{python -m src.prototype5.generate\_final\_dissertation\_pack}. Key output: \texttt{Prototype 5 final dissertation pack generated.}.
-\end{itemize}
-
-The raw verification snapshots are stored at:
-\begin{itemize}
-    \item \texttt{results/prototype5/verification\_snapshots/pytest\_prototype5\_output.txt}
-    \item \texttt{results/prototype5/verification\_snapshots/orchestrator\_output.txt}
-    \item \texttt{results/prototype5/verification\_snapshots/final\_pack\_generator\_output.txt}
-    \item \texttt{results/prototype5/verification\_snapshots/verification\_summary.md}
-\end{itemize}
-
-The generated evidence files include the final evidence dashboard, claims matrix, dissertation metrics, evidence manifest, Microsoft brief alignment matrix, safety-latency frontier and final pack completion report. Remaining caveats include the absence of production robot safety validation, no statistical generalisation beyond the benchmark, no quantitative cloud cost accounting, no detected GPU/NPU counters in Mode D, and Prototype 1 being context-only evidence.
 
 \bibliographystyle{ACM-Reference-Format}
-\bibliography{references}
+
 
 \end{document}
