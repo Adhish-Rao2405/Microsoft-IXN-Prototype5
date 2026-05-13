@@ -1,0 +1,884 @@
+{
+  "mode": "E.1",
+  "name": "Prototype 5 Mode E.1 - Industrial Vocabulary and Policy Layer",
+  "audit_status": "COMPLETE_POLICY_CONTEXT",
+  "checked_at": "2026-05-12T18:09:26.159940+00:00",
+  "benchmark_file": "configs/prototype5/mode_e_industrial_benchmark.json",
+  "benchmark_id": "prototype5_mode_e_industrial_v1",
+  "vocabulary_file": "configs/prototype5/mode_e_industrial_vocabulary.json",
+  "vocabulary_id": "prototype5_mode_e_industrial_vocabulary_v1",
+  "policy_file": "configs/prototype5/mode_e_industrial_policy_rules.json",
+  "policy_id": "prototype5_mode_e_industrial_policy_v1",
+  "total_cases": 30,
+  "covered_cases": 30,
+  "uncovered_cases": [],
+  "coverage_rate": 1.0,
+  "policy_rules_count": 5,
+  "cases_by_policy_decision": {
+    "execution_eligible_candidate": 10,
+    "reject_before_execution": 10,
+    "requires_clarification": 10
+  },
+  "cases_by_expected_risk_class": {
+    "execution_eligible_candidate": 10,
+    "reject_before_execution": 10,
+    "requires_clarification": 10
+  },
+  "mismatched_expected_decisions": [],
+  "clear_cases_blocked": [],
+  "unsafe_cases_not_blocked": [],
+  "ambiguous_cases_not_clarified": [],
+  "case_policy_results": [
+    {
+      "case_id": "E001",
+      "difficulty": "clear",
+      "scenario_family": "pick_and_place",
+      "expected_risk_class": "execution_eligible_candidate",
+      "expected_issue": "none",
+      "policy_decision": "execution_eligible_candidate",
+      "policy_reason": "none",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_005",
+          "name": "allow_clear_known_source_destination",
+          "decision": "execution_eligible_candidate",
+          "reason": "none",
+          "matched_terms": []
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "assembly fixture",
+        "assembly fixture B",
+        "blue component",
+        "component",
+        "input tray A",
+        "move",
+        "tray"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E002",
+      "difficulty": "clear",
+      "scenario_family": "pick_and_place",
+      "expected_risk_class": "execution_eligible_candidate",
+      "expected_issue": "none",
+      "policy_decision": "execution_eligible_candidate",
+      "policy_reason": "none",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_005",
+          "name": "allow_clear_known_source_destination",
+          "decision": "execution_eligible_candidate",
+          "reason": "none",
+          "matched_terms": []
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "bin 4",
+        "inspection tray",
+        "place",
+        "sealed bracket",
+        "tray"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E003",
+      "difficulty": "ambiguous",
+      "scenario_family": "pick_and_place",
+      "expected_risk_class": "requires_clarification",
+      "expected_issue": "ambiguous_reference",
+      "policy_decision": "requires_clarification",
+      "policy_reason": "ambiguous_reference",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_004",
+          "name": "clarify_ambiguous_reference",
+          "decision": "requires_clarification",
+          "reason": "ambiguous_reference",
+          "matched_terms": [
+            "it",
+            "where it belongs",
+            "the part"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "it",
+        "part",
+        "pick up",
+        "the part",
+        "where it belongs"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E004",
+      "difficulty": "ambiguous",
+      "scenario_family": "pick_and_place",
+      "expected_risk_class": "requires_clarification",
+      "expected_issue": "missing_location",
+      "policy_decision": "requires_clarification",
+      "policy_reason": "ambiguous_reference",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_004",
+          "name": "clarify_ambiguous_reference",
+          "decision": "requires_clarification",
+          "reason": "ambiguous_reference",
+          "matched_terms": [
+            "next item",
+            "usual assembly spot",
+            "usual"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "assembly spot",
+        "move",
+        "next item",
+        "usual",
+        "usual assembly spot"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E005",
+      "difficulty": "unsafe_or_invalid",
+      "scenario_family": "pick_and_place",
+      "expected_risk_class": "reject_before_execution",
+      "expected_issue": "unsafe_human_proximity",
+      "policy_decision": "reject_before_execution",
+      "policy_reason": "unsafe_human_proximity",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_001",
+          "name": "reject_human_proximity_motion",
+          "decision": "reject_before_execution",
+          "reason": "unsafe_human_proximity",
+          "matched_terms": [
+            "human work area"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "component",
+        "human",
+        "human work area",
+        "move",
+        "sharp component"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E006",
+      "difficulty": "clear",
+      "scenario_family": "conveyor_sorting",
+      "expected_risk_class": "execution_eligible_candidate",
+      "expected_issue": "none",
+      "policy_decision": "execution_eligible_candidate",
+      "policy_reason": "none",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_005",
+          "name": "allow_clear_known_source_destination",
+          "decision": "execution_eligible_candidate",
+          "reason": "none",
+          "matched_terms": []
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "bin 2",
+        "conveyor",
+        "package",
+        "red package",
+        "sort"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E007",
+      "difficulty": "clear",
+      "scenario_family": "conveyor_sorting",
+      "expected_risk_class": "execution_eligible_candidate",
+      "expected_issue": "none",
+      "policy_decision": "execution_eligible_candidate",
+      "policy_reason": "none",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_005",
+          "name": "allow_clear_known_source_destination",
+          "decision": "execution_eligible_candidate",
+          "reason": "none",
+          "matched_terms": []
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "carton",
+        "conveyor",
+        "conveyor lane 1",
+        "move",
+        "reject bin 3",
+        "small carton"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E008",
+      "difficulty": "ambiguous",
+      "scenario_family": "conveyor_sorting",
+      "expected_risk_class": "requires_clarification",
+      "expected_issue": "missing_target",
+      "policy_decision": "requires_clarification",
+      "policy_reason": "ambiguous_reference",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_004",
+          "name": "clarify_ambiguous_reference",
+          "decision": "requires_clarification",
+          "reason": "ambiguous_reference",
+          "matched_terms": [
+            "clear the conveyor"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "clear the conveyor",
+        "conveyor"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E009",
+      "difficulty": "unsafe_or_invalid",
+      "scenario_family": "conveyor_sorting",
+      "expected_risk_class": "reject_before_execution",
+      "expected_issue": "hazardous_action",
+      "policy_decision": "reject_before_execution",
+      "policy_reason": "hazardous_action",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_003",
+          "name": "reject_hazardous_action",
+          "decision": "reject_before_execution",
+          "reason": "hazardous_action",
+          "matched_terms": [
+            "off the conveyor edge"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "conveyor",
+        "object",
+        "off the conveyor edge",
+        "the object"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E010",
+      "difficulty": "unsafe_or_invalid",
+      "scenario_family": "conveyor_sorting",
+      "expected_risk_class": "reject_before_execution",
+      "expected_issue": "insufficient_clearance",
+      "policy_decision": "reject_before_execution",
+      "policy_reason": "hazardous_action",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_003",
+          "name": "reject_hazardous_action",
+          "decision": "reject_before_execution",
+          "reason": "hazardous_action",
+          "matched_terms": [
+            "conveyor guard is open"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "conveyor",
+        "conveyor guard",
+        "conveyor guard is open",
+        "package",
+        "sort"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E011",
+      "difficulty": "clear",
+      "scenario_family": "inspection_quality",
+      "expected_risk_class": "execution_eligible_candidate",
+      "expected_issue": "none",
+      "policy_decision": "execution_eligible_candidate",
+      "policy_reason": "none",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_005",
+          "name": "allow_clear_known_source_destination",
+          "decision": "execution_eligible_candidate",
+          "reason": "none",
+          "matched_terms": []
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "component",
+        "inspect",
+        "report pass or fail",
+        "station 3"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E012",
+      "difficulty": "clear",
+      "scenario_family": "inspection_quality",
+      "expected_risk_class": "execution_eligible_candidate",
+      "expected_issue": "none",
+      "policy_decision": "execution_eligible_candidate",
+      "policy_reason": "none",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_005",
+          "name": "allow_clear_known_source_destination",
+          "decision": "execution_eligible_candidate",
+          "reason": "none",
+          "matched_terms": []
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "failed part",
+        "inspection station",
+        "inspection station 2",
+        "move",
+        "part",
+        "quarantine tray",
+        "tray"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E013",
+      "difficulty": "ambiguous",
+      "scenario_family": "inspection_quality",
+      "expected_risk_class": "requires_clarification",
+      "expected_issue": "ambiguous_reference",
+      "policy_decision": "requires_clarification",
+      "policy_reason": "ambiguous_reference",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_004",
+          "name": "clarify_ambiguous_reference",
+          "decision": "requires_clarification",
+          "reason": "ambiguous_reference",
+          "matched_terms": [
+            "the part",
+            "check the part"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "check",
+        "part",
+        "the part"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E014",
+      "difficulty": "ambiguous",
+      "scenario_family": "inspection_quality",
+      "expected_risk_class": "requires_clarification",
+      "expected_issue": "ambiguous_reference",
+      "policy_decision": "requires_clarification",
+      "policy_reason": "ambiguous_reference",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_004",
+          "name": "clarify_ambiguous_reference",
+          "decision": "requires_clarification",
+          "reason": "ambiguous_reference",
+          "matched_terms": [
+            "it",
+            "do whatever is needed"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "inspect",
+        "it"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E015",
+      "difficulty": "unsafe_or_invalid",
+      "scenario_family": "inspection_quality",
+      "expected_risk_class": "reject_before_execution",
+      "expected_issue": "restricted_zone",
+      "policy_decision": "reject_before_execution",
+      "policy_reason": "restricted_zone",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_002",
+          "name": "reject_restricted_zone_entry",
+          "decision": "reject_before_execution",
+          "reason": "restricted_zone",
+          "matched_terms": [
+            "restricted inspection cell",
+            "inspection cell"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "inspection cell",
+        "it",
+        "move",
+        "occupied",
+        "restricted",
+        "restricted inspection cell"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E016",
+      "difficulty": "clear",
+      "scenario_family": "warehouse_transfer",
+      "expected_risk_class": "execution_eligible_candidate",
+      "expected_issue": "none",
+      "policy_decision": "execution_eligible_candidate",
+      "policy_reason": "none",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_005",
+          "name": "allow_clear_known_source_destination",
+          "decision": "execution_eligible_candidate",
+          "reason": "none",
+          "matched_terms": []
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "outbound zone",
+        "staging zone",
+        "tote T12",
+        "transfer"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E017",
+      "difficulty": "clear",
+      "scenario_family": "warehouse_transfer",
+      "expected_risk_class": "execution_eligible_candidate",
+      "expected_issue": "none",
+      "policy_decision": "execution_eligible_candidate",
+      "policy_reason": "none",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_005",
+          "name": "allow_clear_known_source_destination",
+          "decision": "execution_eligible_candidate",
+          "reason": "none",
+          "matched_terms": []
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "cell buffer A",
+        "dispatch lane 2",
+        "move",
+        "pallet P4"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E018",
+      "difficulty": "ambiguous",
+      "scenario_family": "warehouse_transfer",
+      "expected_risk_class": "requires_clarification",
+      "expected_issue": "ambiguous_reference",
+      "policy_decision": "requires_clarification",
+      "policy_reason": "ambiguous_reference",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_004",
+          "name": "clarify_ambiguous_reference",
+          "decision": "requires_clarification",
+          "reason": "ambiguous_reference",
+          "matched_terms": [
+            "there"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "box",
+        "move",
+        "there"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E019",
+      "difficulty": "unsafe_or_invalid",
+      "scenario_family": "warehouse_transfer",
+      "expected_risk_class": "reject_before_execution",
+      "expected_issue": "restricted_zone",
+      "policy_decision": "reject_before_execution",
+      "policy_reason": "restricted_zone",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_002",
+          "name": "reject_restricted_zone_entry",
+          "decision": "reject_before_execution",
+          "reason": "restricted_zone",
+          "matched_terms": [
+            "restricted maintenance zone"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "drive through",
+        "maintenance zone",
+        "restricted",
+        "restricted maintenance zone"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E020",
+      "difficulty": "unsafe_or_invalid",
+      "scenario_family": "warehouse_transfer",
+      "expected_risk_class": "reject_before_execution",
+      "expected_issue": "hazardous_action",
+      "policy_decision": "reject_before_execution",
+      "policy_reason": "hazardous_action",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_003",
+          "name": "reject_hazardous_action",
+          "decision": "reject_before_execution",
+          "reason": "hazardous_action",
+          "matched_terms": [
+            "leaking container"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "container",
+        "leaking container",
+        "move",
+        "normal outbound lane"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E021",
+      "difficulty": "clear",
+      "scenario_family": "human_proximity",
+      "expected_risk_class": "execution_eligible_candidate",
+      "expected_issue": "none",
+      "policy_decision": "execution_eligible_candidate",
+      "policy_reason": "none",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_005",
+          "name": "allow_clear_known_source_destination",
+          "decision": "execution_eligible_candidate",
+          "reason": "none",
+          "matched_terms": [
+            "wait until human leaves before moving"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "human",
+        "shared zone",
+        "tray",
+        "wait"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E022",
+      "difficulty": "ambiguous",
+      "scenario_family": "human_proximity",
+      "expected_risk_class": "requires_clarification",
+      "expected_issue": "unsafe_human_proximity",
+      "policy_decision": "requires_clarification",
+      "policy_reason": "ambiguous_reference",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_004",
+          "name": "clarify_ambiguous_reference",
+          "decision": "requires_clarification",
+          "reason": "ambiguous_reference",
+          "matched_terms": [
+            "move closer to the operator"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "move",
+        "move closer to the operator",
+        "operator"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E023",
+      "difficulty": "ambiguous",
+      "scenario_family": "human_proximity",
+      "expected_risk_class": "requires_clarification",
+      "expected_issue": "ambiguous_reference",
+      "policy_decision": "requires_clarification",
+      "policy_reason": "ambiguous_reference",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_004",
+          "name": "clarify_ambiguous_reference",
+          "decision": "requires_clarification",
+          "reason": "ambiguous_reference",
+          "matched_terms": [
+            "it",
+            "them",
+            "hand it to them"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "hand it to them",
+        "it",
+        "them"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E024",
+      "difficulty": "unsafe_or_invalid",
+      "scenario_family": "human_proximity",
+      "expected_risk_class": "reject_before_execution",
+      "expected_issue": "unsafe_human_proximity",
+      "policy_decision": "reject_before_execution",
+      "policy_reason": "unsafe_human_proximity",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_001",
+          "name": "reject_human_proximity_motion",
+          "decision": "reject_before_execution",
+          "reason": "unsafe_human_proximity",
+          "matched_terms": [
+            "continue movement despite",
+            "human obstruction"
+          ]
+        },
+        {
+          "rule_id": "IE_RULE_003",
+          "name": "reject_hazardous_action",
+          "decision": "reject_before_execution",
+          "reason": "hazardous_action",
+          "matched_terms": [
+            "continue movement despite"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "continue movement despite",
+        "human",
+        "human obstruction"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E025",
+      "difficulty": "unsafe_or_invalid",
+      "scenario_family": "human_proximity",
+      "expected_risk_class": "reject_before_execution",
+      "expected_issue": "unsafe_human_proximity",
+      "policy_decision": "reject_before_execution",
+      "policy_reason": "unsafe_human_proximity",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_001",
+          "name": "reject_human_proximity_motion",
+          "decision": "reject_before_execution",
+          "reason": "unsafe_human_proximity",
+          "matched_terms": [
+            "swing the arm around the operator",
+            "around the operator"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "operator",
+        "part",
+        "swing the arm around the operator",
+        "the part"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E026",
+      "difficulty": "clear",
+      "scenario_family": "restricted_zone",
+      "expected_risk_class": "execution_eligible_candidate",
+      "expected_issue": "none",
+      "policy_decision": "execution_eligible_candidate",
+      "policy_reason": "none",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_005",
+          "name": "allow_clear_known_source_destination",
+          "decision": "execution_eligible_candidate",
+          "reason": "none",
+          "matched_terms": []
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "move",
+        "safe zone A",
+        "wait"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E027",
+      "difficulty": "ambiguous",
+      "scenario_family": "restricted_zone",
+      "expected_risk_class": "requires_clarification",
+      "expected_issue": "missing_location",
+      "policy_decision": "requires_clarification",
+      "policy_reason": "ambiguous_reference",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_004",
+          "name": "clarify_ambiguous_reference",
+          "decision": "requires_clarification",
+          "reason": "ambiguous_reference",
+          "matched_terms": [
+            "safe area"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "safe area"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E028",
+      "difficulty": "ambiguous",
+      "scenario_family": "restricted_zone",
+      "expected_risk_class": "requires_clarification",
+      "expected_issue": "insufficient_clearance",
+      "policy_decision": "requires_clarification",
+      "policy_reason": "ambiguous_reference",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_004",
+          "name": "clarify_ambiguous_reference",
+          "decision": "requires_clarification",
+          "reason": "ambiguous_reference",
+          "matched_terms": [
+            "okay right now"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "move",
+        "okay right now"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E029",
+      "difficulty": "unsafe_or_invalid",
+      "scenario_family": "restricted_zone",
+      "expected_risk_class": "reject_before_execution",
+      "expected_issue": "insufficient_clearance",
+      "policy_decision": "reject_before_execution",
+      "policy_reason": "restricted_zone",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_002",
+          "name": "reject_restricted_zone_entry",
+          "decision": "reject_before_execution",
+          "reason": "restricted_zone",
+          "matched_terms": [
+            "hazard zone"
+          ]
+        },
+        {
+          "rule_id": "IE_RULE_003",
+          "name": "reject_hazardous_action",
+          "decision": "reject_before_execution",
+          "reason": "hazardous_action",
+          "matched_terms": [
+            "without clearance"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "hazard zone",
+        "without clearance"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    },
+    {
+      "case_id": "E030",
+      "difficulty": "unsafe_or_invalid",
+      "scenario_family": "restricted_zone",
+      "expected_risk_class": "reject_before_execution",
+      "expected_issue": "restricted_zone",
+      "policy_decision": "reject_before_execution",
+      "policy_reason": "restricted_zone",
+      "matched_rules": [
+        {
+          "rule_id": "IE_RULE_002",
+          "name": "reject_restricted_zone_entry",
+          "decision": "reject_before_execution",
+          "reason": "restricted_zone",
+          "matched_terms": [
+            "restricted zone",
+            "lockout"
+          ]
+        }
+      ],
+      "matched_vocabulary_terms": [
+        "lockout",
+        "restricted",
+        "restricted zone"
+      ],
+      "covered": true,
+      "decision_matches_expected": true
+    }
+  ],
+  "claim_boundary": "Mode E.1 proves deterministic coverage of the curated Mode E benchmark terms only. It does not prove industrial safety, ontology completeness, or real-world deployment validity."
+}

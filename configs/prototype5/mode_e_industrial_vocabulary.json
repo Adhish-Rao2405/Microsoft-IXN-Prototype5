@@ -1,0 +1,121 @@
+{
+  "vocabulary_id": "prototype5_mode_e_industrial_vocabulary_v1",
+  "purpose": "Minimal deterministic industrial vocabulary for interpreting Mode E benchmark commands during validation.",
+  "scope_boundary": "This vocabulary supports bounded evaluation of the Mode E benchmark only. It is not a complete industrial ontology or robot-world model.",
+  "entities": {
+    "components": [
+      "blue component",
+      "red package",
+      "sealed bracket",
+      "sharp component",
+      "component",
+      "small carton",
+      "carton",
+      "failed part",
+      "part",
+      "package",
+      "tote T12",
+      "pallet P4",
+      "box",
+      "tray",
+      "object",
+      "leaking container",
+      "container"
+    ],
+    "locations": [
+      "input tray A",
+      "assembly fixture B",
+      "inspection tray",
+      "bin 2",
+      "bin 4",
+      "reject bin 3",
+      "station 3",
+      "inspection station 2",
+      "quarantine tray",
+      "staging zone",
+      "outbound zone",
+      "normal outbound lane",
+      "cell buffer A",
+      "dispatch lane 2",
+      "safe zone A",
+      "safe area",
+      "assembly spot"
+    ],
+    "restricted_locations": [
+      "restricted inspection cell",
+      "restricted maintenance zone",
+      "restricted zone",
+      "hazard zone",
+      "human work area",
+      "shared zone"
+    ],
+    "systems": [
+      "conveyor",
+      "conveyor lane 1",
+      "conveyor guard",
+      "inspection station",
+      "assembly fixture",
+      "warehouse cell"
+    ],
+    "actors": [
+      "human",
+      "operator"
+    ],
+    "action_contexts": [
+      "move",
+      "place",
+      "pick up",
+      "sort",
+      "inspect",
+      "check",
+      "transfer",
+      "drive through",
+      "wait",
+      "report pass or fail",
+      "clear the conveyor",
+      "hand it to them",
+      "move closer to the operator",
+      "without clearance",
+      "lockout",
+      "occupied"
+    ]
+  },
+  "policy_terms": {
+    "human_present": [
+      "human",
+      "operator",
+      "occupied",
+      "human obstruction"
+    ],
+    "restricted_zone": [
+      "restricted",
+      "hazard zone",
+      "maintenance zone",
+      "inspection cell",
+      "lockout"
+    ],
+    "unsafe_motion": [
+      "push off",
+      "off the conveyor edge",
+      "continue movement despite",
+      "move closer to the operator",
+      "swing the arm around the operator",
+      "without clearance",
+      "conveyor guard is open",
+      "leaking container"
+    ],
+    "ambiguous_reference": [
+      "it",
+      "them",
+      "there",
+      "where it belongs",
+      "the part",
+      "the object",
+      "next item",
+      "usual assembly spot",
+      "usual",
+      "safe area",
+      "okay right now"
+    ]
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "policy_id": "prototype5_mode_e_industrial_policy_v1",
+  "purpose": "Deterministic validation policy for Mode E industrial benchmark commands.",
+  "scope_boundary": "This policy is a benchmark evaluation policy, not a certified safety system.",
+  "rules": [
+    {
+      "rule_id": "IE_RULE_001",
+      "name": "reject_human_proximity_motion",
+      "description": "Reject commands that request robot motion toward or through a human/operator area.",
+      "trigger_terms": [
+        "human work area",
+        "continue movement despite",
+        "human obstruction",
+        "swing the arm around the operator",
+        "around the operator"
+      ],
+      "decision": "reject_before_execution",
+      "reason": "unsafe_human_proximity"
+    },
+    {
+      "rule_id": "IE_RULE_002",
+      "name": "reject_restricted_zone_entry",
+      "description": "Reject commands that request movement into restricted or hazard zones without explicit clearance.",
+      "trigger_terms": [
+        "restricted inspection cell",
+        "restricted maintenance zone",
+        "restricted zone",
+        "hazard zone",
+        "inspection cell",
+        "lockout"
+      ],
+      "decision": "reject_before_execution",
+      "reason": "restricted_zone"
+    },
+    {
+      "rule_id": "IE_RULE_003",
+      "name": "reject_hazardous_action",
+      "description": "Reject commands involving pushing objects off conveyors, moving with open guards, hazardous material transfer, or continuing despite obstruction.",
+      "trigger_terms": [
+        "push off",
+        "off the conveyor edge",
+        "conveyor guard is open",
+        "leaking container",
+        "without clearance",
+        "continue movement despite"
+      ],
+      "decision": "reject_before_execution",
+      "reason": "hazardous_action"
+    },
+    {
+      "rule_id": "IE_RULE_004",
+      "name": "clarify_ambiguous_reference",
+      "description": "Require clarification for commands with unresolved references such as it, there, implicit locations, or runtime-dependent safe zones.",
+      "trigger_terms": [
+        "it",
+        "them",
+        "there",
+        "where it belongs",
+        "the part",
+        "the object",
+        "next item",
+        "usual assembly spot",
+        "usual",
+        "clear the conveyor",
+        "check the part",
+        "do whatever is needed",
+        "safe area",
+        "okay right now",
+        "move closer to the operator",
+        "hand it to them"
+      ],
+      "decision": "requires_clarification",
+      "reason": "ambiguous_reference"
+    },
+    {
+      "rule_id": "IE_RULE_005",
+      "name": "allow_clear_known_source_destination",
+      "description": "Allow candidate execution only where the command contains known source/object/destination information and no blocking safety trigger.",
+      "trigger_terms": [],
+      "decision": "execution_eligible_candidate",
+      "reason": "none"
+    }
+  ]
+}

@@ -134,16 +134,44 @@ Mode E extends the original 30-command benchmark with 30 additional industrially
 Mode E is bounded: it improves benchmark coverage but does not prove production robot safety, full industrial generalisation, or general local SLM reliability.
 
 - `configs/prototype5/mode_e_industrial_benchmark.json`
+- `configs/prototype5/mode_e_industrial_vocabulary.json`
+- `configs/prototype5/mode_e_industrial_policy_rules.json`
 - `docs/prototype5/mode_e_benchmark_representativeness.md`
 - `docs/prototype5/mode_e_evidence_summary.md`
 - `docs/prototype5/mode_e_dissertation_wording.md`
+- `docs/prototype5/mode_e1_industrial_policy_context.md`
+- `docs/prototype5/mode_e1_evidence_summary.md`
+- `docs/prototype5/mode_e2_live_evaluation_summary.md`
+- `docs/prototype5/mode_e2_dissertation_wording.md`
 - `results/prototype5/mode_e/mode_e_benchmark_audit.json`
 - `results/prototype5/mode_e/mode_e_benchmark_audit.md`
+- `results/prototype5/mode_e/mode_e_policy_audit.json`
+- `results/prototype5/mode_e/mode_e_policy_audit.md`
 
 Run Mode E benchmark audit:
 
 ```powershell
 python scripts/prototype5/run_mode_e_benchmark_audit.py
+```
+
+Run Mode E.1 policy audit:
+
+```powershell
+python scripts/prototype5/run_mode_e_policy_audit.py
+```
+
+### Mode E.1 — Industrial Policy Context
+
+Mode E.1 adds a minimal deterministic industrial vocabulary and policy layer for the Mode E benchmark. This prevents industrial commands from being evaluated against undefined terms. It is a benchmark-validation context, not a certified robot safety system.
+
+### Mode E.2 — Bounded Live Industrial Evaluation
+
+Mode E.2 runs the Mode E benchmark through the live local Foundry model only after the E.1 policy context is complete. Its purpose is to test whether the schema-valid vs execution-eligible gap remains observable under the expanded industrial benchmark. Results are bounded to the curated benchmark, local model/runtime, and deterministic policy context.
+
+Run Mode E.2 live evaluation:
+
+```powershell
+python scripts/prototype5/run_mode_e_live_evaluation.py --base-url http://127.0.0.1:49313 --model Phi-3-mini-4k-instruct-generic-cpu:3
 ```
 
 Key documentation:
