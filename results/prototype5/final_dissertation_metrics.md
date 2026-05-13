@@ -4,7 +4,7 @@ Prototype 5 consolidates existing evidence only. It does not introduce new infer
 
 Prototype 1 is treated as optional early feasibility/context evidence. Missing Prototype 1 audit files are not counted as missing core proof and do not change the final model, zero-trust, local-vs-cloud, resource, quantisation, or physical-execution metrics below.
 
-- Proven claims: 11
+- Proven claims: 14
 - Context-only claims: 1
 - Missing evidence claims: 2
 - Quantisation evidence: COMPLETE_CUSTOM_EVIDENCE
@@ -53,6 +53,15 @@ Complete custom precision evidence was recovered for FP16, INT8 and INT4 when `q
 - Live Foundry JSON-valid rate: 0.8
 - Live Foundry mean latency: 7896.97 ms
 - Live Foundry normalized mean CPU: 48.31%
+
+## Mode E.2 Live Industrial Benchmark
+- Mode E.2 status: COMPLETE_LIVE_INDUSTRIAL_EVALUATION
+- schema_valid_rate = 0.6333
+- execution_eligible_rate = 0.1
+- schema_valid_minus_execution_eligible_gap = 0.5333
+- pipeline_false_accepts = 0
+- mean_latency_ms = 28359.26
+- Boundary: Mode E.2 is bounded to a curated industrial benchmark, deterministic policy context, single local model/runtime and single machine. It is not proof of general industrial deployment readiness and does not prove production robot safety.
 
 ## Limitations
 | limitation                                | status  | safe_interpretation                                                                                                              |

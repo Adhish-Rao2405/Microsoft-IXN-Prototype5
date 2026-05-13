@@ -133,9 +133,19 @@ Mode E extends the original 30-command benchmark with 30 additional industrially
 
 Mode E is bounded: it improves benchmark coverage but does not prove production robot safety, full industrial generalisation, or general local SLM reliability.
 
+Mode E/E.1/E.2 complete:
+
+- Mode E benchmark audit: `COMPLETE_BALANCED_EXTENSION`
+- Mode E.1 policy audit: `COMPLETE_POLICY_CONTEXT`
+- Mode E.2 live industrial evaluation: `COMPLETE_LIVE_INDUSTRIAL_EVALUATION`
+- Tests: 104 passed
+
 - `configs/prototype5/mode_e_industrial_benchmark.json`
 - `configs/prototype5/mode_e_industrial_vocabulary.json`
 - `configs/prototype5/mode_e_industrial_policy_rules.json`
+- `docs/prototype5/mode_e_final_evidence_summary.md`
+- `docs/prototype5/mode_e_lee_feedback_closure.md`
+- `docs/prototype5/mode_e_final_dissertation_wording.md`
 - `docs/prototype5/mode_e_benchmark_representativeness.md`
 - `docs/prototype5/mode_e_evidence_summary.md`
 - `docs/prototype5/mode_e_dissertation_wording.md`
@@ -147,6 +157,8 @@ Mode E is bounded: it improves benchmark coverage but does not prove production 
 - `results/prototype5/mode_e/mode_e_benchmark_audit.md`
 - `results/prototype5/mode_e/mode_e_policy_audit.json`
 - `results/prototype5/mode_e/mode_e_policy_audit.md`
+- `results/prototype5/mode_e/mode_e2_live_industrial_summary.json`
+- `results/prototype5/mode_e/mode_e2_live_industrial_results.csv`
 
 Run Mode E benchmark audit:
 

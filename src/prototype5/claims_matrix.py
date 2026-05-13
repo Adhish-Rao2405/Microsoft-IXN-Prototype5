@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from .simple_table import Table, numeric
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _present(status: dict[str, dict[str, str]], *names: str) -> bool:
@@ -280,6 +284,72 @@ def create_claims_matrix(
                 "unsafe_wording_to_avoid": "Do not claim live local resource utilisation evidence.",
             }
         )
+
+    mode_e_claims = [
+        {
+            "claim": "C15: A balanced industrial benchmark extension was created to improve scenario coverage beyond the original 30-command benchmark.",
+            "status": "PROVEN",
+            "evidence_source": (
+                "configs/prototype5/mode_e_industrial_benchmark.json; "
+                "results/prototype5/mode_e/mode_e_benchmark_audit.json; "
+                "docs/prototype5/mode_e_benchmark_representativeness.md"
+            ),
+            "safe_dissertation_wording": (
+                "Prototype 5 Mode E created and audited a balanced 30-command "
+                "industrial benchmark extension. This is a benchmark design/audit "
+                "claim only and does not prove comprehensive industrial coverage."
+            ),
+            "unsafe_wording_to_avoid": (
+                "Do not claim Mode E makes the benchmark comprehensive or proves "
+                "industrial deployment readiness or production robot safety."
+            ),
+        },
+        {
+            "claim": "C16: A deterministic industrial vocabulary and policy context was created to support bounded validation of the Mode E benchmark.",
+            "status": "PROVEN",
+            "evidence_source": (
+                "configs/prototype5/mode_e_industrial_vocabulary.json; "
+                "configs/prototype5/mode_e_industrial_policy_rules.json; "
+                "results/prototype5/mode_e/mode_e_policy_audit.json; "
+                "docs/prototype5/mode_e1_industrial_policy_context.md"
+            ),
+            "safe_dissertation_wording": (
+                "Mode E.1 created a deterministic industrial vocabulary and policy "
+                "context for the curated Mode E benchmark terms and assumptions. "
+                "It is not a certified safety system."
+            ),
+            "unsafe_wording_to_avoid": (
+                "Do not claim the Mode E.1 policy is a production or certified "
+                "industrial robot safety system, and do not claim production robot safety."
+            ),
+        },
+    ]
+    mode_e2_summary = REPO_ROOT / "results" / "prototype5" / "mode_e" / "mode_e2_live_industrial_summary.json"
+    if mode_e2_summary.exists():
+        mode_e_claims.append(
+            {
+                "claim": "C17: Under the Mode E industrial benchmark and E.1 deterministic policy context, live local Foundry evaluation preserved the core schema-valid vs execution-eligible gap and produced zero pipeline false accepts.",
+                "status": "PROVEN",
+                "evidence_source": (
+                    "results/prototype5/mode_e/mode_e2_live_industrial_results.csv; "
+                    "results/prototype5/mode_e/mode_e2_live_industrial_summary.json; "
+                    "results/prototype5/mode_e/mode_e2_live_industrial_summary.md"
+                ),
+                "safe_dissertation_wording": (
+                    "Under the curated Mode E industrial benchmark, selected local "
+                    "Phi-3-mini model alias, Foundry Local runtime, single machine "
+                    "context and deterministic policy context, the schema-valid "
+                    "minus execution-eligible gap was 0.5333 and pipeline false "
+                    "accepts remained zero."
+                ),
+                "unsafe_wording_to_avoid": (
+                    "Do not claim production robot safety, full industrial "
+                    "generalisation, universal local SLM reliability or real robot "
+                    "execution from Mode E.2."
+                ),
+            }
+        )
+    rows.extend(mode_e_claims)
 
     missing_claims = [
         ("physical robot execution is not proven.", "Do not claim physical robot execution or deployment validation."),

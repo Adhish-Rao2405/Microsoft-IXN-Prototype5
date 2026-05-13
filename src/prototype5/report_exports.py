@@ -51,6 +51,40 @@ def _markdown_table(df: Table, max_rows: int | None = None) -> str:
     return "\n".join([fmt(headers), separator, *(fmt(row) for row in rows)])
 
 
+def _load_mode_e2_summary(results_dir: Path = RESULTS_DIR) -> dict[str, Any]:
+    path = results_dir / "mode_e" / "mode_e2_live_industrial_summary.json"
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _mode_e2_metrics_lines(results_dir: Path = RESULTS_DIR) -> list[str]:
+    summary = _load_mode_e2_summary(results_dir)
+    if not summary:
+        return [
+            "## Mode E.2 Live Industrial Benchmark",
+            "- Mode E.2 status: MISSING",
+        ]
+    return [
+        "## Mode E.2 Live Industrial Benchmark",
+        f"- Mode E.2 status: {summary.get('run_status', 'MISSING')}",
+        f"- schema_valid_rate = {summary.get('schema_valid_rate', 'NOT_AVAILABLE')}",
+        f"- execution_eligible_rate = {summary.get('execution_eligible_rate', 'NOT_AVAILABLE')}",
+        (
+            "- schema_valid_minus_execution_eligible_gap = "
+            f"{summary.get('schema_valid_minus_execution_eligible_gap', 'NOT_AVAILABLE')}"
+        ),
+        f"- pipeline_false_accepts = {summary.get('pipeline_false_accepts', 'NOT_AVAILABLE')}",
+        f"- mean_latency_ms = {summary.get('mean_latency_ms', 'NOT_AVAILABLE')}",
+        (
+            "- Boundary: Mode E.2 is bounded to a curated industrial benchmark, "
+            "deterministic policy context, single local model/runtime and single "
+            "machine. It is not proof of general industrial deployment readiness "
+            "and does not prove production robot safety."
+        ),
+    ]
+
+
 def build_final_dissertation_metrics_md(
     model_comparison: Table,
     zero_trust_comparison: Table,
@@ -124,6 +158,8 @@ def build_final_dissertation_metrics_md(
             "Complete custom precision evidence was recovered for FP16, INT8 and INT4 when `quantisation_status` is `COMPLETE_CUSTOM_EVIDENCE`. Built-in Foundry Local catalogue precision metadata remains missing.",
             "",
             *mode_d_lines,
+            "",
+            *_mode_e2_metrics_lines(),
             "",
             "## Limitations",
             _markdown_table(limitations_matrix),
