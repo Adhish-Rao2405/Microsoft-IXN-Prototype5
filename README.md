@@ -4,7 +4,7 @@
 
 This repository contains the final dissertation-focused evidence orchestration layer for the Microsoft IXN Foundry Local zero-trust SLM robot task-planning project.
 
-Prototype 5 does not introduce new robot-planning logic. It consolidates and audits existing evidence from Prototypes 1–4 into dissertation-ready tables, summaries, and claim matrices.
+Prototype 5's core orchestrator does not introduce new planning logic. Later evidence modes include bounded evaluation runs, including E0.4 repeatability testing and Mode E.2 live industrial benchmark evaluation. The repository consolidates and audits evidence into dissertation-ready tables, summaries, and claim matrices.
 
 ## Role
 
@@ -43,6 +43,21 @@ The final state includes:
 - Mode B: quantisation and Phi-family recovery.
 - Mode C: local-vs-cloud comparison.
 - Mode D: live Foundry Local resource profiling.
+- Mode E0: reproducibility/repeatability hardening.
+- Mode E: industrial benchmark extension.
+- Mode E.1: industrial vocabulary/policy context.
+- Mode E.2: bounded live industrial benchmark evaluation.
+
+Current final evidence status:
+
+- E0.4 full live pipeline repeatability: `COMPLETE`
+- Mode E benchmark audit: `COMPLETE_BALANCED_EXTENSION`
+- Mode E.1 policy audit: `COMPLETE_POLICY_CONTEXT`
+- Mode E.2 live industrial evaluation: `COMPLETE_LIVE_INDUSTRIAL_EVALUATION`
+- Prototype 5 tests: 107 passed
+- Orchestrator: `COMPLETE`
+
+Mode E.2 is evidence under a curated industrial benchmark and deterministic policy context. It does not prove production robot safety or general industrial deployment readiness.
 
 Run tests:
 
@@ -138,7 +153,7 @@ Mode E/E.1/E.2 complete:
 - Mode E benchmark audit: `COMPLETE_BALANCED_EXTENSION`
 - Mode E.1 policy audit: `COMPLETE_POLICY_CONTEXT`
 - Mode E.2 live industrial evaluation: `COMPLETE_LIVE_INDUSTRIAL_EVALUATION`
-- Tests: 104 passed
+- Tests: 107 passed
 
 - `configs/prototype5/mode_e_industrial_benchmark.json`
 - `configs/prototype5/mode_e_industrial_vocabulary.json`

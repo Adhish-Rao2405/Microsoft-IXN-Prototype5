@@ -369,6 +369,7 @@ def generate_final_evidence_dashboard(context: dict[str, Any]) -> Path:
         ("Local-vs-cloud comparison shows a deployment trade-off, not a universal winner.", "`results/prototype5/mode_c/local_vs_cloud_summary.json`", "Prototype 5 Mode C", "local_latency_ms, cloud_latency_ms, json_valid, privacy/offline categories", f"Cloud: 30/30 requests, {_value(mode_c.get('cloud_mean_latency_ms'))} ms mean latency, {_percent(mode_c.get('cloud_json_valid_rate'))} JSON-valid. Local: 30/30 requests, {_value(mode_c.get('local_mean_latency_ms'))} ms mean latency, {_percent(mode_c.get('local_json_valid_rate'))} JSON-valid.", "Cost was not quantitatively measured; semantic equivalence is not claimed.", "Chapter 4 deployment comparison; Chapter 5 discussion"),
         ("Local inference has measurable CPU/memory/resource pressure.", "`results/prototype5/mode_d/mode_d_final_evidence_summary.json`; `results/prototype5/mode_d/manual_live_30_command_foundry_process_profile.csv`", "Prototype 5 Mode D", "cpu_usage, memory_usage, resource_pressure, latency_ms", f"Mode D recorded normalized mean CPU {_value(mode_d.get('normalized_mean_foundry_cpu_percent_of_total_logical_capacity'))}% and mean latency {_value(mode_d.get('mean_latency_ms'))} ms.", "Resource data is hardware-specific and GPU/NPU counters were not detected.", "Chapter 4 resource profile; Chapter 5 deployment feasibility"),
         ("The project is industry-positioned for industrial robot task planning.", "`docs/industry_use_case_industrial_robotics.md`; `docs/benchmark_card.md`", "Prototype 5 final pack", "industry scenario, benchmark domain, stakeholder mapping", "Final documentation frames the work as a local natural-language interface for an industrial robot workcell.", "Industry positioning is a use-case framing, not factory deployment proof.", "Chapter 1/3 motivation; Chapter 5 deployment discussion"),
+        ("Mode E industrial benchmark extension preserves the validation-gap argument under bounded industrial conditions.", "`configs/prototype5/mode_e_industrial_benchmark.json`; `configs/prototype5/mode_e_industrial_vocabulary.json`; `configs/prototype5/mode_e_industrial_policy_rules.json`; `results/prototype5/mode_e/mode_e2_live_industrial_summary.json`", "Prototype 5 Mode E/E.1/E.2", "schema_valid_rate, execution_eligible_rate, schema_valid_minus_execution_eligible_gap, pipeline_false_accepts, latency_ms", "C15: balanced industrial benchmark extension. C16: deterministic industrial vocabulary/policy context. C17: Mode E.2 live evaluation reported schema_valid_rate = 0.6333, execution_eligible_rate = 0.1, schema_valid_minus_execution_eligible_gap = 0.5333, pipeline_false_accepts = 0, mean_latency_ms = 28359.26 and max_latency_ms = 66928.25.", "Mode E.2 is bounded to the curated industrial benchmark, E.1 deterministic policy context, single local Phi-3-mini model alias, single Foundry Local runtime/machine, and no real robot execution. It does not prove production robot safety or general industrial deployment readiness.", "Chapter 4 benchmark extension; Chapter 5 validity boundary"),
         ("Prototype 1 is optional early feasibility/context evidence, not a core proof dependency.", "`docs/prototype1_context_note.md`; `results/prototype5/final_claims_matrix.csv`; `results/prototype5/final_evidence_manifest.json`", "Prototype 1 context; Prototype 5 final pack", "context status, core_claim_dependency", "Missing Prototype 1 audit files are classified as optional context and do not affect core final claims.", "Do not use Prototype 1 as proof of final robot safety, deployment readiness or zero-trust effectiveness.", "Chapter 3 prototype evolution; Chapter 5 validity boundary"),
         ("PyBullet, if present, is a visual execution-context demonstrator only.", "`docs/claim_boundaries.md`; optional future `src/prototype5/pybullet_execution_visualiser/`", "Prototype 5 optional extension", "execution_eligible, rejection_reason, dry-run/demo trace", "No PyBullet visualiser is currently detected; if added, it should visualise accepted/rejected proposals only.", "PyBullet does not prove physical robot safety or execution.", "Chapter 5 future work or demonstration appendix"),
     ]
@@ -380,6 +381,10 @@ This dashboard connects dissertation claims to detected evidence, metrics, resul
 | Claim | Evidence file | Prototype source | Metric(s) | Result summary | Caveat | Dissertation chapter relevance |
 |---|---|---|---|---|---|---|
 {table}
+
+Note: Mode E claims are labelled C15-C17 to preserve traceability for the new benchmark-extension evidence. Earlier claims are retained in their existing row format to avoid rewriting historical evidence mappings.
+
+The latency profile constrains the deployment interpretation. Mode E.2 mean latency was 28.36s and maximum latency was 66.93s on the tested CPU local runtime. Therefore, the credible deployment framing is local-first supervisory task proposal and validation, not low-latency closed-loop robot control.
 """
     return _write(RESULTS_DIR / "final_evidence_dashboard.md", content)
 
@@ -717,7 +722,7 @@ def generate_completion_report(generated: list[Path]) -> Path:
 
 ## Test Results
 
-- 62 passed.
+- 107 passed.
 
 ## Orchestrator Result
 
@@ -726,6 +731,10 @@ def generate_completion_report(generated: list[Path]) -> Path:
 - Generated outputs reported by orchestrator: 12.
 - Mode C status: COMPLETE.
 - Mode D status: COMPLETE_LIVE_PROFILE.
+- E0.4 full live pipeline repeatability: COMPLETE.
+- Mode E benchmark audit: COMPLETE_BALANCED_EXTENSION.
+- Mode E.1 policy audit: COMPLETE_POLICY_CONTEXT.
+- Mode E.2 live industrial evaluation: COMPLETE_LIVE_INDUSTRIAL_EVALUATION.
 - Live Foundry profile: PRESENT.
 
 ## Final Pack Generator Result
@@ -746,6 +755,7 @@ def generate_completion_report(generated: list[Path]) -> Path:
 
 Prototype 5 remains an evidence-orchestration and dissertation-reporting layer. It does not merge, rewrite or refactor Prototypes 1-4. Missing source evidence is marked as missing rather than fabricated.
 Prototype 1 may be cited as early feasibility context only; the final claims rest on Prototype 3, Prototype 4 and Prototype 5 evidence.
+Mode E.2 is evidence under a curated industrial benchmark and deterministic policy context. It does not prove production robot safety or general industrial deployment readiness.
 
 ## Next Dissertation-Writing Actions
 

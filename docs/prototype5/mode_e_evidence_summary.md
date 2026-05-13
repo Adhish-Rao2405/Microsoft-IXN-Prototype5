@@ -1,5 +1,10 @@
 # Mode E Evidence Summary
 
+> Status note: This document was created before Mode E.2 live evaluation was completed. It is retained for audit history. For the final Mode E evidence and dissertation wording, use:
+> - `docs/prototype5/mode_e_final_evidence_summary.md`
+> - `docs/prototype5/mode_e_final_dissertation_wording.md`
+> - `docs/prototype5/mode_e_lee_feedback_closure.md`
+
 ## Mode E Objective
 
 Mode E is a tightly scoped industrial benchmark extension and representativeness audit. It does not add a dashboard, simulator, robot controller or new prototype. Its objective is to improve the benchmark basis for the dissertation by adding 30 industrially motivated commands.
@@ -25,7 +30,9 @@ The benchmark audit output is stored in `results/prototype5/mode_e/mode_e_benchm
 
 ## Evaluation Method
 
-The current Mode E implementation validates the benchmark structure and documents its representativeness boundary. Live model evaluation is intentionally not included in this first Mode E step. Reusing the E0.4 live runner directly would be methodologically weak because the current deterministic safety policy and scene assumptions are not yet adapted to the new industrial object and zone vocabulary.
+Historical/pre-E.2 note: the first Mode E step validated the benchmark structure and documented its representativeness boundary. Live model evaluation was intentionally not included in that initial step because the deterministic safety policy and scene assumptions had not yet been adapted to the new industrial object and zone vocabulary.
+
+The final Mode E evidence now includes Mode E.1 deterministic vocabulary/policy context and Mode E.2 bounded live industrial evaluation. Use `docs/prototype5/mode_e_final_evidence_summary.md` as the source of truth for the final evidence state.
 
 ## Key Metrics
 
@@ -43,11 +50,11 @@ The expected coverage status is `COMPLETE_BALANCED_EXTENSION` when all structura
 
 ## Comparison With E0.4
 
-E0.4 produced full live repeatability evidence for the original 30-command benchmark under the tested conditions. Mode E does not replace that evidence. Instead, it creates a broader benchmark extension that can be used in a future live evaluation to test whether the E0.4 validation gap remains observable under broader industrial scenario coverage.
+Historical/pre-E.2 note: E0.4 produced full live repeatability evidence for the original 30-command benchmark under the tested conditions. Mode E did not replace that evidence. Instead, it created a broader benchmark extension that was later evaluated in Mode E.2 to test whether the validation gap remained observable under broader industrial scenario coverage.
 
 ## Claim Supported
 
-Mode E currently supports the benchmark-design claim that Prototype 5 now contains a balanced industrial benchmark extension. It does not yet prove that the schema-valid versus execution-eligible gap persists across the Mode E extension, because no Mode E live evaluation has been run.
+Historical/pre-E.2 note: this document originally supported the benchmark-design claim that Prototype 5 contained a balanced industrial benchmark extension. The final evidence state is broader: Mode E.2 has now run the curated industrial benchmark under the Mode E.1 deterministic policy context. Final claim wording and metrics are maintained in `docs/prototype5/mode_e_final_evidence_summary.md`.
 
 ## Remaining Caveats
 
