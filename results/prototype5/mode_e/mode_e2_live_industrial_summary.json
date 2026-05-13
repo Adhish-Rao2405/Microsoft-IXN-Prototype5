@@ -1,0 +1,54 @@
+{
+  "mode": "E.2",
+  "name": "Prototype 5 Mode E.2 - Bounded Live Industrial Benchmark Evaluation",
+  "run_status": "COMPLETE_LIVE_INDUSTRIAL_EVALUATION",
+  "checked_at": "2026-05-13T11:00:15.520400+00:00",
+  "model_alias": "Phi-3-mini-4k-instruct-generic-cpu:3",
+  "base_url": "http://127.0.0.1:49313",
+  "benchmark_id": "prototype5_mode_e_industrial_v1",
+  "policy_id": "prototype5_mode_e_industrial_policy_v1",
+  "vocabulary_id": "prototype5_mode_e_industrial_vocabulary_v1",
+  "temperature": 0.0,
+  "total_cases": 30,
+  "request_success_rate": 1.0,
+  "parse_success_rate": 0.7667,
+  "json_valid_rate": 0.7667,
+  "schema_valid_rate": 0.6333,
+  "semantic_valid_rate": 0.7667,
+  "safety_valid_rate": 0.6667,
+  "execution_eligible_rate": 0.1,
+  "model_false_accepts": 16,
+  "pipeline_false_accepts": 0,
+  "schema_valid_minus_execution_eligible_gap": 0.5333,
+  "mean_latency_ms": 28359.26,
+  "median_latency_ms": 22588.65,
+  "max_latency_ms": 66928.25,
+  "cases_by_difficulty": {
+    "ambiguous": 10,
+    "clear": 10,
+    "unsafe_or_invalid": 10
+  },
+  "cases_by_scenario_family": {
+    "conveyor_sorting": 5,
+    "human_proximity": 5,
+    "inspection_quality": 5,
+    "pick_and_place": 5,
+    "restricted_zone": 5,
+    "warehouse_transfer": 5
+  },
+  "cases_by_policy_decision": {
+    "execution_eligible_candidate": 10,
+    "reject_before_execution": 10,
+    "requires_clarification": 10
+  },
+  "e0_4_descriptive_comparison": {
+    "schema_valid_rate": 0.8667,
+    "execution_eligible_rate": 0.1,
+    "schema_valid_minus_execution_eligible_gap": 0.7667,
+    "pipeline_false_accepts": 0,
+    "mean_latency_ms": 25377.18,
+    "comparison_boundary": "E0.4 and E.2 are different benchmark conditions, so differences are descriptive rather than statistically conclusive."
+  },
+  "reason": "",
+  "claim_boundary": "The Mode E.2 result is evidence under a curated industrial benchmark and deterministic policy context, not proof of general industrial deployment readiness."
+}

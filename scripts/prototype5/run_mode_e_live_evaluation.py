@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import multiprocessing as mp
 import os
 import statistics
 import sys
@@ -57,9 +56,12 @@ LIVE_SUMMARY_JSON_NAME = "mode_e2_live_industrial_summary.json"
 LIVE_SUMMARY_MD_NAME = "mode_e2_live_industrial_summary.md"
 NOT_RUN_SUMMARY_JSON_NAME = "mode_e2_live_industrial_not_run_summary.json"
 NOT_RUN_SUMMARY_MD_NAME = "mode_e2_live_industrial_not_run_summary.md"
+DEBUG_FIRST_PROMPT_PAYLOAD = DEFAULT_OUTPUT_DIR / "debug_first_prompt_payload.json"
+DEBUG_FIRST_PROMPT_SUMMARY = DEFAULT_OUTPUT_DIR / "debug_first_prompt_payload_summary.json"
+LAST_LIVE_FIRST_REQUEST_PAYLOAD = DEFAULT_OUTPUT_DIR / "last_live_first_request_payload.json"
+LAST_LIVE_REQUEST_ERROR = DEFAULT_OUTPUT_DIR / "last_live_request_error.json"
 
 TEMPERATURE = 0.0
-FIRST_RESPONSE_PROBE_TIMEOUT_SECONDS = 10.0
 E04_COMPARISON = {
     "schema_valid_rate": 0.8667,
     "execution_eligible_rate": 0.1,
@@ -124,6 +126,23 @@ def _load_cases(max_cases: int | None = None) -> tuple[dict[str, Any], list[dict
         raise ValueError("Mode E benchmark cases must be a list.")
     selected = cases[:max_cases] if max_cases is not None else cases
     return payload, [case for case in selected if isinstance(case, dict)]
+
+
+def _select_case_window(
+    cases: list[dict[str, Any]],
+    *,
+    start_index: int | None,
+    end_index: int | None,
+) -> list[dict[str, Any]]:
+    if start_index is None and end_index is None:
+        return cases
+    start = 1 if start_index is None else start_index
+    end = len(cases) if end_index is None else end_index
+    if start < 1:
+        raise RuntimeError("--start-index must be 1 or greater.")
+    if end < start:
+        raise RuntimeError("--end-index must be greater than or equal to --start-index.")
+    return cases[start - 1 : end]
 
 
 def _read_e1_audit(path: Path = E1_AUDIT_JSON) -> dict[str, Any]:
@@ -203,10 +222,91 @@ def _chat_payload(command: str, model_id: str, prompt: str) -> dict[str, Any]:
         "model": model_id,
         "temperature": TEMPERATURE,
         "max_tokens": 256,
+        "stream": False,
         "messages": [
             {"role": "system", "content": prompt},
             {"role": "user", "content": f"Command: {command}"},
         ],
+    }
+
+
+def _payload_text(payload: dict[str, Any]) -> str:
+    return json.dumps(payload, ensure_ascii=True, sort_keys=True)
+
+
+def _message_text(payload: dict[str, Any]) -> str:
+    messages = payload.get("messages", [])
+    if not isinstance(messages, list):
+        return ""
+    return "\n".join(
+        str(message.get("content", ""))
+        for message in messages
+        if isinstance(message, dict)
+    )
+
+
+def _debug_summary(
+    payload: dict[str, Any],
+    selected_case: dict[str, Any],
+    vocabulary: dict[str, Any],
+    policy: dict[str, Any],
+    prompt: str,
+) -> dict[str, Any]:
+    payload_text = _payload_text(payload)
+    message_text = _message_text(payload)
+    vocabulary_markers = [
+        str(vocabulary.get("vocabulary_id", "")),
+        "mode_e_industrial_vocabulary",
+    ]
+    policy_markers = [
+        str(policy.get("policy_id", "")),
+        "mode_e_industrial_policy",
+    ]
+    return {
+        "model": payload.get("model", ""),
+        "selected_case_id": selected_case.get("id", ""),
+        "selected_case_command": selected_case.get("command", ""),
+        "number_of_messages": len(payload.get("messages", []))
+        if isinstance(payload.get("messages"), list)
+        else 0,
+        "approximate_character_count": len(payload_text),
+        "approximate_word_count": len(message_text.split()),
+        "includes_action_envelope_prompt": prompt in message_text,
+        "includes_industrial_vocabulary": any(
+            marker and marker in payload_text for marker in vocabulary_markers
+        ),
+        "includes_industrial_policy_rules": any(
+            marker and marker in payload_text for marker in policy_markers
+        ),
+        "max_tokens": payload.get("max_tokens"),
+        "temperature": payload.get("temperature"),
+    }
+
+
+def write_debug_first_prompt(args: argparse.Namespace) -> dict[str, Any]:
+    _read_e1_audit()
+    benchmark, cases = _load_cases(args.max_cases)
+    if not cases:
+        raise RuntimeError("Mode E benchmark has no cases to debug.")
+    vocabulary = load_json(VOCABULARY_PATH)
+    policy = load_json(POLICY_PATH)
+    prompt = PROMPT_PATH.read_text(encoding="utf-8")
+    requested_model = args.model or os.environ.get(FOUNDRY_ENV_MODEL)
+    model = requested_model or "DEBUG_MODEL_NOT_SELECTED_NO_FOUNDRY_CALL"
+    selected_case = cases[0]
+    payload = _chat_payload(str(selected_case.get("command", "")), model, prompt)
+    summary = _debug_summary(payload, selected_case, vocabulary, policy, prompt)
+
+    DEBUG_FIRST_PROMPT_PAYLOAD.parent.mkdir(parents=True, exist_ok=True)
+    DEBUG_FIRST_PROMPT_PAYLOAD.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    DEBUG_FIRST_PROMPT_SUMMARY.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    return {
+        "run_status": "DEBUG_FIRST_PROMPT_WRITTEN",
+        "total_cases": 1,
+        "model_alias": model,
+        "payload_file": str(DEBUG_FIRST_PROMPT_PAYLOAD.relative_to(REPO_ROOT).as_posix()),
+        "summary_file": str(DEBUG_FIRST_PROMPT_SUMMARY.relative_to(REPO_ROOT).as_posix()),
+        "benchmark_id": benchmark.get("benchmark_id", ""),
     }
 
 
@@ -216,11 +316,17 @@ def _call_foundry(
     command: str,
     prompt: str,
     timeout_seconds: float,
+    *,
+    record_first_payload: bool = False,
 ) -> dict[str, Any]:
     endpoint = f"{base_url}/v1/chat/completions"
+    payload = _chat_payload(command, model_id, prompt)
+    if record_first_payload:
+        LAST_LIVE_FIRST_REQUEST_PAYLOAD.parent.mkdir(parents=True, exist_ok=True)
+        LAST_LIVE_FIRST_REQUEST_PAYLOAD.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     request = Request(
         endpoint,
-        data=json.dumps(_chat_payload(command, model_id, prompt)).encode("utf-8"),
+        data=json.dumps(payload).encode("utf-8"),
         headers={"Content-Type": "application/json"},
         method="POST",
     )
@@ -237,74 +343,28 @@ def _call_foundry(
     }
 
 
-def _call_foundry_worker(
-    queue: mp.Queue,
+def _request_error_record(
+    exc: Exception,
+    *,
     base_url: str,
-    model_id: str,
-    command: str,
-    prompt: str,
-    timeout_seconds: float,
-) -> None:
-    try:
-        queue.put(
-            {
-                "ok": True,
-                "result": _call_foundry(base_url, model_id, command, prompt, timeout_seconds),
-            }
-        )
-    except BaseException as exc:  # pragma: no cover - defensive child-process boundary.
-        queue.put({"ok": False, "error": str(exc)})
-
-
-def _call_foundry_bounded(
-    base_url: str,
-    model_id: str,
-    command: str,
-    prompt: str,
+    case: dict[str, Any],
     timeout_seconds: float,
 ) -> dict[str, Any]:
-    """Run one live request behind a hard process timeout.
-
-    urllib timeouts can still leave the parent waiting on some Windows/local
-    serving failure modes. A child process lets the E.2 evidence path fail
-    closed instead of hanging for hours.
-    """
-
-    queue: mp.Queue = mp.Queue()
-    process = mp.Process(
-        target=_call_foundry_worker,
-        args=(queue, base_url, model_id, command, prompt, timeout_seconds),
-    )
-    process.start()
-    process.join(timeout_seconds + 2.0)
-    if process.is_alive():
-        process.terminate()
-        process.join(5.0)
-        return {
-            "request_success": False,
-            "raw_payload": None,
-            "raw_response": "",
-            "latency_ms": "",
-            "error": f"request_timeout_after_{timeout_seconds}_seconds",
-        }
-    if queue.empty():
-        return {
-            "request_success": False,
-            "raw_payload": None,
-            "raw_response": "",
-            "latency_ms": "",
-            "error": "request_process_finished_without_result",
-        }
-    payload = queue.get()
-    if payload.get("ok"):
-        return dict(payload["result"])
     return {
-        "request_success": False,
-        "raw_payload": None,
-        "raw_response": "",
-        "latency_ms": "",
-        "error": str(payload.get("error", "")),
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+        "exception_type": type(exc).__name__,
+        "message": str(exc),
+        "base_url": base_url,
+        "endpoint": f"{base_url}/v1/chat/completions",
+        "case_id": case.get("id", ""),
+        "command": case.get("command", ""),
+        "timeout_seconds": timeout_seconds,
     }
+
+
+def _write_last_request_error(record: dict[str, Any]) -> None:
+    LAST_LIVE_REQUEST_ERROR.parent.mkdir(parents=True, exist_ok=True)
+    LAST_LIVE_REQUEST_ERROR.write_text(json.dumps(record, indent=2), encoding="utf-8")
 
 
 def _evaluate_response(
@@ -423,6 +483,22 @@ def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
             handle.write(json.dumps(row) + "\n")
 
 
+def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8", newline="") as handle:
+        handle.write(json.dumps(row) + "\n")
+
+
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    rows: list[dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            rows.append(json.loads(line))
+    return rows
+
+
 def _write_results_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -430,6 +506,76 @@ def _write_results_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer.writeheader()
         for row in rows:
             writer.writerow({column: row.get(column, "") for column in RESULT_COLUMNS})
+
+
+def _append_results_csv(path: Path, row: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    write_header = not path.exists() or path.stat().st_size == 0
+    with path.open("a", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=RESULT_COLUMNS)
+        if write_header:
+            writer.writeheader()
+        writer.writerow({column: row.get(column, "") for column in RESULT_COLUMNS})
+
+
+def _read_results_csv(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+def _dedupe_rows_by_case_id(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduped: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        case_id = str(row.get("case_id", ""))
+        if case_id:
+            deduped[case_id] = row
+    return list(deduped.values())
+
+
+def _truthy(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).lower() == "true"
+
+
+def _normalise_result_row(row: dict[str, Any]) -> dict[str, Any]:
+    normalised = dict(row)
+    for key in [
+        "request_success",
+        "parse_success",
+        "json_valid",
+        "schema_valid",
+        "semantic_valid",
+        "safety_valid",
+        "execution_eligible",
+        "model_false_accept",
+        "pipeline_false_accept",
+    ]:
+        normalised[key] = _truthy(normalised.get(key))
+    return normalised
+
+
+def _existing_case_ids(raw_path: Path, results_path: Path) -> set[str]:
+    ids = {str(row.get("case_id", "")) for row in _read_results_csv(results_path)}
+    ids.update(str(row.get("case_id", "")) for row in _read_jsonl(raw_path))
+    return {case_id for case_id in ids if case_id}
+
+
+def _clear_live_outputs(output_dir: Path) -> None:
+    for path in _output_paths(output_dir, not_run=False):
+        if path.exists():
+            path.unlink()
+
+
+def _summary_status(result_rows: list[dict[str, Any]], interrupted: bool = False) -> str:
+    completed_ids = {str(row.get("case_id", "")) for row in result_rows if row.get("case_id")}
+    if interrupted:
+        return "INTERRUPTED_PARTIAL_LIVE_EVALUATION"
+    if len(completed_ids) == 30:
+        return "COMPLETE_LIVE_INDUSTRIAL_EVALUATION"
+    return "PARTIAL_LIVE_INDUSTRIAL_EVALUATION"
 
 
 def _build_markdown(summary: dict[str, Any]) -> str:
@@ -494,17 +640,36 @@ def _write_not_run(
     paths[1].write_text(_build_markdown(summary), encoding="utf-8")
 
 
+def _write_live_summary(
+    output_dir: Path,
+    summary: dict[str, Any],
+) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / LIVE_SUMMARY_JSON_NAME).write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    (output_dir / LIVE_SUMMARY_MD_NAME).write_text(_build_markdown(summary), encoding="utf-8")
+
+
 def run_live_evaluation(args: argparse.Namespace) -> dict[str, Any]:
+    if args.debug_first_prompt:
+        return write_debug_first_prompt(args)
+
     _read_e1_audit()
     output_dir = Path(args.output_dir)
     if not output_dir.is_absolute():
         output_dir = REPO_ROOT / output_dir
     benchmark, cases = _load_cases(args.max_cases)
+    cases = _select_case_window(
+        cases,
+        start_index=args.start_index,
+        end_index=args.end_index,
+    )
     vocabulary = load_json(VOCABULARY_PATH)
     policy = load_json(POLICY_PATH)
     prompt = PROMPT_PATH.read_text(encoding="utf-8")
     base_url = _resolve_base_url(args.base_url)
     requested_model = args.model or os.environ.get(FOUNDRY_ENV_MODEL)
+    raw_path = output_dir / LIVE_RAW_NAME
+    results_path = output_dir / LIVE_RESULTS_NAME
 
     discovery = _discover_models(base_url, min(float(args.timeout_seconds), 5.0))
     selected_model = select_phi_model(discovery, requested_model)
@@ -523,65 +688,143 @@ def run_live_evaluation(args: argparse.Namespace) -> dict[str, Any]:
         _write_not_run(output_dir, summary, args.allow_overwrite)
         return summary
 
-    _ensure_no_overwrite(_output_paths(output_dir, not_run=False), args.allow_overwrite)
-    raw_rows: list[dict[str, Any]] = []
-    result_rows: list[dict[str, Any]] = []
-    for index, case in enumerate(cases):
-        raw_row: dict[str, Any] = {
-            "case_id": case.get("id", ""),
-            "command_text": case.get("command", ""),
-            "model_id": selected_model,
-            "request_success": False,
-            "raw_payload": None,
-            "raw_response": "",
-            "latency_ms": "",
-            "error": "",
-        }
-        effective_timeout = float(args.timeout_seconds)
-        if index == 0:
-            effective_timeout = min(effective_timeout, FIRST_RESPONSE_PROBE_TIMEOUT_SECONDS)
-        raw_row.update(
-            _call_foundry_bounded(
-                base_url,
-                selected_model,
-                str(case.get("command", "")),
-                prompt,
-                effective_timeout,
+    if args.allow_overwrite:
+        _clear_live_outputs(output_dir)
+    elif not args.resume:
+        _ensure_no_overwrite(_output_paths(output_dir, not_run=False), args.allow_overwrite)
+
+    existing_result_rows = [
+        _normalise_result_row(row)
+        for row in _dedupe_rows_by_case_id(_read_results_csv(results_path))
+    ]
+    result_rows: list[dict[str, Any]] = list(existing_result_rows)
+    completed_case_ids = _existing_case_ids(raw_path, results_path) if args.resume else set()
+    total_selected = len(cases)
+    first_request_payload_written = False
+
+    try:
+        for index, case in enumerate(cases, start=1):
+            case_id = str(case.get("id", ""))
+            command = str(case.get("command", ""))
+            if args.resume and case_id in completed_case_ids:
+                print(f"[Mode E.2] Skipping case {case_id}; already present in existing outputs.")
+                continue
+            print(f"[Mode E.2] Running case {index}/{total_selected}: {case_id} - {command}")
+            raw_row: dict[str, Any] = {
+                "case_id": case_id,
+                "command_text": command,
+                "model_id": selected_model,
+                "request_success": False,
+                "raw_payload": None,
+                "raw_response": "",
+                "latency_ms": "",
+                "error": "",
+            }
+            try:
+                record_first_payload = not first_request_payload_written
+                raw_row.update(
+                    _call_foundry(
+                        base_url,
+                        selected_model,
+                        command,
+                        prompt,
+                        float(args.timeout_seconds),
+                        record_first_payload=record_first_payload,
+                    )
+                )
+                if record_first_payload:
+                    first_request_payload_written = True
+            except Exception as exc:
+                error_record = _request_error_record(
+                    exc,
+                    base_url=base_url,
+                    case=case,
+                    timeout_seconds=float(args.timeout_seconds),
+                )
+                _write_last_request_error(error_record)
+                raw_row["error"] = f"{error_record['exception_type']}: {error_record['message']}"
+            if not result_rows and raw_row.get("request_success") is not True:
+                summary = _build_summary(
+                    run_status="NOT_RUN_FOUNDRY_UNAVAILABLE",
+                    model_alias=selected_model,
+                    base_url=base_url,
+                    benchmark=benchmark,
+                    vocabulary=vocabulary,
+                    policy=policy,
+                    rows=[],
+                    reason=(
+                        "Foundry Local model discovery succeeded, but the first chat "
+                        f"completion failed closed: {raw_row.get('error', '')}"
+                    ),
+                )
+                _write_not_run(output_dir, summary, args.allow_overwrite)
+                return summary
+            result_row = _evaluate_response(raw_row, case, policy)
+            _append_jsonl(raw_path, raw_row)
+            _append_results_csv(results_path, result_row)
+            result_rows = _dedupe_rows_by_case_id([*result_rows, result_row])
+            completed_case_ids.add(case_id)
+            print(
+                "[Mode E.2] Completed case {case_id} in {latency} ms with "
+                "parse/json/schema/execution={parse_status}/{json_status}/{schema_status}/{execution_status}.".format(
+                    case_id=case_id,
+                    latency=raw_row.get("latency_ms", ""),
+                    parse_status=result_row["parse_success"],
+                    json_status=result_row["json_valid"],
+                    schema_status=result_row["schema_valid"],
+                    execution_status=result_row["execution_eligible"],
+                )
             )
-        )
-        if index == 0 and raw_row.get("request_success") is not True:
             summary = _build_summary(
-                run_status="NOT_RUN_FOUNDRY_UNAVAILABLE",
+                run_status=_summary_status(result_rows),
                 model_alias=selected_model,
                 base_url=base_url,
                 benchmark=benchmark,
                 vocabulary=vocabulary,
                 policy=policy,
-                rows=[],
+                rows=result_rows,
                 reason=(
-                    "Foundry Local model discovery succeeded, but the first chat "
-                    f"completion did not complete: {raw_row.get('error', '')}"
+                    "Partial runs are smoke/partial evidence only. Only 30/30 "
+                    "completed Mode E cases can be COMPLETE_LIVE_INDUSTRIAL_EVALUATION."
+                    if _summary_status(result_rows) != "COMPLETE_LIVE_INDUSTRIAL_EVALUATION"
+                    else ""
                 ),
             )
-            _write_not_run(output_dir, summary, args.allow_overwrite)
-            return summary
-        raw_rows.append(raw_row)
-        result_rows.append(_evaluate_response(raw_row, case, policy))
+            _write_live_summary(output_dir, summary)
+    except KeyboardInterrupt:
+        summary = _build_summary(
+            run_status="INTERRUPTED_PARTIAL_LIVE_EVALUATION",
+            model_alias=selected_model,
+            base_url=base_url,
+            benchmark=benchmark,
+            vocabulary=vocabulary,
+            policy=policy,
+            rows=result_rows,
+            reason=(
+                "Run interrupted by user. Completed cases remain available as "
+                "partial evidence; this is not complete Mode E.2 live evidence."
+            ),
+        )
+        _write_live_summary(output_dir, summary)
+        print("[Mode E.2] Interrupted; partial summary written.")
+        return summary
 
     summary = _build_summary(
-        run_status="COMPLETE_LIVE_INDUSTRIAL_EVALUATION",
+        run_status=_summary_status(result_rows),
         model_alias=selected_model,
         base_url=base_url,
         benchmark=benchmark,
         vocabulary=vocabulary,
         policy=policy,
         rows=result_rows,
+        reason=(
+            "Partial runs are smoke/partial evidence only. Only 30/30 completed "
+            "Mode E cases can be COMPLETE_LIVE_INDUSTRIAL_EVALUATION."
+            if _summary_status(result_rows) != "COMPLETE_LIVE_INDUSTRIAL_EVALUATION"
+            else ""
+        ),
     )
-    output_dir.mkdir(parents=True, exist_ok=True)
-    _write_jsonl(output_dir / LIVE_RAW_NAME, raw_rows)
-    _write_results_csv(output_dir / LIVE_RESULTS_NAME, result_rows)
-    (output_dir / LIVE_SUMMARY_JSON_NAME).write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    (output_dir / LIVE_SUMMARY_MD_NAME).write_text(_build_markdown(summary), encoding="utf-8")
+    _write_live_summary(output_dir, summary)
     return summary
 
 
@@ -591,8 +834,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--model", default=None)
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR.relative_to(REPO_ROOT)))
     parser.add_argument("--max-cases", type=int, default=None)
+    parser.add_argument("--start-index", type=int, default=None)
+    parser.add_argument("--end-index", type=int, default=None)
     parser.add_argument("--timeout-seconds", type=float, default=120.0)
     parser.add_argument("--allow-overwrite", action="store_true")
+    parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--debug-first-prompt", action="store_true")
     return parser
 
 
@@ -608,6 +855,10 @@ def main() -> int:
     print("Prototype 5 Mode E.2 live industrial evaluation:", summary["run_status"])
     print(f"Total cases: {summary['total_cases']}")
     print(f"Model alias: {summary['model_alias']}")
+    if summary.get("payload_file"):
+        print(f"Debug payload: {summary['payload_file']}")
+    if summary.get("summary_file"):
+        print(f"Debug summary: {summary['summary_file']}")
     if summary.get("reason"):
         print(f"Reason: {summary['reason']}")
     return 0

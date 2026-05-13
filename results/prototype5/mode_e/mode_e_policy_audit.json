@@ -2,7 +2,7 @@
   "mode": "E.1",
   "name": "Prototype 5 Mode E.1 - Industrial Vocabulary and Policy Layer",
   "audit_status": "COMPLETE_POLICY_CONTEXT",
-  "checked_at": "2026-05-12T18:09:26.159940+00:00",
+  "checked_at": "2026-05-13T11:02:51.055667+00:00",
   "benchmark_file": "configs/prototype5/mode_e_industrial_benchmark.json",
   "benchmark_id": "prototype5_mode_e_industrial_v1",
   "vocabulary_file": "configs/prototype5/mode_e_industrial_vocabulary.json",
