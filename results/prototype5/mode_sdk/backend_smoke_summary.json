@@ -1,0 +1,33 @@
+{
+  "status": "COMPLETE_BACKEND_SMOKE",
+  "timestamp_utc": "2026-05-28T21:05:09.581606+00:00",
+  "scope": "bounded_sdk_backend_smoke_only",
+  "strict_scope_note": "Bounded SDK backend smoke only. This is not benchmark evidence and does not perform schema, semantic, safety, or execution validation.",
+  "base_url": "http://127.0.0.1:53402",
+  "model_alias": "qwen2.5-coder-0.5b-instruct-generic-cpu:4",
+  "prompt_count": 1,
+  "success_count": 1,
+  "failure_count": 0,
+  "results": [
+    {
+      "case_id": "smoke_001",
+      "success": true,
+      "backend": "foundry_local_openai_compatible",
+      "model_alias": "qwen2.5-coder-0.5b-instruct-generic-cpu:4",
+      "prompt_id": "phase1_m5_backend_smoke_prompt",
+      "latency_ms": 1065.217,
+      "raw_text": "```json\n{\n  \"status\": \"ok\",\n  \"action\": \"noop\"\n}\n```",
+      "error_type": null,
+      "error_message": null,
+      "timestamp_utc": "2026-05-28T21:05:09.581606+00:00"
+    }
+  ],
+  "architectural_boundary": {
+    "parses_json": false,
+    "validates_schema": false,
+    "repairs_model_output": false,
+    "infers_execution_eligibility": false,
+    "calls_orchestrator": false,
+    "runs_benchmark": false
+  }
+}
