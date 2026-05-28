@@ -1,0 +1,62 @@
+{
+  "status": "PHASE1_SDK_MIGRATION_COMPLETE",
+  "timestamp_utc": "2026-05-29T00:00:00+00:00",
+  "latest_commits": {
+    "m3": "516455a",
+    "m4": "e930e1c",
+    "m5": "f0f8ebc",
+    "m6": "f7ee36c",
+    "m7": "6cd975a",
+    "m8": "b1027bc",
+    "m9": "fbed5b9"
+  },
+  "evidence_files": [
+    "docs/prototype5/phase1_foundry_local_api_discovery.md",
+    "src/prototype5/foundry_sdk_client.py",
+    "src/prototype5/foundry_sdk_backend.py",
+    "results/prototype5/mode_sdk/backend_smoke_summary.json",
+    "results/prototype5/mode_sdk/sdk_mini_replay_results.json",
+    "results/prototype5/mode_sdk/sdk_mini_replay_validator_audit.json",
+    "results/prototype5/mode_sdk/sdk_mini_replay_failure_diagnosis.json",
+    "results/prototype5/mode_sdk/sdk_action_envelope_mini_replay_results.json",
+    "docs/prototype5/phase1_sdk_migration_completion_report.md",
+    "docs/prototype5/phase1_sdk_claims_and_evidence_matrix.md",
+    "docs/prototype5/phase1_sdk_limitations_and_next_steps.md"
+  ],
+  "key_results": {
+    "m7_case_count": 5,
+    "m7_sdk_success_count": 5,
+    "m7_json_valid_count": 5,
+    "m7_schema_valid_count": 0,
+    "m7_execution_eligible_count": 0,
+    "m8_prompt_alignment_issue_count": 5,
+    "m9_case_count": 5,
+    "m9_sdk_success_count": 5,
+    "m9_json_valid_count": 5,
+    "m9_schema_valid_count": 4,
+    "m9_execution_eligible_count": 0
+  },
+  "test_status": {
+    "full_prototype5_tests": "passed",
+    "last_observed_full_count": 171
+  },
+  "phase1_decision": "COMPLETE",
+  "phase1_completion_boundary": "Complete as bounded SDK migration integration evidence; not production robot safety evidence.",
+  "phase2_readiness": {
+    "voice_control_ready_to_start": true,
+    "conditions": [
+      "Voice must remain a text-command input layer only.",
+      "Voice must not bypass deterministic validators.",
+      "Voice-derived commands must preserve raw transcript and backend evidence.",
+      "Stop/proceed intents require explicit safety tiering.",
+      "Ambiguous, low-confidence, unsafe, or unsupported voice-derived commands must fail closed."
+    ]
+  },
+  "non_claims": [
+    "production robotics safety",
+    "certified robot safety",
+    "universal local SLM reliability",
+    "implemented voice control",
+    "full 30-command SDK benchmark is complete"
+  ]
+}
