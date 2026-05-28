@@ -1,0 +1,26 @@
+{
+  "model": "qwen2.5-coder-0.5b-instruct-generic-cpu:4",
+  "choices": [
+    {
+      "delta": {
+        "role": "assistant",
+        "content": "```json\n{\n  \"action\": \"move\",\n  \"target\": {\n    \"type\": \"red_block\",\n    \"x\": 0,\n    \"y\": 0\n  }\n}\n```",
+        "tool_calls": []
+      },
+      "message": {
+        "role": "assistant",
+        "content": "```json\n{\n  \"action\": \"move\",\n  \"target\": {\n    \"type\": \"red_block\",\n    \"x\": 0,\n    \"y\": 0\n  }\n}\n```",
+        "tool_calls": []
+      },
+      "index": 0,
+      "finish_reason": "stop"
+    }
+  ],
+  "created": 1780000471,
+  "CreatedAt": "2026-05-28T20:34:31+00:00",
+  "id": "chat.id.1",
+  "IsDelta": false,
+  "Successful": true,
+  "HttpStatusCode": 0,
+  "object": "chat.completion"
+}

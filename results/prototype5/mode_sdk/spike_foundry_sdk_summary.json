@@ -1,0 +1,12 @@
+{
+  "status": "SUCCESS",
+  "timestamp_utc": "2026-05-28T20:34:23.893226+00:00",
+  "base_url": "http://127.0.0.1:53402",
+  "model_alias": "qwen2.5-coder-0.5b-instruct-generic-cpu:4",
+  "models_endpoint": "http://127.0.0.1:53402/v1/models",
+  "chat_endpoint": "http://127.0.0.1:53402/v1/chat/completions",
+  "latency_ms": 7768.9,
+  "response_text_found": true,
+  "error_type": null,
+  "error_message": null
+}
