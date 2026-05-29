@@ -1,0 +1,15 @@
+{
+  "status": "MOCKED_CONTRACT_PROBE",
+  "timestamp_utc": "2026-05-29T00:00:00+00:00",
+  "cases_total": 4,
+  "voice_policy_rejections": 3,
+  "planner_called_count": 1,
+  "validator_rejections": 1,
+  "execution_eligible_count": 0,
+  "pipeline_false_accepts": null,
+  "notes": [
+    "Typed/manual transcript bridge only; no microphone, audio file, Whisper, Foundry transcription runtime, or robot execution.",
+    "Mock backend only; no live SDK result is fabricated.",
+    "voice_eligible_for_planning is not execution_eligible."
+  ]
+}
