@@ -4,6 +4,7 @@ from urllib import error as urllib_error
 import pytest
 
 from src.prototype5.foundry_sdk_client import (
+    DEFAULT_MODEL_ENV,
     DEFAULT_MODEL_PREFERENCE_ORDER,
     FoundryClientResponse,
     FoundryLocalClient,
@@ -73,6 +74,7 @@ def test_response_object_has_required_fields():
 
 
 def test_uses_safe_model_preference_order_when_no_explicit_model(monkeypatch):
+    monkeypatch.delenv(DEFAULT_MODEL_ENV, raising=False)
     captured = []
     make_urlopen_sequence(
         monkeypatch,
@@ -143,7 +145,26 @@ def test_bad_explicit_model_alias_fails_closed(monkeypatch):
     assert response.raw_text is None
 
 
+def test_bad_env_model_alias_fails_closed(monkeypatch):
+    monkeypatch.setenv(DEFAULT_MODEL_ENV, "missing-model:999")
+    make_urlopen_sequence(
+        monkeypatch,
+        [models_payload(DEFAULT_MODEL_PREFERENCE_ORDER[0])],
+    )
+
+    client = FoundryLocalClient(
+        base_url="http://127.0.0.1:53402",
+        timeout_seconds=1,
+    )
+    response = client.chat_completion("Test.")
+
+    assert response.success is False
+    assert response.error_type == "bad_model_alias"
+    assert response.raw_text is None
+
+
 def test_successful_response_extraction(monkeypatch):
+    monkeypatch.delenv(DEFAULT_MODEL_ENV, raising=False)
     make_urlopen_sequence(
         monkeypatch,
         [
@@ -202,6 +223,7 @@ def test_endpoint_unavailable_fails_closed(monkeypatch):
 
 
 def test_empty_model_list_fails_closed(monkeypatch):
+    monkeypatch.delenv(DEFAULT_MODEL_ENV, raising=False)
     make_urlopen_sequence(monkeypatch, [{"object": "list", "data": []}])
 
     client = FoundryLocalClient(base_url="http://127.0.0.1:53402", timeout_seconds=1)
@@ -213,6 +235,7 @@ def test_empty_model_list_fails_closed(monkeypatch):
 
 
 def test_no_preferred_model_available_fails_closed(monkeypatch):
+    monkeypatch.delenv(DEFAULT_MODEL_ENV, raising=False)
     make_urlopen_sequence(monkeypatch, [models_payload("gpt-oss-20b-generic-cpu:1")])
 
     client = FoundryLocalClient(base_url="http://127.0.0.1:53402", timeout_seconds=1)
@@ -224,6 +247,7 @@ def test_no_preferred_model_available_fails_closed(monkeypatch):
 
 
 def test_no_choices_response_fails_closed(monkeypatch):
+    monkeypatch.delenv(DEFAULT_MODEL_ENV, raising=False)
     make_urlopen_sequence(
         monkeypatch,
         [
@@ -241,6 +265,7 @@ def test_no_choices_response_fails_closed(monkeypatch):
 
 
 def test_empty_text_response_fails_closed(monkeypatch):
+    monkeypatch.delenv(DEFAULT_MODEL_ENV, raising=False)
     make_urlopen_sequence(
         monkeypatch,
         [
