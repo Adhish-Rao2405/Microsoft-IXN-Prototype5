@@ -1,0 +1,57 @@
+{
+  "milestone": "Phase 2 Milestone 11",
+  "scope": "Documentation/specification only",
+  "framing": "Voice command intake for zero-trust robot task planning",
+  "protected_boundary": "Voice is an input modality only and cannot directly trigger execution.",
+  "risks": [
+    {
+      "risk_id": "VOICE-R01",
+      "risk": "mistranscription",
+      "policy_response": "Treat transcript as untrusted input and fail closed when meaning is uncertain."
+    },
+    {
+      "risk_id": "VOICE-R02",
+      "risk": "partial transcription",
+      "policy_response": "Reject partial transcripts or require clarification before planner handoff."
+    },
+    {
+      "risk_id": "VOICE-R03",
+      "risk": "word insertion or deletion",
+      "policy_response": "Preserve raw and normalised transcript evidence and require deterministic validation after planning."
+    },
+    {
+      "risk_id": "VOICE-R04",
+      "risk": "negation loss",
+      "policy_response": "Flag negation-sensitive commands and fail closed when the command meaning changes under plausible transcription error."
+    },
+    {
+      "risk_id": "VOICE-R05",
+      "risk": "object, zone, coordinate, or number confusion",
+      "policy_response": "Reject ambiguous or context-free references before planner handoff."
+    },
+    {
+      "risk_id": "VOICE-R06",
+      "risk": "background noise, overlapping speakers, or low-volume speech",
+      "policy_response": "Reject or require clarification when operator intent is uncertain."
+    },
+    {
+      "risk_id": "VOICE-R07",
+      "risk": "casual speech mistaken as command",
+      "policy_response": "Classify as non-command or unknown unless bounded command intent is explicit."
+    },
+    {
+      "risk_id": "VOICE-R08",
+      "risk": "stop/proceed confusion",
+      "policy_response": "Treat stop and proceed as safety-critical intent classes and fail closed on conflict."
+    }
+  ],
+  "claim_boundary": {
+    "supports": "A safety-first voice intake specification that preserves zero-trust planning.",
+    "does_not_support": [
+      "safe voice-controlled robot execution",
+      "certified emergency-stop functionality",
+      "production voice-control readiness",
+      "industrial deployment readiness"
+    ]
+  }
+}

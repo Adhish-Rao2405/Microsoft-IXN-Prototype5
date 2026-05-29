@@ -1,0 +1,8 @@
+claim_id,claim,status,evidence,boundary
+VOICE-M11-C1,Milestone 11 defines voice as an input modality only,supported,docs/prototype5/phase2_milestone11_voice_baseline_spec.md,Does not claim voice-controlled robot execution
+VOICE-M11-C2,Speech recognition output is untrusted text input,supported,docs/prototype5/phase2_milestone11_transcript_contract.md,Does not claim transcript correctness
+VOICE-M11-C3,Model-generated plans remain untrusted proposals,supported,docs/prototype5/phase2_milestone11_voice_safety_policy.md,Does not claim model output is executable
+VOICE-M11-C4,Voice cannot bypass deterministic validation,supported,docs/prototype5/phase2_milestone11_voice_baseline_spec.md,Does not mutate validators
+VOICE-M11-C5,Voice cannot directly trigger execution,supported,docs/prototype5/phase2_milestone11_non_goals_and_claim_boundaries.md,Does not implement execution
+VOICE-M11-C6,Stop and proceed are safety-critical intent classes,supported,docs/prototype5/phase2_milestone11_stop_proceed_policy.md,Does not claim certified emergency stop
+VOICE-M11-C7,Milestone 11 is specification only,supported,docs/prototype5/phase2_milestone11_non_goals_and_claim_boundaries.md,Does not implement runtime voice control
