@@ -1,0 +1,35 @@
+{
+  "status": "MOCKED_CONTRACT_PROBE",
+  "timestamp_utc": "2026-05-29T00:00:00+00:00",
+  "cases_total": 11,
+  "cases_eligible_for_planning": 1,
+  "cases_rejected": 10,
+  "intent_counts": {
+    "clarification": 1,
+    "non_command": 1,
+    "planning_command": 5,
+    "proceed_command": 1,
+    "stop_command": 2,
+    "unknown": 1
+  },
+  "risk_flag_counts": {
+    "ambiguous_reference": 1,
+    "context_required": 2,
+    "empty_transcript": 1,
+    "negation_detected": 1,
+    "non_command": 1,
+    "object_reference_present": 6,
+    "partial_transcript": 1,
+    "proceed_intent": 2,
+    "safety_critical_intent": 2,
+    "stop_intent": 2,
+    "stop_proceed_conflict": 1,
+    "unknown_intent": 1,
+    "unsafe_keyword": 2,
+    "zone_reference_present": 3
+  },
+  "notes": [
+    "Mocked transcript text only; no audio runtime, microphone, Whisper, Foundry transcription, SDK planner call, validator call, or robot execution.",
+    "eligible_for_planning is not execution eligibility."
+  ]
+}
