@@ -1,0 +1,17 @@
+{
+  "audio_files_committed_count": 0,
+  "audio_files_required_later_count": 15,
+  "audio_manifest_rows": 15,
+  "audio_runtime_used": false,
+  "binary_audio_committed": false,
+  "dependency_changes": false,
+  "linked_m14a_case_count": 15,
+  "live_microphone_used": false,
+  "milestone": "Phase 2 Milestone 14B",
+  "mode": "recorded_audio_artefact_pack_without_runtime_transcription",
+  "notes": "M14B commits manifest and transcript metadata only. No binary audio, audio runtime, speech-to-text, microphone capture, or dependency changes are included.",
+  "speech_to_text_used": false,
+  "status": "COMPLETE_AUDIO_ARTEFACT_MANIFEST",
+  "timestamp_utc": "2026-06-02T17:44:18Z",
+  "transcript_manifest_rows": 15
+}

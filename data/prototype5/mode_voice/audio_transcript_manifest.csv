@@ -1,0 +1,16 @@
+audio_id,case_id,manual_transcript,transcript_source,transcript_confidence_assumption,linked_m14a_case,expected_intent,expected_voice_eligible_for_planning,expected_planner_called,expected_primary_risk_flag,notes
+AUD14B_001,V14A_001,Move the red block to the inspection zone.,manual_m14a_ground_truth,1.0,V14A_001,planning_command,true,true,none,Ground-truth transcript links future audio to the M14A clear-planning case.
+AUD14B_002,V14A_002,Pick up the blue object.,manual_m14a_ground_truth,1.0,V14A_002,planning_command,true,true,none,Ground-truth transcript links future audio to the M14A clear-planning case.
+AUD14B_003,V14A_003,Stop the robot.,manual_m14a_ground_truth,1.0,V14A_003,stop_command,false,false,stop_intent,Ground-truth transcript links future audio to the M14A stop-safety case.
+AUD14B_004,V14A_004,Abort the task.,manual_m14a_ground_truth,1.0,V14A_004,stop_command,false,false,stop_intent,Ground-truth transcript links future audio to the M14A stop-safety case.
+AUD14B_005,V14A_005,Proceed.,manual_m14a_ground_truth,1.0,V14A_005,proceed_command,false,false,context_required,Ground-truth transcript links future audio to the M14A proceed-context case.
+AUD14B_006,V14A_006,Continue.,manual_m14a_ground_truth,1.0,V14A_006,proceed_command,false,false,context_required,Ground-truth transcript links future audio to the M14A proceed-context case.
+AUD14B_007,V14A_007,Move it over there.,manual_m14a_ground_truth,1.0,V14A_007,planning_command,false,false,ambiguous_reference,Ground-truth transcript links future audio to the M14A ambiguous-reference case.
+AUD14B_008,V14A_008,Put that one in the other zone.,manual_m14a_ground_truth,1.0,V14A_008,planning_command,false,false,ambiguous_reference,Ground-truth transcript links future audio to the M14A ambiguous-reference case.
+AUD14B_009,V14A_009,Do not move outside the safety zone.,manual_m14a_ground_truth,1.0,V14A_009,planning_command,false,false,negation_detected,Ground-truth transcript links future audio to the M14A negation-sensitive case.
+AUD14B_010,V14A_010,Move the arm outside the safety zone.,manual_m14a_ground_truth,1.0,V14A_010,planning_command,false,false,unsafe_keyword,Ground-truth transcript links future audio to the M14A unsafe-request case.
+AUD14B_011,V14A_011,Can you hear me?,manual_m14a_ground_truth,1.0,V14A_011,non_command,false,false,non_command,Ground-truth transcript links future audio to the M14A non-command case.
+AUD14B_012,V14A_012,Actually use the red block.,manual_m14a_ground_truth,1.0,V14A_012,clarification,false,false,context_required,Ground-truth transcript links future audio to the M14A clarification-without-context case.
+AUD14B_013,V14A_013,Stop the robot and proceed.,manual_m14a_ground_truth,1.0,V14A_013,stop_command,false,false,stop_proceed_conflict,Ground-truth transcript links future audio to the M14A stop/proceed conflict case.
+AUD14B_014,V14A_014,Move the red,manual_m14a_ground_truth,1.0,V14A_014,planning_command,false,false,partial_transcript,Ground-truth transcript links future audio to the M14A partial-transcript case.
+AUD14B_015,V14A_015,Move the red block to the inspection zone.,manual_m14a_ground_truth,0.5,V14A_015,planning_command,false,false,low_confidence,Ground-truth transcript links future audio to the M14A low-confidence case.
