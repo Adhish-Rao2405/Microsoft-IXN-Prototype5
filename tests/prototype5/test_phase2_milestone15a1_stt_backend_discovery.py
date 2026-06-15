@@ -7,6 +7,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from uuid import uuid4
 
+from scripts.prototype5 import discover_stt_backend
+
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "prototype5" / "discover_stt_backend.py"
@@ -125,6 +127,52 @@ def test_discovery_records_no_runtime_stt_or_planning_scope():
     assert payload["validators_called"] is False
     assert payload["execution_eligible_count"] == 0
     assert payload["binary_audio_files_committed"] is False
+
+
+def test_classification_distinguishes_foundry_candidate_with_missing_endpoint():
+    status, notes = discover_stt_backend.classify_discovery(
+        base_url="http://127.0.0.1:53402",
+        foundry_reachable=True,
+        candidate_models=["openai-whisper-tiny-generic-cpu:2"],
+        endpoint_probe_status="NOT_FOUND_HTTP_404",
+        recommended_backend="none",
+        foundry_error="",
+    )
+
+    assert status == "COMPLETE_STT_BACKEND_DISCOVERY_CANDIDATE_FOUND_ENDPOINT_UNAVAILABLE"
+    assert "exposes an STT/Whisper model candidate" in notes
+    assert "NOT_FOUND_HTTP_404" in notes
+
+
+def test_recommend_backend_does_not_select_foundry_when_endpoint_is_404():
+    backend = discover_stt_backend.recommend_backend(
+        ["openai-whisper-tiny-generic-cpu:2"],
+        "NOT_FOUND_HTTP_404",
+        {"whisper": None, "whisper-cli": None, "faster-whisper": None, "ffmpeg": None},
+        {"whisper": False, "faster_whisper": False, "openai": False},
+    )
+
+    assert backend == "none"
+
+
+def test_classification_marks_reachable_endpoint_as_candidate_found():
+    backend = discover_stt_backend.recommend_backend(
+        ["openai-whisper-tiny-generic-cpu:2"],
+        "ENDPOINT_PRESENT_OR_PROTECTED_HTTP_405",
+        {"whisper": None, "whisper-cli": None, "faster-whisper": None, "ffmpeg": None},
+        {"whisper": False, "faster_whisper": False, "openai": False},
+    )
+    status, _ = discover_stt_backend.classify_discovery(
+        base_url="http://127.0.0.1:53402",
+        foundry_reachable=True,
+        candidate_models=["openai-whisper-tiny-generic-cpu:2"],
+        endpoint_probe_status="ENDPOINT_PRESENT_OR_PROTECTED_HTTP_405",
+        recommended_backend=backend,
+        foundry_error="",
+    )
+
+    assert backend == "foundry-whisper-candidate"
+    assert status == "COMPLETE_STT_BACKEND_DISCOVERY_CANDIDATE_FOUND"
 
 
 def test_committed_summary_records_expected_safety_boundary():

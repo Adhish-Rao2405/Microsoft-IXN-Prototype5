@@ -1,15 +1,28 @@
 {
-  "audio_transcription_endpoint_probe_status": "NOT_PROBED_BASE_URL_NOT_CONFIGURED",
+  "audio_transcription_endpoint_probe_status": "NOT_FOUND_HTTP_404",
   "binary_audio_files_committed": false,
-  "candidate_foundry_stt_models": [],
-  "configured_environment_variables": [],
+  "candidate_foundry_stt_models": [
+    "openai-whisper-tiny-generic-cpu:2"
+  ],
+  "configured_environment_variables": [
+    "FOUNDRY_LOCAL_BASE_URL"
+  ],
   "dependency_changes": false,
   "execution_eligible_count": 0,
   "fake_transcripts_generated": false,
-  "foundry_base_url": "",
-  "foundry_base_url_configured": false,
-  "foundry_model_aliases": [],
-  "foundry_models_endpoint_reachable": false,
+  "foundry_base_url": "http://127.0.0.1:53402",
+  "foundry_base_url_configured": true,
+  "foundry_model_aliases": [
+    "gpt-oss-20b-generic-cpu:1",
+    "openai-whisper-tiny-generic-cpu:2",
+    "Phi-3-mini-4k-instruct-generic-cpu:3",
+    "qwen2.5-0.5b-instruct-generic-cpu:4",
+    "qwen2.5-1.5b-instruct-generic-cpu:4",
+    "qwen2.5-coder-0.5b-instruct-generic-cpu:4",
+    "qwen2.5-coder-1.5b-instruct-generic-cpu:4",
+    "qwen2.5-coder-7b-instruct-generic-cpu:4"
+  ],
+  "foundry_models_endpoint_reachable": true,
   "live_microphone_used": false,
   "local_cli_candidates": {
     "faster-whisper": null,
@@ -19,7 +32,7 @@
   },
   "milestone": "Phase 2 Milestone 15A.1",
   "mode": "stt_backend_discovery_spike",
-  "notes": "No usable STT backend candidate was discovered without installing dependencies or downloading models.",
+  "notes": "Foundry Local is reachable and exposes an STT/Whisper model candidate, but no usable audio transcription endpoint was confirmed. Endpoint probe status: NOT_FOUND_HTTP_404.",
   "planner_called": false,
   "python_package_candidates": {
     "faster_whisper": false,
@@ -29,7 +42,7 @@
   "real_stt_attempted": false,
   "recommended_backend": "none",
   "speech_to_text_used": false,
-  "status": "COMPLETE_STT_BACKEND_DISCOVERY_NO_BACKEND_FOUND",
-  "timestamp_utc": "2026-06-15T18:07:21Z",
+  "status": "COMPLETE_STT_BACKEND_DISCOVERY_CANDIDATE_FOUND_ENDPOINT_UNAVAILABLE",
+  "timestamp_utc": "2026-06-15T18:24:32Z",
   "validators_called": false
 }

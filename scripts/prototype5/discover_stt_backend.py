@@ -45,6 +45,7 @@ CLI_CANDIDATES = ("whisper", "whisper-cli", "faster-whisper", "ffmpeg")
 PYTHON_PACKAGE_CANDIDATES = ("whisper", "faster_whisper", "openai")
 
 STATUS_CANDIDATE_FOUND = "COMPLETE_STT_BACKEND_DISCOVERY_CANDIDATE_FOUND"
+STATUS_CANDIDATE_ENDPOINT_UNAVAILABLE = "COMPLETE_STT_BACKEND_DISCOVERY_CANDIDATE_FOUND_ENDPOINT_UNAVAILABLE"
 STATUS_NO_BACKEND_FOUND = "COMPLETE_STT_BACKEND_DISCOVERY_NO_BACKEND_FOUND"
 STATUS_FOUNDRY_UNREACHABLE = "COMPLETE_STT_BACKEND_DISCOVERY_FOUNDRY_UNREACHABLE"
 
@@ -153,7 +154,7 @@ def recommend_backend(
     cli_candidates: dict[str, str | None],
     python_package_candidates: dict[str, bool],
 ) -> str:
-    if candidate_foundry_stt_models and endpoint_probe_status != "NOT_FOUND_HTTP_404":
+    if candidate_foundry_stt_models and transcription_endpoint_candidate_is_usable(endpoint_probe_status):
         return "foundry-whisper-candidate"
     if cli_candidates.get("whisper") or cli_candidates.get("whisper-cli"):
         return "local-whisper-cli-candidate"
@@ -164,6 +165,48 @@ def recommend_backend(
     if python_package_candidates.get("faster_whisper"):
         return "faster-whisper-python-candidate"
     return "none"
+
+
+def transcription_endpoint_candidate_is_usable(endpoint_probe_status: str) -> bool:
+    return endpoint_probe_status == "REACHABLE_OPTIONS_OK" or endpoint_probe_status.startswith(
+        "ENDPOINT_PRESENT_OR_PROTECTED_HTTP_"
+    )
+
+
+def classify_discovery(
+    *,
+    base_url: str,
+    foundry_reachable: bool,
+    candidate_models: list[str],
+    endpoint_probe_status: str,
+    recommended_backend: str,
+    foundry_error: str,
+) -> tuple[str, str]:
+    if recommended_backend != "none":
+        return (
+            STATUS_CANDIDATE_FOUND,
+            "Discovery found a usable STT backend candidate. M15A.2 should run a controlled one-file smoke test.",
+        )
+
+    if base_url and not foundry_reachable:
+        return (
+            STATUS_FOUNDRY_UNREACHABLE,
+            f"Foundry Local base URL was configured but /v1/models was not reachable: {foundry_error}",
+        )
+
+    if foundry_reachable and candidate_models:
+        return (
+            STATUS_CANDIDATE_ENDPOINT_UNAVAILABLE,
+            (
+                "Foundry Local is reachable and exposes an STT/Whisper model candidate, but no usable "
+                f"audio transcription endpoint was confirmed. Endpoint probe status: {endpoint_probe_status}."
+            ),
+        )
+
+    return (
+        STATUS_NO_BACKEND_FOUND,
+        "No STT backend candidate was discovered without installing dependencies or downloading models.",
+    )
 
 
 def build_summary(timeout_seconds: float) -> dict[str, Any]:
@@ -181,20 +224,14 @@ def build_summary(timeout_seconds: float) -> dict[str, Any]:
         python_package_candidates,
     )
 
-    if recommended_backend != "none":
-        status = STATUS_CANDIDATE_FOUND
-    elif base_url and not foundry["reachable"]:
-        status = STATUS_FOUNDRY_UNREACHABLE
-    else:
-        status = STATUS_NO_BACKEND_FOUND
-
-    notes = (
-        "Discovery found a possible STT backend candidate. M15A.2 should run a controlled one-file smoke test."
-        if recommended_backend != "none"
-        else "No usable STT backend candidate was discovered without installing dependencies or downloading models."
+    status, notes = classify_discovery(
+        base_url=base_url,
+        foundry_reachable=bool(foundry["reachable"]),
+        candidate_models=candidate_models,
+        endpoint_probe_status=endpoint_probe_status,
+        recommended_backend=recommended_backend,
+        foundry_error=foundry["error"],
     )
-    if status == STATUS_FOUNDRY_UNREACHABLE:
-        notes = f"Foundry Local base URL was configured but /v1/models was not reachable: {foundry['error']}"
 
     return {
         "status": status,

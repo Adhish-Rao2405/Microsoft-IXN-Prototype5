@@ -20,6 +20,17 @@ The discovery probe checks:
 
 The probe uses discovery APIs only. It does not invoke long-running transcription and does not submit local audio files to a transcription endpoint.
 
+## Discovery Classifications
+
+M15A.1B distinguishes four discovery outcomes:
+
+- Foundry Local is not configured or is unreachable.
+- Foundry Local is reachable but exposes no STT/Whisper model candidate.
+- Foundry Local is reachable and exposes an STT/Whisper model candidate, but no usable transcription endpoint is confirmed.
+- A usable transcription endpoint candidate is discovered for a later one-file smoke test.
+
+If a Whisper model appears in `/v1/models` but `/v1/audio/transcriptions` returns `HTTP 404`, the correct outcome is candidate-found but endpoint-unavailable, not full backend availability.
+
 ## Relationship To M15A
 
 M15A established a bounded STT feasibility adapter and reported backend unavailability without fabricating transcripts.

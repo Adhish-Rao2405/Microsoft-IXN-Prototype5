@@ -6,10 +6,10 @@ M15A.1 discovers whether this machine already exposes a usable speech-to-text ba
 
 ## Current Result
 
-- Status: `COMPLETE_STT_BACKEND_DISCOVERY_NO_BACKEND_FOUND`
-- Foundry Local base URL configured: false
-- `/v1/models` reachable: false
-- Audio transcription endpoint probe: `NOT_PROBED_BASE_URL_NOT_CONFIGURED`
+- Status: `COMPLETE_STT_BACKEND_DISCOVERY_CANDIDATE_FOUND_ENDPOINT_UNAVAILABLE`
+- Foundry Local base URL configured: true
+- `/v1/models` reachable: true
+- Audio transcription endpoint probe: `NOT_FOUND_HTTP_404`
 - Recommended backend: `none`
 - Real STT attempted: false
 - Speech-to-text used: false
@@ -21,7 +21,7 @@ M15A.1 discovers whether this machine already exposes a usable speech-to-text ba
 
 ## Candidate Foundry STT Models
 
-- None
+- `openai-whisper-tiny-generic-cpu:2`
 
 ## Local CLI Candidates
 
@@ -38,7 +38,7 @@ M15A.1 discovers whether this machine already exposes a usable speech-to-text ba
 
 ## Notes
 
-No usable STT backend candidate was discovered without installing dependencies or downloading models.
+Foundry Local is reachable and exposes an STT/Whisper model candidate, but no usable audio transcription endpoint was confirmed. Endpoint probe status: NOT_FOUND_HTTP_404.
 
 ## Claim Boundary
 
