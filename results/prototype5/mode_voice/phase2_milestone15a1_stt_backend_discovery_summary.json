@@ -1,0 +1,35 @@
+{
+  "audio_transcription_endpoint_probe_status": "NOT_PROBED_BASE_URL_NOT_CONFIGURED",
+  "binary_audio_files_committed": false,
+  "candidate_foundry_stt_models": [],
+  "configured_environment_variables": [],
+  "dependency_changes": false,
+  "execution_eligible_count": 0,
+  "fake_transcripts_generated": false,
+  "foundry_base_url": "",
+  "foundry_base_url_configured": false,
+  "foundry_model_aliases": [],
+  "foundry_models_endpoint_reachable": false,
+  "live_microphone_used": false,
+  "local_cli_candidates": {
+    "faster-whisper": null,
+    "ffmpeg": null,
+    "whisper": null,
+    "whisper-cli": null
+  },
+  "milestone": "Phase 2 Milestone 15A.1",
+  "mode": "stt_backend_discovery_spike",
+  "notes": "No usable STT backend candidate was discovered without installing dependencies or downloading models.",
+  "planner_called": false,
+  "python_package_candidates": {
+    "faster_whisper": false,
+    "openai": false,
+    "whisper": false
+  },
+  "real_stt_attempted": false,
+  "recommended_backend": "none",
+  "speech_to_text_used": false,
+  "status": "COMPLETE_STT_BACKEND_DISCOVERY_NO_BACKEND_FOUND",
+  "timestamp_utc": "2026-06-15T18:07:21Z",
+  "validators_called": false
+}
