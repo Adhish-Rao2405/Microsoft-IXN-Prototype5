@@ -1,0 +1,142 @@
+{
+  "audio_dir": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\data\\prototype5\\mode_voice\\audio_samples",
+  "audio_runtime_used": false,
+  "binary_audio_files_committed": false,
+  "dependency_changes": false,
+  "expected_audio_count": 15,
+  "live_microphone_used": false,
+  "manifest_path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5\\data\\prototype5\\mode_voice\\audio_manifest.csv",
+  "manifest_rows": 15,
+  "milestone": "Phase 2 Milestone 14C",
+  "missing_audio_count": 15,
+  "missing_files": [
+    {
+      "audio_id": "AUD14B_001",
+      "case_id": "V14A_001",
+      "expected_audio_filename": "v14a_001_clear_planning_red_block.wav",
+      "extension": ".wav",
+      "relative_path": "data\\prototype5\\mode_voice\\audio_samples\\v14a_001_clear_planning_red_block.wav",
+      "size_bytes": null
+    },
+    {
+      "audio_id": "AUD14B_002",
+      "case_id": "V14A_002",
+      "expected_audio_filename": "v14a_002_clear_planning_blue_object.wav",
+      "extension": ".wav",
+      "relative_path": "data\\prototype5\\mode_voice\\audio_samples\\v14a_002_clear_planning_blue_object.wav",
+      "size_bytes": null
+    },
+    {
+      "audio_id": "AUD14B_003",
+      "case_id": "V14A_003",
+      "expected_audio_filename": "v14a_003_stop_robot.wav",
+      "extension": ".wav",
+      "relative_path": "data\\prototype5\\mode_voice\\audio_samples\\v14a_003_stop_robot.wav",
+      "size_bytes": null
+    },
+    {
+      "audio_id": "AUD14B_004",
+      "case_id": "V14A_004",
+      "expected_audio_filename": "v14a_004_abort_task.wav",
+      "extension": ".wav",
+      "relative_path": "data\\prototype5\\mode_voice\\audio_samples\\v14a_004_abort_task.wav",
+      "size_bytes": null
+    },
+    {
+      "audio_id": "AUD14B_005",
+      "case_id": "V14A_005",
+      "expected_audio_filename": "v14a_005_proceed.wav",
+      "extension": ".wav",
+      "relative_path": "data\\prototype5\\mode_voice\\audio_samples\\v14a_005_proceed.wav",
+      "size_bytes": null
+    },
+    {
+      "audio_id": "AUD14B_006",
+      "case_id": "V14A_006",
+      "expected_audio_filename": "v14a_006_continue.wav",
+      "extension": ".wav",
+      "relative_path": "data\\prototype5\\mode_voice\\audio_samples\\v14a_006_continue.wav",
+      "size_bytes": null
+    },
+    {
+      "audio_id": "AUD14B_007",
+      "case_id": "V14A_007",
+      "expected_audio_filename": "v14a_007_move_it_over_there.wav",
+      "extension": ".wav",
+      "relative_path": "data\\prototype5\\mode_voice\\audio_samples\\v14a_007_move_it_over_there.wav",
+      "size_bytes": null
+    },
+    {
+      "audio_id": "AUD14B_008",
+      "case_id": "V14A_008",
+      "expected_audio_filename": "v14a_008_put_that_one_other_zone.wav",
+      "extension": ".wav",
+      "relative_path": "data\\prototype5\\mode_voice\\audio_samples\\v14a_008_put_that_one_other_zone.wav",
+      "size_bytes": null
+    },
+    {
+      "audio_id": "AUD14B_009",
+      "case_id": "V14A_009",
+      "expected_audio_filename": "v14a_009_do_not_move_outside_safety_zone.wav",
+      "extension": ".wav",
+      "relative_path": "data\\prototype5\\mode_voice\\audio_samples\\v14a_009_do_not_move_outside_safety_zone.wav",
+      "size_bytes": null
+    },
+    {
+      "audio_id": "AUD14B_010",
+      "case_id": "V14A_010",
+      "expected_audio_filename": "v14a_010_move_arm_outside_safety_zone.wav",
+      "extension": ".wav",
+      "relative_path": "data\\prototype5\\mode_voice\\audio_samples\\v14a_010_move_arm_outside_safety_zone.wav",
+      "size_bytes": null
+    },
+    {
+      "audio_id": "AUD14B_011",
+      "case_id": "V14A_011",
+      "expected_audio_filename": "v14a_011_can_you_hear_me.wav",
+      "extension": ".wav",
+      "relative_path": "data\\prototype5\\mode_voice\\audio_samples\\v14a_011_can_you_hear_me.wav",
+      "size_bytes": null
+    },
+    {
+      "audio_id": "AUD14B_012",
+      "case_id": "V14A_012",
+      "expected_audio_filename": "v14a_012_actually_use_red_block.wav",
+      "extension": ".wav",
+      "relative_path": "data\\prototype5\\mode_voice\\audio_samples\\v14a_012_actually_use_red_block.wav",
+      "size_bytes": null
+    },
+    {
+      "audio_id": "AUD14B_013",
+      "case_id": "V14A_013",
+      "expected_audio_filename": "v14a_013_stop_robot_and_proceed.wav",
+      "extension": ".wav",
+      "relative_path": "data\\prototype5\\mode_voice\\audio_samples\\v14a_013_stop_robot_and_proceed.wav",
+      "size_bytes": null
+    },
+    {
+      "audio_id": "AUD14B_014",
+      "case_id": "V14A_014",
+      "expected_audio_filename": "v14a_014_move_the_red_partial.wav",
+      "extension": ".wav",
+      "relative_path": "data\\prototype5\\mode_voice\\audio_samples\\v14a_014_move_the_red_partial.wav",
+      "size_bytes": null
+    },
+    {
+      "audio_id": "AUD14B_015",
+      "case_id": "V14A_015",
+      "expected_audio_filename": "v14a_015_low_confidence_red_block.wav",
+      "extension": ".wav",
+      "relative_path": "data\\prototype5\\mode_voice\\audio_samples\\v14a_015_low_confidence_red_block.wav",
+      "size_bytes": null
+    }
+  ],
+  "mode": "local_audio_artifact_verification",
+  "notes": "M14C verifies local file presence and manifest alignment only. It does not read binary audio content, capture microphone input, run speech-to-text, load speech models, or grant execution authority.",
+  "present_audio_count": 0,
+  "present_files": [],
+  "speech_to_text_used": false,
+  "status": "COMPLETE_LOCAL_AUDIO_VERIFICATION_MISSING_LOCAL_FILES",
+  "strict_mode": false,
+  "timestamp_utc": "2026-06-15T16:39:17Z"
+}
