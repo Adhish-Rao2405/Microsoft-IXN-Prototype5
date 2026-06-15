@@ -12,7 +12,7 @@ Recommended recording constraints:
 - normal speaking volume
 - no background music
 - no overlapping speech
-- WAV format when possible
+- M4A format is acceptable when that is the real recorder output
 - stable lowercase snake_case filenames matching the manifest
 - self-recorded audio or explicit consent only
 

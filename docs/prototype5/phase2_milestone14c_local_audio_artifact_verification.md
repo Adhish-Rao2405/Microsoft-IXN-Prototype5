@@ -58,7 +58,7 @@ Expected statuses:
 
 ## Current Expected State
 
-At the time M14C is added, the 15 local recordings may be absent. That is an intentional and honest state:
+At the time M14C is updated for local recordings, the manifest expects M4A artefacts produced by Windows Sound Recorder. M14C records filesystem presence and byte size only; it does not parse or validate the audio container:
 
 - expected audio count: 15
 - present audio count: reported by the local verifier

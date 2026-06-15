@@ -22,7 +22,7 @@ No binary audio files are committed in M14B. The `audio_samples` folder is reser
 
 ## Recording Protocol
 
-Future recordings should use one speaker in a quiet room, normal speaking volume, one command per file, no background music, no overlapping speech, and stable lowercase snake_case WAV filenames from the manifest. Audio should be self-recorded or collected with explicit consent.
+Recordings should use one speaker in a quiet room, normal speaking volume, one command per file, no background music, no overlapping speech, and stable lowercase snake_case filenames from the manifest. Current local recordings are M4A files produced by Windows Sound Recorder, and the manifest records that format honestly. Audio should be self-recorded or collected with explicit consent.
 
 ## Current Status
 

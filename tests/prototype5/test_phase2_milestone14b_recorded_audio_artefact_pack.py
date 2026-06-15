@@ -105,21 +105,29 @@ def test_every_audio_id_and_case_id_is_unique():
     assert len({row["case_id"] for row in transcript_rows}) == len(transcript_rows)
 
 
-def test_audio_manifest_uses_placeholder_storage_and_stable_wav_names():
+def test_audio_manifest_uses_local_recorded_storage_and_stable_m4a_names():
     rows = read_csv(AUDIO_MANIFEST)
 
-    assert {row["audio_storage_status"] for row in rows} == {"placeholder_not_recorded"}
-    assert all(row["expected_audio_filename"].endswith(".wav") for row in rows)
+    assert {row["audio_storage_status"] for row in rows} == {"local_recorded_untracked"}
+    assert {row["audio_format"] for row in rows} == {"m4a_recorded"}
+    assert all(row["expected_audio_filename"].endswith(".m4a") for row in rows)
     assert all(row["expected_audio_filename"] == row["expected_audio_filename"].lower() for row in rows)
     assert all(" " not in row["expected_audio_filename"] for row in rows)
 
 
 def test_no_binary_audio_file_is_required_or_committed():
     assert AUDIO_SAMPLES_DIR.exists()
-    files = [path for path in AUDIO_SAMPLES_DIR.rglob("*") if path.is_file()]
+    completed = subprocess.run(
+        ["git", "ls-files", "data/prototype5/mode_voice/audio_samples"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    tracked_files = [ROOT / line for line in completed.stdout.splitlines()]
 
-    assert files == [AUDIO_SAMPLES_DIR / "README.md"]
-    assert not any(path.suffix.lower() in BINARY_AUDIO_SUFFIXES for path in files)
+    assert tracked_files == [AUDIO_SAMPLES_DIR / "README.md"]
+    assert not any(path.suffix.lower() in BINARY_AUDIO_SUFFIXES for path in tracked_files)
 
 
 def test_summary_outputs_exist():

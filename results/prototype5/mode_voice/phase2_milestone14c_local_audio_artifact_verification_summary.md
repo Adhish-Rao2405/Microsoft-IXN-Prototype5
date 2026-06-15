@@ -8,10 +8,10 @@ The verifier supports the expected development state where recordings may not ex
 
 ## Current Result
 
-- Status: `COMPLETE_LOCAL_AUDIO_VERIFICATION_MISSING_LOCAL_FILES`
+- Status: `COMPLETE_LOCAL_AUDIO_VERIFICATION_ALL_PRESENT`
 - Expected audio count: 15
-- Present audio count: 0
-- Missing audio count: 15
+- Present audio count: 15
+- Missing audio count: 0
 - Strict mode: false
 - Binary audio files committed: false
 - Audio runtime used: false
@@ -21,25 +21,25 @@ The verifier supports the expected development state where recordings may not ex
 
 ## Present Files
 
-- None
+- `v14a_001_clear_planning_red_block.m4a` (V14A_001, 150307 bytes)
+- `v14a_002_clear_planning_blue_object.m4a` (V14A_002, 131183 bytes)
+- `v14a_003_stop_robot.m4a` (V14A_003, 95780 bytes)
+- `v14a_004_abort_task.m4a` (V14A_004, 89723 bytes)
+- `v14a_005_proceed.m4a` (V14A_005, 80517 bytes)
+- `v14a_006_continue.m4a` (V14A_006, 64150 bytes)
+- `v14a_007_move_it_over_there.m4a` (V14A_007, 99546 bytes)
+- `v14a_008_put_that_one_other_zone.m4a` (V14A_008, 109503 bytes)
+- `v14a_009_do_not_move_outside_safety_zone.m4a` (V14A_009, 117034 bytes)
+- `v14a_010_move_arm_outside_safety_zone.m4a` (V14A_010, 126274 bytes)
+- `v14a_011_can_you_hear_me.m4a` (V14A_011, 88134 bytes)
+- `v14a_012_actually_use_red_block.m4a` (V14A_012, 107724 bytes)
+- `v14a_013_stop_robot_and_proceed.m4a` (V14A_013, 99524 bytes)
+- `v14a_014_move_the_red_partial.m4a` (V14A_014, 88168 bytes)
+- `v14a_015_low_confidence_red_block.m4a` (V14A_015, 119825 bytes)
 
 ## Missing Files
 
-- `v14a_001_clear_planning_red_block.wav` (V14A_001)
-- `v14a_002_clear_planning_blue_object.wav` (V14A_002)
-- `v14a_003_stop_robot.wav` (V14A_003)
-- `v14a_004_abort_task.wav` (V14A_004)
-- `v14a_005_proceed.wav` (V14A_005)
-- `v14a_006_continue.wav` (V14A_006)
-- `v14a_007_move_it_over_there.wav` (V14A_007)
-- `v14a_008_put_that_one_other_zone.wav` (V14A_008)
-- `v14a_009_do_not_move_outside_safety_zone.wav` (V14A_009)
-- `v14a_010_move_arm_outside_safety_zone.wav` (V14A_010)
-- `v14a_011_can_you_hear_me.wav` (V14A_011)
-- `v14a_012_actually_use_red_block.wav` (V14A_012)
-- `v14a_013_stop_robot_and_proceed.wav` (V14A_013)
-- `v14a_014_move_the_red_partial.wav` (V14A_014)
-- `v14a_015_low_confidence_red_block.wav` (V14A_015)
+- None
 
 ## Method
 

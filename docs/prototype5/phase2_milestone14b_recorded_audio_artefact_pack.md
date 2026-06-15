@@ -45,19 +45,19 @@ Future recordings should follow this protocol:
 - avoid background music
 - avoid overlapping speech
 - record the intended command exactly where possible
-- save as WAV where possible
+- save using the real recorder output format and record that format honestly in the manifest
 - use stable lowercase snake_case filenames from the manifest
 - preserve a manual transcript for each recording
 - document any mismatch between intended command and spoken command
 - keep large binary audio files local and untracked unless explicitly approved
 - use self-recorded audio or obtain explicit consent
 
-Recommended naming convention examples:
+Current local naming convention examples:
 
-- `v14a_001_clear_planning_red_block.wav`
-- `v14a_002_clear_planning_blue_object.wav`
-- `v14a_003_stop_robot.wav`
-- `v14a_013_stop_robot_and_proceed.wav`
+- `v14a_001_clear_planning_red_block.m4a`
+- `v14a_002_clear_planning_blue_object.m4a`
+- `v14a_003_stop_robot.m4a`
+- `v14a_013_stop_robot_and_proceed.m4a`
 
 ## Privacy And Consent Boundary
 
