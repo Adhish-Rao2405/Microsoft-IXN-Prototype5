@@ -1,0 +1,59 @@
+{
+  "audio_file": "v14a_006_continue.m4a",
+  "audio_file_present": true,
+  "automatic_transcript": "",
+  "binary_audio_files_committed": false,
+  "candidate_model": "openai-whisper-tiny-generic-cpu:2",
+  "candidate_model_visible": true,
+  "dependency_changes": false,
+  "emergency_stop_implemented": false,
+  "execution_eligible_count": 0,
+  "fake_transcripts_generated": false,
+  "foundry_base_url": "http://127.0.0.1:53402",
+  "foundry_base_url_configured": true,
+  "foundry_models_endpoint_status": 200,
+  "live_microphone_used": false,
+  "milestone": "Phase 2 Milestone 15A.2",
+  "mode": "foundry_whisper_transcription_endpoint_feasibility_probe",
+  "notes": "The candidate model was visible, but none of the fixed transcription routes returned a usable 2xx transcript-like response.",
+  "planner_called": false,
+  "real_stt_attempted": true,
+  "robot_execution_used": false,
+  "routes_attempted": [
+    {
+      "automatic_transcript": "",
+      "error": "HTTP 404: Not Found",
+      "http_status": 404,
+      "latency_ms": 27.653,
+      "response_snippet": "",
+      "route": "/v1/audio/transcriptions",
+      "transcript_like_response": false,
+      "usable_stt_confirmed": false
+    },
+    {
+      "automatic_transcript": "",
+      "error": "HTTP 404: Not Found",
+      "http_status": 404,
+      "latency_ms": 2.175,
+      "response_snippet": "",
+      "route": "/v1/transcriptions",
+      "transcript_like_response": false,
+      "usable_stt_confirmed": false
+    },
+    {
+      "automatic_transcript": "",
+      "error": "HTTP 404: Not Found",
+      "http_status": 404,
+      "latency_ms": 27.275,
+      "response_snippet": "",
+      "route": "/v1/models/openai-whisper-tiny-generic-cpu:2/transcriptions",
+      "transcript_like_response": false,
+      "usable_stt_confirmed": false
+    }
+  ],
+  "speech_to_text_used": false,
+  "status": "COMPLETE_FOUNDRY_WHISPER_ENDPOINT_PROBE_NO_USABLE_ENDPOINT",
+  "timestamp_utc": "2026-06-25T09:54:57Z",
+  "usable_endpoint_confirmed": false,
+  "validators_called": false
+}
