@@ -6,6 +6,15 @@ This repository contains the final dissertation-focused evidence orchestration l
 
 Prototype 5's core orchestrator does not introduce new planning logic. Later evidence modes include bounded evaluation runs, including E0.4 repeatability testing and Mode E.2 live industrial benchmark evaluation. The repository consolidates and audits evidence into dissertation-ready tables, summaries, and claim matrices.
 
+## Latest Status For Supervisors
+
+- Final feature-development stop point reached for Prototype 5.
+- Full Prototype 5 test suite: 297 passed.
+- M15A.2 completed: Foundry Local exposed a Whisper candidate model, but the tested HTTP transcription endpoints returned 404 and no usable transcription endpoint was confirmed.
+- M15B.0 completed: Nemotron SDK STT feasibility assessment found that `foundry-local-sdk` is not installed, no `.wav` audio files exist, and dependency plus WAV/PCM handling decisions would be required before any controlled Nemotron STT spike.
+- Lee Stott's `fl-nemotron` repository has been added as an external reference snapshot only.
+- No runtime integration, STT implementation, microphone capture, TTS/web UI/FastAPI, planner/validator changes, robot execution, emergency-stop functionality, or voice-control claim has been added.
+
 ## Supervisor-facing evidence pack
 
 For a quick review of the latest Prototype 5 / Mode E progress, start here:
@@ -65,7 +74,7 @@ Current final evidence status:
 - Mode E benchmark audit: `COMPLETE_BALANCED_EXTENSION`
 - Mode E.1 policy audit: `COMPLETE_POLICY_CONTEXT`
 - Mode E.2 live industrial evaluation: `COMPLETE_LIVE_INDUSTRIAL_EVALUATION`
-- Prototype 5 tests: 107 passed
+- Prototype 5 tests: 297 passed
 - Orchestrator: `COMPLETE`
 
 Mode E.2 is evidence under a curated industrial benchmark and deterministic policy context. It does not prove production robot safety or general industrial deployment readiness.
@@ -164,7 +173,7 @@ Mode E/E.1/E.2 complete:
 - Mode E benchmark audit: `COMPLETE_BALANCED_EXTENSION`
 - Mode E.1 policy audit: `COMPLETE_POLICY_CONTEXT`
 - Mode E.2 live industrial evaluation: `COMPLETE_LIVE_INDUSTRIAL_EVALUATION`
-- Tests: 107 passed
+- Tests: 297 passed
 
 - `configs/prototype5/mode_e_industrial_benchmark.json`
 - `configs/prototype5/mode_e_industrial_vocabulary.json`

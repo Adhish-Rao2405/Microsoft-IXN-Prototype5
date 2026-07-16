@@ -11,8 +11,8 @@ def read(relative_path: str) -> str:
 def test_readme_reflects_current_mode_e_state():
     readme = read("README.md")
 
-    assert "Prototype 5 tests: 107 passed" in readme
-    assert "Tests: 107 passed" in readme
+    assert "Prototype 5 tests: 297 passed" in readme
+    assert "Tests: 297 passed" in readme
     assert "Mode E.2 live industrial evaluation: `COMPLETE_LIVE_INDUSTRIAL_EVALUATION`" in readme
     assert "Mode E.2 is evidence under a curated industrial benchmark and deterministic policy context" in readme
     assert "does not prove production robot safety or general industrial deployment readiness" in readme
@@ -66,4 +66,3 @@ def test_final_dashboard_includes_latency_deployment_framing():
     assert "latency profile constrains the deployment interpretation" in lowered
     assert "local-first supervisory task proposal and validation" in lowered
     assert "not low-latency closed-loop robot control" in lowered
-

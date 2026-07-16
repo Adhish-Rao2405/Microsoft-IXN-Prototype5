@@ -30,7 +30,7 @@ DEFAULT_SUMMARY_MD = (
 MILESTONE = "Phase 2 Milestone 15B.0"
 MODE = "nemotron_sdk_stt_future_extension_feasibility"
 MINIMUM_SDK_VERSION = "1.1.0"
-REFERENCE_MODEL_ALIAS = "nvidia-nemotron-speech-streaming"
+REFERENCE_MODEL_ALIAS = "nemotron-speech-streaming-en-0.6b"
 
 STATUS_SDK_NOT_INSTALLED = "COMPLETE_NEMOTRON_SDK_ASSESSMENT_SDK_NOT_INSTALLED"
 STATUS_SDK_TOO_OLD = "COMPLETE_NEMOTRON_SDK_ASSESSMENT_SDK_TOO_OLD"
