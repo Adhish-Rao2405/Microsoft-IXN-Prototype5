@@ -7,6 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MODE_E0_DIR = ROOT / "results" / "prototype5" / "mode_e0"
+BENCHMARK_PATH = ROOT / "configs" / "prototype5" / "benchmark_v1.json"
 
 
 def test_pipeline_repeatability_script_generates_outputs(tmp_path):
@@ -19,6 +20,8 @@ def test_pipeline_repeatability_script_generates_outputs(tmp_path):
             str(MODE_E0_DIR),
             "--output-dir",
             str(output_dir),
+            "--benchmark",
+            str(BENCHMARK_PATH),
         ],
         cwd=ROOT,
         text=True,

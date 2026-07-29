@@ -1,0 +1,55 @@
+name: Prototype 5 qualification
+
+"on":
+  pull_request:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prototype5-tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prototype5-tests:
+    name: Prototype 5 tests (Windows, Python 3.12)
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUTF8: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install repository dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Run Prototype 5 tests
+        run: python -m pytest tests/prototype5 -q
+
+      - name: Verify repository cleanliness
+        shell: pwsh
+        run: |
+          git diff --check
+          git diff --exit-code
+
+          $changes = git status --porcelain
+          if ($changes) {
+            $changes
+            throw "Prototype 5 tests modified or created repository files."
+          }
