@@ -14,20 +14,29 @@ SUMMARY_JSON = MODE_E0_DIR / "full_pipeline_live_repeatability_summary.json"
 SUMMARY_MD = MODE_E0_DIR / "full_pipeline_live_repeatability_summary.md"
 
 
-def test_full_pipeline_repeatability_script_is_repo_local_and_bounded():
+def test_full_pipeline_repeatability_script_is_repo_local_and_bounded(tmp_path):
+    output_dir = tmp_path / "mode_e0"
     completed = subprocess.run(
-        [sys.executable, "scripts/prototype5/run_full_pipeline_repeatability.py"],
+        [
+            sys.executable,
+            "scripts/prototype5/run_full_pipeline_repeatability.py",
+            "--output-dir",
+            str(output_dir),
+        ],
         cwd=ROOT,
         text=True,
         capture_output=True,
         check=False,
     )
     assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert RUNS_CSV.exists()
-    assert SUMMARY_JSON.exists()
-    assert SUMMARY_MD.exists()
+    runs_csv = output_dir / RUNS_CSV.name
+    summary_json = output_dir / SUMMARY_JSON.name
+    summary_md = output_dir / SUMMARY_MD.name
+    assert runs_csv.exists()
+    assert summary_json.exists()
+    assert summary_md.exists()
 
-    summary = json.loads(SUMMARY_JSON.read_text(encoding="utf-8"))
+    summary = json.loads(summary_json.read_text(encoding="utf-8"))
     assert summary["mode"] == "E0.4"
     assert summary["status"] in {
         "COMPLETE_FULL_LIVE_PIPELINE_REPEATABILITY",

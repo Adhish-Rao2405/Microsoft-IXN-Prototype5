@@ -9,6 +9,7 @@ needed to make full live pipeline repeatability executable.
 
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 from datetime import datetime, timezone
@@ -63,7 +64,14 @@ def _external_hints() -> dict[str, bool]:
     return {str(path): path.exists() for path in EXTERNAL_PROTOTYPE3_HINTS}
 
 
-def build_not_run_summary() -> dict[str, object]:
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPO_ROOT).as_posix())
+    except ValueError:
+        return str(path)
+
+
+def build_not_run_summary(output_dir: Path = MODE_E0_DIR) -> dict[str, object]:
     repo_local = _repo_local_interfaces()
     external = _external_hints()
     missing = [path for path, present in repo_local.items() if not present]
@@ -80,7 +88,7 @@ def build_not_run_summary() -> dict[str, object]:
         "repo_local_interfaces_checked": repo_local,
         "repo_local_missing": missing,
         "external_prototype3_hints": external,
-        "live_runs_csv": str(LIVE_RUNS_CSV.relative_to(REPO_ROOT).as_posix()),
+        "live_runs_csv": _display_path(output_dir / LIVE_RUNS_CSV.name),
         "required_command_interface": (
             "python scripts/prototype5/run_full_pipeline_repeatability_live.py --live "
             "--runs 3 --base-url <FOUNDRY_LOCAL_BASE_URL> --model <MODEL_ALIAS> "
@@ -101,8 +109,14 @@ def build_not_run_summary() -> dict[str, object]:
     }
 
 
-def write_outputs(summary: dict[str, object]) -> None:
-    MODE_E0_DIR.mkdir(parents=True, exist_ok=True)
+def write_outputs(
+    summary: dict[str, object],
+    output_dir: Path = MODE_E0_DIR,
+) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    live_runs_csv = output_dir / LIVE_RUNS_CSV.name
+    summary_json = output_dir / SUMMARY_JSON.name
+    summary_md = output_dir / SUMMARY_MD.name
     row = {
         "run_id": "e0_3_full_live_pipeline",
         "model_alias": "not_run",
@@ -122,13 +136,13 @@ def write_outputs(summary: dict[str, object]) -> None:
         "std_latency_ms": "NOT_EVALUATED",
         "notes": str(summary["reason"]),
     }
-    with LIVE_RUNS_CSV.open("w", newline="", encoding="utf-8") as handle:
+    with live_runs_csv.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=CSV_COLUMNS)
         writer.writeheader()
         writer.writerow(row)
 
-    SUMMARY_JSON.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    SUMMARY_MD.write_text(build_markdown(summary), encoding="utf-8")
+    summary_json.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    summary_md.write_text(build_markdown(summary), encoding="utf-8")
 
 
 def build_markdown(summary: dict[str, object]) -> str:
@@ -169,8 +183,12 @@ def build_markdown(summary: dict[str, object]) -> str:
 
 
 def main() -> int:
-    summary = build_not_run_summary()
-    write_outputs(summary)
+    parser = argparse.ArgumentParser(description="Generate the Mode E0.3 not-run gate.")
+    parser.add_argument("--output-dir", type=Path, default=MODE_E0_DIR)
+    args = parser.parse_args()
+
+    summary = build_not_run_summary(args.output_dir)
+    write_outputs(summary, args.output_dir)
     print("Prototype 5 Mode E0.3 full live pipeline repeatability:", summary["status"])
     print(summary["reason"])
     return 0

@@ -8,6 +8,7 @@ physical robot safety.
 
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 import math
@@ -246,8 +247,10 @@ def validate_safety(actions: list[dict[str, Any]] | None) -> SafetyValidationRes
     return SafetyValidationResult(not violations, violations, list(actions) if not violations else None)
 
 
-def load_benchmark() -> dict[str, dict[str, Any]]:
-    payload = json.loads(BENCHMARK_PATH.read_text(encoding="utf-8-sig"))
+def load_benchmark(
+    benchmark_path: Path = BENCHMARK_PATH,
+) -> dict[str, dict[str, Any]]:
+    payload = json.loads(benchmark_path.read_text(encoding="utf-8-sig"))
     return {item["id"]: item for item in payload}
 
 
@@ -331,9 +334,24 @@ def summarise_run(run_id: str, records: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def run_pipeline_repeatability() -> dict[str, Any]:
-    MODE_E0_DIR.mkdir(parents=True, exist_ok=True)
-    raw_paths = sorted(MODE_E0_DIR.glob("e0_1_live_run_*_raw.jsonl"))
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPO_ROOT).as_posix())
+    except ValueError:
+        return str(path)
+
+
+def run_pipeline_repeatability(
+    output_dir: Path = MODE_E0_DIR,
+    input_dir: Path = MODE_E0_DIR,
+    benchmark_path: Path = BENCHMARK_PATH,
+) -> dict[str, Any]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    records_jsonl = output_dir / PIPELINE_RECORDS_JSONL.name
+    summary_csv = output_dir / PIPELINE_SUMMARY_CSV.name
+    variance_json = output_dir / PIPELINE_VARIANCE_JSON.name
+    variance_md = output_dir / PIPELINE_VARIANCE_MD.name
+    raw_paths = sorted(input_dir.glob("e0_1_live_run_*_raw.jsonl"))
     if not raw_paths:
         summary = {
             "mode": "E0.2",
@@ -342,11 +360,14 @@ def run_pipeline_repeatability() -> dict[str, Any]:
             "checked_at": datetime.now(timezone.utc).isoformat(),
             "reason": "No E0.1 raw live JSONL files found.",
         }
-        PIPELINE_VARIANCE_JSON.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-        PIPELINE_VARIANCE_MD.write_text("# Mode E0.2 Full Validation Pipeline Repeatability Replay\n\nStatus: NOT_RUN\n", encoding="utf-8")
+        variance_json.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+        variance_md.write_text(
+            "# Mode E0.2 Full Validation Pipeline Repeatability Replay\n\nStatus: NOT_RUN\n",
+            encoding="utf-8",
+        )
         return summary
 
-    benchmark_by_id = load_benchmark()
+    benchmark_by_id = load_benchmark(benchmark_path)
     detailed_records: list[dict[str, Any]] = []
     grouped: dict[str, list[dict[str, Any]]] = {}
     for path in raw_paths:
@@ -357,12 +378,12 @@ def run_pipeline_repeatability() -> dict[str, Any]:
             detailed_records.append(evaluated)
             grouped.setdefault(str(evaluated["run_id"]), []).append(evaluated)
 
-    with PIPELINE_RECORDS_JSONL.open("w", encoding="utf-8", newline="") as handle:
+    with records_jsonl.open("w", encoding="utf-8", newline="") as handle:
         for record in detailed_records:
             handle.write(json.dumps(record) + "\n")
 
     summary_rows = [summarise_run(run_id, grouped[run_id]) for run_id in sorted(grouped)]
-    with PIPELINE_SUMMARY_CSV.open("w", newline="", encoding="utf-8") as handle:
+    with summary_csv.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=SUMMARY_COLUMNS)
         writer.writeheader()
         writer.writerows(summary_rows)
@@ -406,9 +427,9 @@ def run_pipeline_repeatability() -> dict[str, Any]:
         "name": "Full Validation Pipeline Repeatability Replay",
         "status": "COMPLETE_PIPELINE_REPLAY_ON_MINIMAL_PROMPT_OUTPUTS",
         "checked_at": datetime.now(timezone.utc).isoformat(),
-        "source_raw_files": [str(path.relative_to(REPO_ROOT).as_posix()) for path in raw_paths],
-        "records_file": str(PIPELINE_RECORDS_JSONL.relative_to(REPO_ROOT).as_posix()),
-        "summary_csv": str(PIPELINE_SUMMARY_CSV.relative_to(REPO_ROOT).as_posix()),
+        "source_raw_files": [_display_path(path) for path in raw_paths],
+        "records_file": _display_path(records_jsonl),
+        "summary_csv": _display_path(summary_csv),
         "runs_evaluated": len(summary_rows),
         "commands_per_run": len(next(iter(grouped.values()))) if grouped else 0,
         "metric_variance": metric_variance,
@@ -426,8 +447,8 @@ def run_pipeline_repeatability() -> dict[str, Any]:
             "compatibility with the full pipeline contract, not a change to locked Prototype 3 metrics."
         ),
     }
-    PIPELINE_VARIANCE_JSON.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    PIPELINE_VARIANCE_MD.write_text(build_markdown(summary, summary_rows), encoding="utf-8")
+    variance_json.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    variance_md.write_text(build_markdown(summary, summary_rows), encoding="utf-8")
     return summary
 
 
@@ -470,7 +491,17 @@ def build_markdown(summary: dict[str, Any], rows: list[dict[str, Any]]) -> str:
 
 
 def main() -> int:
-    summary = run_pipeline_repeatability()
+    parser = argparse.ArgumentParser(description="Run the Mode E0.2 offline pipeline replay.")
+    parser.add_argument("--output-dir", type=Path, default=MODE_E0_DIR)
+    parser.add_argument("--input-dir", type=Path, default=MODE_E0_DIR)
+    parser.add_argument("--benchmark", type=Path, default=BENCHMARK_PATH)
+    args = parser.parse_args()
+
+    summary = run_pipeline_repeatability(
+        output_dir=args.output_dir,
+        input_dir=args.input_dir,
+        benchmark_path=args.benchmark,
+    )
     print("Prototype 5 Mode E0.2 pipeline repeatability:", summary["status"])
     if summary["status"] == "COMPLETE_PIPELINE_REPLAY_ON_MINIMAL_PROMPT_OUTPUTS":
         print(f"Runs evaluated: {summary['runs_evaluated']}")

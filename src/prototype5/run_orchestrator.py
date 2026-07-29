@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from .claims_matrix import create_claims_matrix
 from .evidence_manifest import generate_evidence_manifest
-from .evidence_paths import collect_input_status
+from .evidence_paths import DOCS_DIR, RESULTS_DIR, collect_input_status
 from .loaders import load_evidence
 from .metrics import (
     final_extension_summary,
@@ -33,7 +35,10 @@ def _status_from_table(table) -> str:
     return "MISSING"
 
 
-def run() -> tuple[dict[str, object], list[object]]:
+def run(
+    results_dir: Path = RESULTS_DIR,
+    docs_dir: Path = DOCS_DIR,
+) -> tuple[dict[str, object], list[object]]:
     input_status = collect_input_status()
     evidence = load_evidence()
     quantisation_summary = collect_quantisation_evidence()
@@ -67,7 +72,12 @@ def run() -> tuple[dict[str, object], list[object]]:
         mode_c_summary,
         mode_d_summary,
     )
-    generated = export_all(tables, provisional_manifest)
+    generated = export_all(
+        tables,
+        provisional_manifest,
+        results_dir=results_dir,
+        docs_dir=docs_dir,
+    )
     final_manifest = generate_evidence_manifest(
         input_status,
         generated,
@@ -77,7 +87,12 @@ def run() -> tuple[dict[str, object], list[object]]:
         mode_c_summary,
         mode_d_summary,
     )
-    generated = export_all(tables, final_manifest)
+    generated = export_all(
+        tables,
+        final_manifest,
+        results_dir=results_dir,
+        docs_dir=docs_dir,
+    )
     return {"tables": tables, "manifest": final_manifest}, generated
 
 

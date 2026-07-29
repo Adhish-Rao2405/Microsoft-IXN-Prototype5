@@ -2,6 +2,8 @@ import json
 import shutil
 from pathlib import Path
 
+import pytest
+
 from src.prototype5.phi_recovery_metrics import (
     collect_phi_evidence,
     load_phi_results,
@@ -15,7 +17,13 @@ from src.prototype5.phi_recovery_runner import (
 )
 
 
-TMP_ROOT = Path("tests/prototype5/_tmp_phi_metrics")
+TMP_ROOT: Path
+
+
+@pytest.fixture(autouse=True)
+def isolated_tmp_root(tmp_path):
+    global TMP_ROOT
+    TMP_ROOT = tmp_path / "phi_metrics"
 
 
 class FakeResponse:
@@ -146,6 +154,7 @@ def test_limited_run_with_successful_fenced_json_is_partial(monkeypatch):
 
     result = run_phi_recovery(
         output_dir=TMP_ROOT,
+        docs_dir=TMP_ROOT / "docs",
         requested_model="Phi-3-mini-4k-instruct-generic-cpu:3",
         timeout_seconds=1,
         max_tokens=32,
@@ -155,4 +164,5 @@ def test_limited_run_with_successful_fenced_json_is_partial(monkeypatch):
     assert result["summary"]["successful_requests"] == 1
     assert result["summary"]["parse_success_rate"] == 1.0
     assert result["summary"]["evidence_status"] == "PARTIAL"
+    assert (TMP_ROOT / "docs" / "prototype5_phi_evidence_summary.md").exists()
     shutil.rmtree(TMP_ROOT, ignore_errors=True)

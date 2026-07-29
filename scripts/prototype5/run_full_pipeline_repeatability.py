@@ -89,6 +89,21 @@ METRICS_FOR_VARIANCE = [
 SCENE_STATE: dict[str, Any] = {}
 
 
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPO_ROOT).as_posix())
+    except ValueError:
+        return str(path)
+
+
+def _configure_output_dir(output_dir: Path) -> None:
+    global MODE_E0_DIR, RUNS_CSV, SUMMARY_JSON, SUMMARY_MD
+    MODE_E0_DIR = output_dir
+    RUNS_CSV = output_dir / "full_pipeline_live_repeatability_runs.csv"
+    SUMMARY_JSON = output_dir / "full_pipeline_live_repeatability_summary.json"
+    SUMMARY_MD = output_dir / "full_pipeline_live_repeatability_summary.md"
+
+
 def _extract_response_text(payload: dict[str, Any]) -> str:
     choices = payload.get("choices", [])
     if not choices:
@@ -268,7 +283,7 @@ def _summarise_evaluated_run(
         "mean_latency_ms": str(round(sum(latencies) / len(latencies), 2)) if latencies else "",
         "std_latency_ms": str(round(math.sqrt(sum((value - (sum(latencies) / len(latencies))) ** 2 for value in latencies) / (len(latencies) - 1)), 2)) if len(latencies) > 1 else "",
         "schema_valid_minus_execution_eligible_gap": str(round(schema_rate - execution_rate, 4)),
-        "raw_output_file": str(raw_path.relative_to(REPO_ROOT).as_posix()),
+        "raw_output_file": _display_path(raw_path),
         "notes": (
             "Live Foundry Local action-envelope run evaluated through deterministic schema, semantic, safety and execution-eligibility gates."
             if status == "COMPLETE_FULL_LIVE_PIPELINE_REPEATABILITY"
@@ -448,7 +463,7 @@ def _write_summary(rows: list[dict[str, str]], benchmark_path: Path, prompt_path
         "minimum_live_target": 3,
         "benchmark_path": str(benchmark_path.relative_to(REPO_ROOT).as_posix()),
         "prompt_path": str(prompt_path.relative_to(REPO_ROOT).as_posix()),
-        "runs_csv": str(RUNS_CSV.relative_to(REPO_ROOT).as_posix()),
+        "runs_csv": _display_path(RUNS_CSV),
         "raw_output_files": [
             row.get("raw_output_file", "")
             for row in rows
@@ -662,7 +677,10 @@ def main() -> int:
     parser.add_argument("--max-tokens", type=int, default=256)
     parser.add_argument("--benchmark", type=Path, default=DEFAULT_BENCHMARK_PATH)
     parser.add_argument("--prompt", type=Path, default=DEFAULT_PROMPT_PATH)
+    parser.add_argument("--output-dir", type=Path, default=MODE_E0_DIR)
     args = parser.parse_args()
+
+    _configure_output_dir(args.output_dir)
 
     if args.base_url:
         os.environ["FOUNDRY_LOCAL_BASE_URL"] = args.base_url

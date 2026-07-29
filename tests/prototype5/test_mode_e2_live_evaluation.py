@@ -12,11 +12,6 @@ ROOT = Path(__file__).resolve().parents[2]
 RUNNER = ROOT / "scripts" / "prototype5" / "run_mode_e_live_evaluation.py"
 SUMMARY_DOC = ROOT / "docs" / "prototype5" / "mode_e2_live_evaluation_summary.md"
 WORDING_DOC = ROOT / "docs" / "prototype5" / "mode_e2_dissertation_wording.md"
-REPO_TEST_OUTPUT_DIR = ROOT / ".pytest_cache" / "mode_e2_not_run"
-RESUME_TEST_OUTPUT_DIR = ROOT / ".pytest_cache" / "mode_e2_resume"
-DEBUG_PAYLOAD = ROOT / "results" / "prototype5" / "mode_e" / "debug_first_prompt_payload.json"
-DEBUG_SUMMARY = ROOT / "results" / "prototype5" / "mode_e" / "debug_first_prompt_payload_summary.json"
-
 REQUIRED_METRICS = {
     "run_status",
     "model_alias",
@@ -82,7 +77,8 @@ def test_mode_e2_help_exposes_required_cli_flags():
         assert flag in completed.stdout
 
 
-def test_mode_e2_debug_first_prompt_writes_payload_without_foundry_call():
+def test_mode_e2_debug_first_prompt_writes_payload_without_foundry_call(tmp_path):
+    output_dir = tmp_path / "debug"
     completed = subprocess.run(
         [
             sys.executable,
@@ -90,6 +86,8 @@ def test_mode_e2_debug_first_prompt_writes_payload_without_foundry_call():
             "--debug-first-prompt",
             "--base-url",
             "http://127.0.0.1:1",
+            "--output-dir",
+            str(output_dir),
         ],
         cwd=ROOT,
         text=True,
@@ -97,11 +95,13 @@ def test_mode_e2_debug_first_prompt_writes_payload_without_foundry_call():
         check=False,
     )
     assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert DEBUG_PAYLOAD.exists()
-    assert DEBUG_SUMMARY.exists()
+    debug_payload = output_dir / "debug_first_prompt_payload.json"
+    debug_summary = output_dir / "debug_first_prompt_payload_summary.json"
+    assert debug_payload.exists()
+    assert debug_summary.exists()
 
-    payload = json.loads(DEBUG_PAYLOAD.read_text(encoding="utf-8"))
-    summary = json.loads(DEBUG_SUMMARY.read_text(encoding="utf-8"))
+    payload = json.loads(debug_payload.read_text(encoding="utf-8"))
+    summary = json.loads(debug_summary.read_text(encoding="utf-8"))
     assert payload["temperature"] == 0.0
     assert payload["max_tokens"] == 256
     assert payload["stream"] is False
@@ -119,7 +119,8 @@ def test_mode_e2_debug_first_prompt_writes_payload_without_foundry_call():
     assert summary["temperature"] == 0.0
 
 
-def test_mode_e2_writes_not_run_summary_when_foundry_unavailable():
+def test_mode_e2_writes_not_run_summary_when_foundry_unavailable(tmp_path):
+    output_dir = tmp_path / "not_run"
     completed = subprocess.run(
         [
             sys.executable,
@@ -129,7 +130,7 @@ def test_mode_e2_writes_not_run_summary_when_foundry_unavailable():
             "--model",
             "Phi-3-mini-4k-instruct-generic-cpu:3",
             "--output-dir",
-            str(REPO_TEST_OUTPUT_DIR),
+            str(output_dir),
             "--max-cases",
             "1",
             "--timeout-seconds",
@@ -142,8 +143,8 @@ def test_mode_e2_writes_not_run_summary_when_foundry_unavailable():
         check=False,
     )
     assert completed.returncode == 0, completed.stdout + completed.stderr
-    summary_path = REPO_TEST_OUTPUT_DIR / "mode_e2_live_industrial_not_run_summary.json"
-    md_path = REPO_TEST_OUTPUT_DIR / "mode_e2_live_industrial_not_run_summary.md"
+    summary_path = output_dir / "mode_e2_live_industrial_not_run_summary.json"
+    md_path = output_dir / "mode_e2_live_industrial_not_run_summary.md"
     assert summary_path.exists()
     assert md_path.exists()
 
@@ -189,15 +190,16 @@ def test_mode_e2_case_window_is_one_based_inclusive():
     ]
 
 
-def test_mode_e2_resume_does_not_duplicate_case_rows(monkeypatch):
-    RESUME_TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+def test_mode_e2_resume_does_not_duplicate_case_rows(monkeypatch, tmp_path):
+    output_dir = tmp_path / "resume"
+    output_dir.mkdir(parents=True, exist_ok=True)
     for name in [
         "mode_e2_live_industrial_raw.jsonl",
         "mode_e2_live_industrial_results.csv",
         "mode_e2_live_industrial_summary.json",
         "mode_e2_live_industrial_summary.md",
     ]:
-        path = RESUME_TEST_OUTPUT_DIR / name
+        path = output_dir / name
         if path.exists():
             path.unlink()
 
@@ -221,9 +223,9 @@ def test_mode_e2_resume_does_not_duplicate_case_rows(monkeypatch):
         "latency_ms": "1.0",
         "error": "",
     }
-    e2._append_results_csv(RESUME_TEST_OUTPUT_DIR / "mode_e2_live_industrial_results.csv", existing_row)
+    e2._append_results_csv(output_dir / "mode_e2_live_industrial_results.csv", existing_row)
     e2._append_jsonl(
-        RESUME_TEST_OUTPUT_DIR / "mode_e2_live_industrial_raw.jsonl",
+        output_dir / "mode_e2_live_industrial_raw.jsonl",
         {"case_id": "E001", "request_success": True},
     )
 
@@ -254,7 +256,7 @@ def test_mode_e2_resume_does_not_duplicate_case_rows(monkeypatch):
     args = e2.argparse.Namespace(
         base_url="http://127.0.0.1:1",
         model="Phi-test",
-        output_dir=str(RESUME_TEST_OUTPUT_DIR),
+        output_dir=str(output_dir),
         max_cases=2,
         start_index=None,
         end_index=None,
@@ -264,7 +266,7 @@ def test_mode_e2_resume_does_not_duplicate_case_rows(monkeypatch):
         debug_first_prompt=False,
     )
     summary = e2.run_live_evaluation(args)
-    rows = e2._read_results_csv(RESUME_TEST_OUTPUT_DIR / "mode_e2_live_industrial_results.csv")
+    rows = e2._read_results_csv(output_dir / "mode_e2_live_industrial_results.csv")
     case_ids = [row["case_id"] for row in rows]
     assert case_ids.count("E001") == 1
     assert case_ids.count("E002") == 1

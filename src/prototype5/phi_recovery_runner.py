@@ -125,6 +125,7 @@ def _append_jsonl(row: dict[str, Any], path: Path) -> None:
 
 def run_phi_recovery(
     output_dir: Path = PHI_RECOVERY_DIR,
+    docs_dir: Path = DOCS_DIR,
     base_url: str | None = None,
     requested_model: str | None = None,
     timeout_seconds: float | None = None,
@@ -148,7 +149,7 @@ def run_phi_recovery(
     temp_results_path = output_dir / "phi_recovery_results.tmp.jsonl"
     summary_path = output_dir / "phi_recovery_summary.csv"
     manifest_path = output_dir / "phi_recovery_manifest.json"
-    doc_path = DOCS_DIR / "prototype5_phi_evidence_summary.md"
+    doc_path = docs_dir / "prototype5_phi_evidence_summary.md"
 
     failure_reason = ""
     rows: list[dict[str, Any]] = []

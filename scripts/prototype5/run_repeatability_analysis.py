@@ -27,6 +27,7 @@ from src.prototype5.benchmark_cases import load_benchmark_cases
 from src.prototype5.foundry_discovery import discover_foundry_models, select_phi_model
 from src.prototype5.phi_recovery_runner import call_foundry_chat
 
+import run_reproducibility_check as reproducibility
 from run_reproducibility_check import (
     REPEATABILITY_COLUMNS,
     REPEATABILITY_LIVE_RUNS_CSV,
@@ -34,6 +35,20 @@ from run_reproducibility_check import (
     RESULTS_DIR,
     ensure_repeatability_outputs,
 )
+
+
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPO_ROOT).as_posix())
+    except ValueError:
+        return str(path)
+
+
+def _configure_output_dir(output_dir: Path) -> None:
+    global RESULTS_DIR, REPEATABILITY_LIVE_RUNS_CSV
+    RESULTS_DIR = output_dir
+    REPEATABILITY_LIVE_RUNS_CSV = output_dir / "repeatability_live_runs.csv"
+    reproducibility.configure_output_dir(output_dir)
 
 
 def _write_jsonl(rows: list[dict[str, object]], path: Path) -> None:
@@ -101,7 +116,8 @@ def _summarise_live_run(
         "std_latency_ms": _latency_std(latencies),
         "notes": (
             "Live Foundry Local repeatability run. Schema, semantic, safety and "
-            f"execution-eligibility metrics are not evaluated by this E0.1 runner. Raw rows: {raw_path.relative_to(REPO_ROOT).as_posix()}"
+            "execution-eligibility metrics are not evaluated by this E0.1 runner. "
+            f"Raw rows: {_display_path(raw_path)}"
         ),
     }
 
@@ -190,7 +206,15 @@ def main() -> int:
     parser.add_argument("--model", default=None, help="Requested Foundry Local model alias.")
     parser.add_argument("--timeout-seconds", type=float, default=180.0)
     parser.add_argument("--max-tokens", type=int, default=128)
+    parser.add_argument("--output-dir", type=Path, default=RESULTS_DIR)
+    parser.add_argument(
+        "--skip-foundry-probe",
+        action="store_true",
+        help="Do not query the local Foundry service while regenerating summaries.",
+    )
     args = parser.parse_args()
+
+    _configure_output_dir(args.output_dir)
 
     if args.base_url:
         os.environ["FOUNDRY_LOCAL_BASE_URL"] = args.base_url
@@ -205,7 +229,12 @@ def main() -> int:
         )
         print(f"Recorded live repeatability runs: {len(rows)}")
 
-    summary = ensure_repeatability_outputs()
+    probe_fn = (
+        reproducibility._not_assessed_foundry_probe
+        if args.skip_foundry_probe
+        else reproducibility._probe_foundry_local
+    )
+    summary = ensure_repeatability_outputs(probe_fn=probe_fn)
     print("Prototype 5 Mode E0.1 repeatability analysis:", summary["status"])
     print(f"Completed repeated runs: {summary['completed_run_count']}/{summary['target_run_count']}")
     print(

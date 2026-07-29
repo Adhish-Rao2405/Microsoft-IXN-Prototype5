@@ -8,6 +8,7 @@ benchmark unless a separate live-repeatability runner is explicitly added.
 
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 import math
@@ -15,7 +16,7 @@ import os
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
@@ -67,6 +68,73 @@ REQUIRED_RESULT_FILES = [
     E0_4_FULL_PIPELINE_LIVE_JSON,
     E0_4_FULL_PIPELINE_LIVE_MD,
 ]
+
+
+def configure_output_dir(output_dir: Path) -> None:
+    global RESULTS_DIR
+    global TRACEABILITY_CSV
+    global REPEATABILITY_CSV
+    global REPEATABILITY_LIVE_RUNS_CSV
+    global REPEATABILITY_VARIANCE_JSON
+    global REPEATABILITY_VARIANCE_MD
+    global PIPELINE_REPEATABILITY_RECORDS_JSONL
+    global PIPELINE_REPEATABILITY_SUMMARY_CSV
+    global PIPELINE_REPEATABILITY_VARIANCE_JSON
+    global PIPELINE_REPEATABILITY_VARIANCE_MD
+    global FULL_PIPELINE_LIVE_CSV
+    global FULL_PIPELINE_LIVE_JSON
+    global FULL_PIPELINE_LIVE_MD
+    global E0_4_FULL_PIPELINE_LIVE_CSV
+    global E0_4_FULL_PIPELINE_LIVE_JSON
+    global E0_4_FULL_PIPELINE_LIVE_MD
+    global SUMMARY_JSON
+    global REQUIRED_RESULT_FILES
+
+    RESULTS_DIR = output_dir
+    TRACEABILITY_CSV = output_dir / "claim_to_evidence_traceability.csv"
+    REPEATABILITY_CSV = output_dir / "repeatability_summary.csv"
+    REPEATABILITY_LIVE_RUNS_CSV = output_dir / "repeatability_live_runs.csv"
+    REPEATABILITY_VARIANCE_JSON = output_dir / "repeatability_variance_summary.json"
+    REPEATABILITY_VARIANCE_MD = output_dir / "repeatability_variance_summary.md"
+    PIPELINE_REPEATABILITY_RECORDS_JSONL = output_dir / "pipeline_repeatability_records.jsonl"
+    PIPELINE_REPEATABILITY_SUMMARY_CSV = output_dir / "pipeline_repeatability_summary.csv"
+    PIPELINE_REPEATABILITY_VARIANCE_JSON = (
+        output_dir / "pipeline_repeatability_variance_summary.json"
+    )
+    PIPELINE_REPEATABILITY_VARIANCE_MD = (
+        output_dir / "pipeline_repeatability_variance_summary.md"
+    )
+    FULL_PIPELINE_LIVE_CSV = output_dir / "full_pipeline_repeatability_live_runs.csv"
+    FULL_PIPELINE_LIVE_JSON = output_dir / "full_pipeline_repeatability_summary.json"
+    FULL_PIPELINE_LIVE_MD = output_dir / "full_pipeline_repeatability_summary.md"
+    E0_4_FULL_PIPELINE_LIVE_CSV = (
+        output_dir / "full_pipeline_live_repeatability_runs.csv"
+    )
+    E0_4_FULL_PIPELINE_LIVE_JSON = (
+        output_dir / "full_pipeline_live_repeatability_summary.json"
+    )
+    E0_4_FULL_PIPELINE_LIVE_MD = (
+        output_dir / "full_pipeline_live_repeatability_summary.md"
+    )
+    SUMMARY_JSON = output_dir / "reproducibility_check_summary.json"
+    REQUIRED_RESULT_FILES = [
+        SUMMARY_JSON,
+        TRACEABILITY_CSV,
+        REPEATABILITY_CSV,
+        REPEATABILITY_LIVE_RUNS_CSV,
+        REPEATABILITY_VARIANCE_JSON,
+        REPEATABILITY_VARIANCE_MD,
+        PIPELINE_REPEATABILITY_RECORDS_JSONL,
+        PIPELINE_REPEATABILITY_SUMMARY_CSV,
+        PIPELINE_REPEATABILITY_VARIANCE_JSON,
+        PIPELINE_REPEATABILITY_VARIANCE_MD,
+        FULL_PIPELINE_LIVE_CSV,
+        FULL_PIPELINE_LIVE_JSON,
+        FULL_PIPELINE_LIVE_MD,
+        E0_4_FULL_PIPELINE_LIVE_CSV,
+        E0_4_FULL_PIPELINE_LIVE_JSON,
+        E0_4_FULL_PIPELINE_LIVE_MD,
+    ]
 
 TRACEABILITY_COLUMNS = [
     "claim_id",
@@ -262,6 +330,13 @@ def _split_paths(value: str) -> list[Path]:
     return [REPO_ROOT / item.strip() for item in value.split(";") if item.strip()]
 
 
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPO_ROOT).as_posix())
+    except ValueError:
+        return str(path)
+
+
 def _all_paths_exist(value: str) -> bool:
     return all(path.exists() for path in _split_paths(value))
 
@@ -383,6 +458,18 @@ def _probe_foundry_local(timeout_seconds: float = 0.75) -> dict[str, Any]:
         }
 
 
+def _not_assessed_foundry_probe() -> dict[str, Any]:
+    return {
+        "attempted": False,
+        "base_url": "",
+        "models_endpoint": "",
+        "request_success": False,
+        "model_count": 0,
+        "phi_model_count": 0,
+        "error": "NOT_ASSESSED_TEST_ISOLATION",
+    }
+
+
 def _write_repeatability_table(path: Path, rows: list[dict[str, str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -412,13 +499,15 @@ def _normalise_live_repeatability_rows(rows: list[dict[str, str]]) -> list[dict[
     return normalised
 
 
-def ensure_repeatability_outputs() -> dict[str, Any]:
+def ensure_repeatability_outputs(
+    probe_fn: Callable[[], dict[str, Any]] = _probe_foundry_local,
+) -> dict[str, Any]:
     """Create E0.1 repeatability outputs without inventing live measurements."""
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     live_rows = _read_repeatability_rows()
     if not live_rows:
-        probe = _probe_foundry_local()
+        probe = probe_fn()
         notes = (
             "Live repeated benchmark runs are not available in this repository state. "
             "Foundry Local repeatability was not executed by Mode E0 because it depends "
@@ -427,7 +516,7 @@ def ensure_repeatability_outputs() -> dict[str, Any]:
         live_rows = [_empty_repeatability_row("NOT_RUN", notes)]
         _write_repeatability_table(REPEATABILITY_LIVE_RUNS_CSV, live_rows)
     else:
-        probe = _probe_foundry_local()
+        probe = probe_fn()
         live_rows = _normalise_live_repeatability_rows(live_rows)
         _write_repeatability_table(REPEATABILITY_LIVE_RUNS_CSV, live_rows)
 
@@ -487,8 +576,8 @@ def ensure_repeatability_outputs() -> dict[str, Any]:
         "target_run_count": 3,
         "ideal_run_count": 5,
         "completed_run_count": completed_run_count,
-        "live_runs_file": str(REPEATABILITY_LIVE_RUNS_CSV.relative_to(REPO_ROOT).as_posix()),
-        "repeatability_summary_file": str(REPEATABILITY_CSV.relative_to(REPO_ROOT).as_posix()),
+        "live_runs_file": _display_path(REPEATABILITY_LIVE_RUNS_CSV),
+        "repeatability_summary_file": _display_path(REPEATABILITY_CSV),
         "live_execution_probe": probe,
         "metric_variance": metric_summary,
         "central_findings": {
@@ -603,8 +692,10 @@ def _read_traceability_rows() -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
-def build_summary() -> dict[str, Any]:
-    repeatability_variance = ensure_repeatability_outputs()
+def build_summary(
+    probe_fn: Callable[[], dict[str, Any]] = _probe_foundry_local,
+) -> dict[str, Any]:
+    repeatability_variance = ensure_repeatability_outputs(probe_fn=probe_fn)
     _write_traceability_csv()
 
     traceability_rows = _read_traceability_rows()
@@ -639,7 +730,7 @@ def build_summary() -> dict[str, Any]:
         E0_4_FULL_PIPELINE_LIVE_MD,
     ]
     result_missing = [
-        str(path.relative_to(REPO_ROOT).as_posix())
+        _display_path(path)
         for path in result_files_for_check
         if not path.exists()
     ]
@@ -786,7 +877,18 @@ def _read_e0_4_repeatability_rows() -> list[dict[str, str]]:
 
 
 def main() -> int:
-    summary = build_summary()
+    parser = argparse.ArgumentParser(description="Run the Mode E0 reproducibility audit.")
+    parser.add_argument("--output-dir", type=Path, default=RESULTS_DIR)
+    parser.add_argument(
+        "--skip-foundry-probe",
+        action="store_true",
+        help="Do not query the local Foundry service while regenerating summaries.",
+    )
+    args = parser.parse_args()
+
+    configure_output_dir(args.output_dir)
+    probe_fn = _not_assessed_foundry_probe if args.skip_foundry_probe else _probe_foundry_local
+    summary = build_summary(probe_fn=probe_fn)
     print("Prototype 5 Mode E0 reproducibility check:", summary["status"])
     print(f"Documents: {summary['required_documents']['present']}/{summary['required_documents']['total']}")
     print(f"Traceability claims: {summary['claim_traceability']['total_claims']}")

@@ -103,6 +103,11 @@ def _relative(path: Path) -> str:
         return str(path)
 
 
+def _resolve_output_dir(value: str | Path) -> Path:
+    output_dir = Path(value)
+    return output_dir if output_dir.is_absolute() else REPO_ROOT / output_dir
+
+
 def _extract_response_text(payload: dict[str, Any]) -> str:
     choices = payload.get("choices", [])
     if not choices:
@@ -297,15 +302,18 @@ def write_debug_first_prompt(args: argparse.Namespace) -> dict[str, Any]:
     payload = _chat_payload(str(selected_case.get("command", "")), model, prompt)
     summary = _debug_summary(payload, selected_case, vocabulary, policy, prompt)
 
-    DEBUG_FIRST_PROMPT_PAYLOAD.parent.mkdir(parents=True, exist_ok=True)
-    DEBUG_FIRST_PROMPT_PAYLOAD.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    DEBUG_FIRST_PROMPT_SUMMARY.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    output_dir = _resolve_output_dir(args.output_dir)
+    payload_path = output_dir / DEBUG_FIRST_PROMPT_PAYLOAD.name
+    summary_path = output_dir / DEBUG_FIRST_PROMPT_SUMMARY.name
+    output_dir.mkdir(parents=True, exist_ok=True)
+    payload_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     return {
         "run_status": "DEBUG_FIRST_PROMPT_WRITTEN",
         "total_cases": 1,
         "model_alias": model,
-        "payload_file": str(DEBUG_FIRST_PROMPT_PAYLOAD.relative_to(REPO_ROOT).as_posix()),
-        "summary_file": str(DEBUG_FIRST_PROMPT_SUMMARY.relative_to(REPO_ROOT).as_posix()),
+        "payload_file": _relative(payload_path),
+        "summary_file": _relative(summary_path),
         "benchmark_id": benchmark.get("benchmark_id", ""),
     }
 
@@ -318,12 +326,14 @@ def _call_foundry(
     timeout_seconds: float,
     *,
     record_first_payload: bool = False,
+    diagnostics_dir: Path = DEFAULT_OUTPUT_DIR,
 ) -> dict[str, Any]:
     endpoint = f"{base_url}/v1/chat/completions"
     payload = _chat_payload(command, model_id, prompt)
     if record_first_payload:
-        LAST_LIVE_FIRST_REQUEST_PAYLOAD.parent.mkdir(parents=True, exist_ok=True)
-        LAST_LIVE_FIRST_REQUEST_PAYLOAD.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        payload_path = diagnostics_dir / LAST_LIVE_FIRST_REQUEST_PAYLOAD.name
+        diagnostics_dir.mkdir(parents=True, exist_ok=True)
+        payload_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     request = Request(
         endpoint,
         data=json.dumps(payload).encode("utf-8"),
@@ -362,9 +372,13 @@ def _request_error_record(
     }
 
 
-def _write_last_request_error(record: dict[str, Any]) -> None:
-    LAST_LIVE_REQUEST_ERROR.parent.mkdir(parents=True, exist_ok=True)
-    LAST_LIVE_REQUEST_ERROR.write_text(json.dumps(record, indent=2), encoding="utf-8")
+def _write_last_request_error(
+    record: dict[str, Any],
+    output_dir: Path = DEFAULT_OUTPUT_DIR,
+) -> None:
+    error_path = output_dir / LAST_LIVE_REQUEST_ERROR.name
+    output_dir.mkdir(parents=True, exist_ok=True)
+    error_path.write_text(json.dumps(record, indent=2), encoding="utf-8")
 
 
 def _evaluate_response(
@@ -654,9 +668,7 @@ def run_live_evaluation(args: argparse.Namespace) -> dict[str, Any]:
         return write_debug_first_prompt(args)
 
     _read_e1_audit()
-    output_dir = Path(args.output_dir)
-    if not output_dir.is_absolute():
-        output_dir = REPO_ROOT / output_dir
+    output_dir = _resolve_output_dir(args.output_dir)
     benchmark, cases = _load_cases(args.max_cases)
     cases = _select_case_window(
         cases,
@@ -730,6 +742,7 @@ def run_live_evaluation(args: argparse.Namespace) -> dict[str, Any]:
                         prompt,
                         float(args.timeout_seconds),
                         record_first_payload=record_first_payload,
+                        diagnostics_dir=output_dir,
                     )
                 )
                 if record_first_payload:
@@ -741,7 +754,7 @@ def run_live_evaluation(args: argparse.Namespace) -> dict[str, Any]:
                     case=case,
                     timeout_seconds=float(args.timeout_seconds),
                 )
-                _write_last_request_error(error_record)
+                _write_last_request_error(error_record, output_dir)
                 raw_row["error"] = f"{error_record['exception_type']}: {error_record['message']}"
             if not result_rows and raw_row.get("request_success") is not True:
                 summary = _build_summary(

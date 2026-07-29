@@ -2,6 +2,8 @@ import json
 import shutil
 from pathlib import Path
 
+import pytest
+
 from src.prototype5.quantisation_evidence import (
     classify_quantisation_evidence,
     precision_from_metadata,
@@ -9,7 +11,13 @@ from src.prototype5.quantisation_evidence import (
 )
 
 
-TMP_ROOT = Path("tests/prototype5/_tmp_quantisation")
+TMP_ROOT: Path
+
+
+@pytest.fixture(autouse=True)
+def isolated_tmp_root(tmp_path):
+    global TMP_ROOT
+    TMP_ROOT = tmp_path / "quantisation"
 
 
 def _write_metadata(name: str, precision: str) -> None:
