@@ -38,9 +38,16 @@ REPEATABILITY_STATUSES = {
 }
 
 
-def test_repeatability_analysis_script_generates_e0_1_outputs():
+def test_repeatability_analysis_script_generates_e0_1_outputs(tmp_path):
+    output_dir = tmp_path / "mode_e0"
     completed = subprocess.run(
-        [sys.executable, "scripts/prototype5/run_repeatability_analysis.py"],
+        [
+            sys.executable,
+            "scripts/prototype5/run_repeatability_analysis.py",
+            "--output-dir",
+            str(output_dir),
+            "--skip-foundry-probe",
+        ],
         cwd=ROOT,
         text=True,
         capture_output=True,
@@ -48,9 +55,9 @@ def test_repeatability_analysis_script_generates_e0_1_outputs():
     )
     assert completed.returncode == 0, completed.stdout + completed.stderr
 
-    assert (MODE_E0_DIR / "repeatability_live_runs.csv").exists()
-    assert (MODE_E0_DIR / "repeatability_variance_summary.json").exists()
-    assert (MODE_E0_DIR / "repeatability_variance_summary.md").exists()
+    assert (output_dir / "repeatability_live_runs.csv").exists()
+    assert (output_dir / "repeatability_variance_summary.json").exists()
+    assert (output_dir / "repeatability_variance_summary.md").exists()
 
 
 def test_repeatability_live_runs_csv_schema_and_honest_not_run_metrics():

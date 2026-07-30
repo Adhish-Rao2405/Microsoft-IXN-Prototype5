@@ -2,10 +2,18 @@ import json
 import shutil
 from pathlib import Path
 
+import pytest
+
 from src.prototype5.local_cloud_comparison import run_local_cloud_comparison
 
 
-TMP_ROOT = Path("tests/prototype5/_tmp_local_cloud")
+TMP_ROOT: Path
+
+
+@pytest.fixture(autouse=True)
+def isolated_tmp_root(tmp_path):
+    global TMP_ROOT
+    TMP_ROOT = tmp_path / "local_cloud"
 
 
 def test_local_cloud_comparison_generates_fallback_outputs_without_overwriting_mode_b(monkeypatch):

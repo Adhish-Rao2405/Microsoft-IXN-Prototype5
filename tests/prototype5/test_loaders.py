@@ -2,9 +2,17 @@ import json
 import shutil
 from pathlib import Path
 
+import pytest
+
 from src.prototype5.loaders import load_csv, load_evidence, load_json, load_jsonl, load_markdown
 
-TMP_ROOT = Path("tests/prototype5/_tmp_loaders")
+TMP_ROOT: Path
+
+
+@pytest.fixture(autouse=True)
+def isolated_tmp_root(tmp_path):
+    global TMP_ROOT
+    TMP_ROOT = tmp_path / "loaders"
 
 
 def test_loaders_handle_missing_optional_files():

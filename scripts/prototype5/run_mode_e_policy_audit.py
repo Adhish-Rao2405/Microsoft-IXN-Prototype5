@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import sys
@@ -318,19 +319,26 @@ def build_markdown(audit: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def run_audit() -> dict[str, Any]:
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+def run_audit(output_dir: Path = RESULTS_DIR) -> dict[str, Any]:
+    output_dir.mkdir(parents=True, exist_ok=True)
     benchmark = load_json(BENCHMARK_PATH)
     vocabulary = load_json(VOCABULARY_PATH)
     policy = load_json(POLICY_PATH)
     audit = build_audit(benchmark, vocabulary, policy)
-    AUDIT_JSON.write_text(json.dumps(audit, indent=2), encoding="utf-8")
-    AUDIT_MD.write_text(build_markdown(audit), encoding="utf-8")
+    (output_dir / AUDIT_JSON.name).write_text(
+        json.dumps(audit, indent=2),
+        encoding="utf-8",
+    )
+    (output_dir / AUDIT_MD.name).write_text(build_markdown(audit), encoding="utf-8")
     return audit
 
 
 def main() -> int:
-    audit = run_audit()
+    parser = argparse.ArgumentParser(description="Audit the Mode E.1 policy context.")
+    parser.add_argument("--output-dir", type=Path, default=RESULTS_DIR)
+    args = parser.parse_args()
+
+    audit = run_audit(args.output_dir)
     print("Prototype 5 Mode E.1 policy audit:", audit["audit_status"])
     print(f"Covered cases: {audit['covered_cases']}/{audit['total_cases']}")
     print(f"Mismatched expected decisions: {len(audit['mismatched_expected_decisions'])}")

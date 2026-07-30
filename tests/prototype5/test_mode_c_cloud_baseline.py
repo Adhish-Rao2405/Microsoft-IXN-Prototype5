@@ -2,10 +2,18 @@ import json
 import shutil
 from pathlib import Path
 
+import pytest
+
 from src.prototype5.mode_c_cloud_baseline import cloud_api_key_present, run_mode_c
 
 
-TMP_ROOT = Path("tests/prototype5/_tmp_mode_c")
+TMP_ROOT: Path
+
+
+@pytest.fixture(autouse=True)
+def isolated_tmp_root(tmp_path):
+    global TMP_ROOT
+    TMP_ROOT = tmp_path / "mode_c"
 
 
 def test_cloud_api_key_present_respects_empty_env():

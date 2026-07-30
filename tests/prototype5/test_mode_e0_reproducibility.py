@@ -1,4 +1,5 @@
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -31,9 +32,17 @@ def test_mode_e0_docs_and_results_exist():
     assert missing == []
 
 
-def test_mode_e0_reproducibility_script_generates_summary():
+def test_mode_e0_reproducibility_script_generates_summary(tmp_path):
+    output_dir = tmp_path / "mode_e0"
+    shutil.copytree(MODE_E0_DIR, output_dir)
     completed = subprocess.run(
-        [sys.executable, "scripts/prototype5/run_reproducibility_check.py"],
+        [
+            sys.executable,
+            "scripts/prototype5/run_reproducibility_check.py",
+            "--output-dir",
+            str(output_dir),
+            "--skip-foundry-probe",
+        ],
         cwd=ROOT,
         text=True,
         capture_output=True,
@@ -41,7 +50,9 @@ def test_mode_e0_reproducibility_script_generates_summary():
     )
     assert completed.returncode == 0, completed.stdout + completed.stderr
 
-    summary = json.loads((MODE_E0_DIR / "reproducibility_check_summary.json").read_text())
+    summary = json.loads(
+        (output_dir / "reproducibility_check_summary.json").read_text()
+    )
     assert summary["mode"] == "E0"
     assert summary["name"] == "Reproducibility and Evaluation Rigour Audit"
     assert summary["status"] in {"COMPLETE", "COMPLETE_WITH_WARNINGS"}

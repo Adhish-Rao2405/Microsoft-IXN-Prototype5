@@ -7,21 +7,32 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MODE_E0_DIR = ROOT / "results" / "prototype5" / "mode_e0"
+BENCHMARK_PATH = ROOT / "configs" / "prototype5" / "benchmark_v1.json"
 
 
-def test_pipeline_repeatability_script_generates_outputs():
+def test_pipeline_repeatability_script_generates_outputs(tmp_path):
+    output_dir = tmp_path / "mode_e0"
     completed = subprocess.run(
-        [sys.executable, "scripts/prototype5/run_pipeline_repeatability_analysis.py"],
+        [
+            sys.executable,
+            "scripts/prototype5/run_pipeline_repeatability_analysis.py",
+            "--input-dir",
+            str(MODE_E0_DIR),
+            "--output-dir",
+            str(output_dir),
+            "--benchmark",
+            str(BENCHMARK_PATH),
+        ],
         cwd=ROOT,
         text=True,
         capture_output=True,
         check=False,
     )
     assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert (MODE_E0_DIR / "pipeline_repeatability_records.jsonl").exists()
-    assert (MODE_E0_DIR / "pipeline_repeatability_summary.csv").exists()
-    assert (MODE_E0_DIR / "pipeline_repeatability_variance_summary.json").exists()
-    assert (MODE_E0_DIR / "pipeline_repeatability_variance_summary.md").exists()
+    assert (output_dir / "pipeline_repeatability_records.jsonl").exists()
+    assert (output_dir / "pipeline_repeatability_summary.csv").exists()
+    assert (output_dir / "pipeline_repeatability_variance_summary.json").exists()
+    assert (output_dir / "pipeline_repeatability_variance_summary.md").exists()
 
 
 def test_pipeline_repeatability_summary_schema_and_boundaries():

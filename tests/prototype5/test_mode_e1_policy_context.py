@@ -8,8 +8,6 @@ ROOT = Path(__file__).resolve().parents[2]
 VOCABULARY = ROOT / "configs" / "prototype5" / "mode_e_industrial_vocabulary.json"
 POLICY = ROOT / "configs" / "prototype5" / "mode_e_industrial_policy_rules.json"
 AUDIT_SCRIPT = ROOT / "scripts" / "prototype5" / "run_mode_e_policy_audit.py"
-AUDIT_JSON = ROOT / "results" / "prototype5" / "mode_e" / "mode_e_policy_audit.json"
-AUDIT_MD = ROOT / "results" / "prototype5" / "mode_e" / "mode_e_policy_audit.md"
 
 
 def test_mode_e1_required_files_exist():
@@ -44,19 +42,27 @@ def test_mode_e1_policy_has_required_reject_and_clarify_rules():
     assert "clarify_ambiguous_reference" in names
 
 
-def test_mode_e1_policy_audit_outputs_are_complete():
+def test_mode_e1_policy_audit_outputs_are_complete(tmp_path):
+    output_dir = tmp_path / "mode_e"
     completed = subprocess.run(
-        [sys.executable, "scripts/prototype5/run_mode_e_policy_audit.py"],
+        [
+            sys.executable,
+            "scripts/prototype5/run_mode_e_policy_audit.py",
+            "--output-dir",
+            str(output_dir),
+        ],
         cwd=ROOT,
         text=True,
         capture_output=True,
         check=False,
     )
     assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert AUDIT_JSON.exists()
-    assert AUDIT_MD.exists()
+    audit_json = output_dir / "mode_e_policy_audit.json"
+    audit_md = output_dir / "mode_e_policy_audit.md"
+    assert audit_json.exists()
+    assert audit_md.exists()
 
-    audit = json.loads(AUDIT_JSON.read_text(encoding="utf-8"))
+    audit = json.loads(audit_json.read_text(encoding="utf-8"))
     assert audit["audit_status"] == "COMPLETE_POLICY_CONTEXT"
     assert audit["total_cases"] == 30
     assert audit["covered_cases"] == 30
@@ -66,6 +72,10 @@ def test_mode_e1_policy_audit_outputs_are_complete():
     assert audit["clear_cases_blocked"] == []
     assert audit["unsafe_cases_not_blocked"] == []
     assert audit["ambiguous_cases_not_clarified"] == []
+    assert {path.name for path in output_dir.iterdir()} == {
+        "mode_e_policy_audit.json",
+        "mode_e_policy_audit.md",
+    }
 
 
 def test_mode_e1_docs_contain_bounded_language():

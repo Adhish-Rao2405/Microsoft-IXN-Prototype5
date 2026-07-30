@@ -2,9 +2,17 @@ import csv
 import shutil
 from pathlib import Path
 
+import pytest
+
 from src.prototype5.cloud_baseline_runner import CLOUD_RESULT_COLUMNS, run_cloud_baseline
 
-TMP_ROOT = Path("tests/prototype5/_tmp_cloud_runner")
+TMP_ROOT: Path
+
+
+@pytest.fixture(autouse=True)
+def isolated_tmp_root(tmp_path):
+    global TMP_ROOT
+    TMP_ROOT = tmp_path / "cloud_runner"
 
 
 def test_cloud_runner_does_not_crash_when_api_key_missing(monkeypatch):

@@ -130,6 +130,7 @@ def run_phi_recovery(
     timeout_seconds: float | None = None,
     max_tokens: int | None = None,
     limit_commands: int | None = None,
+    docs_dir: Path = DOCS_DIR,
 ) -> dict[str, Any]:
     if timeout_seconds is None:
         timeout_seconds = float(os.environ.get("FOUNDRY_LOCAL_TIMEOUT_SECONDS", "180"))
@@ -148,7 +149,7 @@ def run_phi_recovery(
     temp_results_path = output_dir / "phi_recovery_results.tmp.jsonl"
     summary_path = output_dir / "phi_recovery_summary.csv"
     manifest_path = output_dir / "phi_recovery_manifest.json"
-    doc_path = DOCS_DIR / "prototype5_phi_evidence_summary.md"
+    doc_path = docs_dir / "prototype5_phi_evidence_summary.md"
 
     failure_reason = ""
     rows: list[dict[str, Any]] = []

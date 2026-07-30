@@ -1,6 +1,9 @@
+import inspect
 import json
 import shutil
 from pathlib import Path
+
+import pytest
 
 from src.prototype5.phi_recovery_metrics import (
     collect_phi_evidence,
@@ -15,7 +18,13 @@ from src.prototype5.phi_recovery_runner import (
 )
 
 
-TMP_ROOT = Path("tests/prototype5/_tmp_phi_metrics")
+TMP_ROOT: Path
+
+
+@pytest.fixture(autouse=True)
+def isolated_tmp_root(tmp_path):
+    global TMP_ROOT
+    TMP_ROOT = tmp_path / "phi_metrics"
 
 
 class FakeResponse:
@@ -115,6 +124,19 @@ def test_extract_response_text_handles_delta_content():
     assert _extract_response_text(payload) == '{"action": "move"}'
 
 
+def test_run_phi_recovery_preserves_existing_positional_parameter_order():
+    parameters = list(inspect.signature(run_phi_recovery).parameters)
+    assert parameters[:7] == [
+        "output_dir",
+        "base_url",
+        "requested_model",
+        "timeout_seconds",
+        "max_tokens",
+        "limit_commands",
+        "docs_dir",
+    ]
+
+
 def test_limited_run_with_successful_fenced_json_is_partial(monkeypatch):
     from src.prototype5 import phi_recovery_runner
 
@@ -146,6 +168,7 @@ def test_limited_run_with_successful_fenced_json_is_partial(monkeypatch):
 
     result = run_phi_recovery(
         output_dir=TMP_ROOT,
+        docs_dir=TMP_ROOT / "docs",
         requested_model="Phi-3-mini-4k-instruct-generic-cpu:3",
         timeout_seconds=1,
         max_tokens=32,
@@ -155,4 +178,5 @@ def test_limited_run_with_successful_fenced_json_is_partial(monkeypatch):
     assert result["summary"]["successful_requests"] == 1
     assert result["summary"]["parse_success_rate"] == 1.0
     assert result["summary"]["evidence_status"] == "PARTIAL"
+    assert (TMP_ROOT / "docs" / "prototype5_phi_evidence_summary.md").exists()
     shutil.rmtree(TMP_ROOT, ignore_errors=True)

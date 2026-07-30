@@ -3,10 +3,18 @@ import json
 import shutil
 from pathlib import Path
 
+import pytest
+
 from src.prototype5.throughput_runner import run_throughput_profile
 
 
-TMP_ROOT = Path("tests/prototype5/_tmp_mode_d_runner")
+TMP_ROOT: Path
+
+
+@pytest.fixture(autouse=True)
+def isolated_tmp_root(tmp_path):
+    global TMP_ROOT
+    TMP_ROOT = tmp_path / "mode_d_runner"
 
 
 def _write_phi_rows(path: Path) -> str:

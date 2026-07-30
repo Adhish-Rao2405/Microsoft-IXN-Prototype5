@@ -1,18 +1,13 @@
 import json
-import shutil
 from pathlib import Path
 
 from src.prototype5.report_exports import export_all
 from src.prototype5.run_orchestrator import run
 from src.prototype5.simple_table import Table
 
-TMP_ROOT = Path("tests/prototype5/_tmp_exports")
-
-
-def test_report_exports_create_csv_json_and_markdown_outputs():
-    shutil.rmtree(TMP_ROOT, ignore_errors=True)
-    results_dir = TMP_ROOT / "results"
-    docs_dir = TMP_ROOT / "docs"
+def test_report_exports_create_csv_json_and_markdown_outputs(tmp_path):
+    results_dir = tmp_path / "results"
+    docs_dir = tmp_path / "docs"
     tables = {
         "model_comparison": Table([{"model": "m1", "evidence_status": "PRESENT"}]),
         "zero_trust_comparison": Table(
@@ -52,11 +47,12 @@ def test_report_exports_create_csv_json_and_markdown_outputs():
     assert (results_dir / "final_model_comparison.csv").exists()
     manifest_data = json.loads((results_dir / "final_evidence_manifest.json").read_text())
     assert manifest_data["quantisation_status"] == "MISSING"
-    shutil.rmtree(TMP_ROOT, ignore_errors=True)
 
 
-def test_orchestrator_can_run_with_available_local_evidence():
-    result, generated = run()
+def test_orchestrator_can_run_with_available_local_evidence(tmp_path):
+    results_dir = tmp_path / "results"
+    docs_dir = tmp_path / "docs"
+    result, generated = run(results_dir=results_dir, docs_dir=docs_dir)
     assert result["manifest"]["quantisation_status"] == "COMPLETE_CUSTOM_EVIDENCE"
     assert result["manifest"]["mode_d_status"] == "COMPLETE_LIVE_PROFILE"
     assert result["manifest"]["live_foundry_profile_status"] == "PRESENT"
@@ -67,3 +63,7 @@ def test_orchestrator_can_run_with_available_local_evidence():
     assert result["manifest"]["live_foundry_normalized_mean_cpu_percent"] == 48.31
     assert len(generated) >= 12
     assert all(path.exists() for path in generated)
+    assert all(
+        path.is_relative_to(results_dir) or path.is_relative_to(docs_dir)
+        for path in generated
+    )
