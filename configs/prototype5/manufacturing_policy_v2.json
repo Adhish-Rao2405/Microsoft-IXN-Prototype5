@@ -1,0 +1,139 @@
+{
+  "policy_id": "prototype5_manufacturing_policy_v2",
+  "policy_version": "2.0.0",
+  "scope_boundary": "Synthetic bounded manufacturing demonstration; not a certified industrial robot safety function.",
+  "action_aliases": [
+    {
+      "action": "MOVE",
+      "aliases": ["move", "movement", "transfer", "relocate", "sort"]
+    },
+    {
+      "action": "PICK",
+      "aliases": ["pick", "pick up", "collect"]
+    },
+    {
+      "action": "PLACE",
+      "aliases": ["place", "put", "set down"]
+    },
+    {
+      "action": "WAIT",
+      "aliases": ["wait", "pause", "hold position"]
+    },
+    {
+      "action": "STOP",
+      "aliases": ["stop", "halt", "abort"]
+    },
+    {
+      "action": "INSPECT",
+      "aliases": ["inspect", "check", "examine"]
+    }
+  ],
+  "objects": [
+    {
+      "entity_id": "blue_component",
+      "aliases": ["blue component", "blue part"]
+    },
+    {
+      "entity_id": "red_component",
+      "aliases": ["red component", "red part"]
+    },
+    {
+      "entity_id": "component_a",
+      "aliases": ["component a"]
+    },
+    {
+      "entity_id": "inspection_part",
+      "aliases": ["inspection part", "inspection component"]
+    }
+  ],
+  "locations": [
+    {
+      "entity_id": "input_tray_a",
+      "aliases": ["input tray a", "tray a"],
+      "restricted": false
+    },
+    {
+      "entity_id": "assembly_fixture_b",
+      "aliases": ["assembly fixture b", "fixture b"],
+      "restricted": false
+    },
+    {
+      "entity_id": "conveyor_a",
+      "aliases": ["conveyor a", "input conveyor"],
+      "restricted": false
+    },
+    {
+      "entity_id": "destination_bin_b",
+      "aliases": ["destination bin b", "bin b"],
+      "restricted": false
+    },
+    {
+      "entity_id": "inspection_station",
+      "aliases": ["inspection station"],
+      "restricted": false
+    },
+    {
+      "entity_id": "warehouse_rack_a",
+      "aliases": ["warehouse rack a", "rack a"],
+      "restricted": false
+    },
+    {
+      "entity_id": "shared_zone",
+      "aliases": ["shared zone", "human shared zone"],
+      "restricted": false
+    },
+    {
+      "entity_id": "restricted_zone",
+      "aliases": ["restricted zone", "restricted area"],
+      "restricted": true
+    }
+  ],
+  "ambiguous_phrases": [
+    "the part",
+    "the object",
+    "that part",
+    "it",
+    "there",
+    "over there",
+    "where it belongs",
+    "the usual place"
+  ],
+  "safety_phrase_rules": [
+    {
+      "reason_code": "HUMAN_OBSTRUCTION_OVERRIDE",
+      "phrases": [
+        "continue movement despite the human obstruction",
+        "continue despite the human obstruction",
+        "ignore the human obstruction"
+      ]
+    },
+    {
+      "reason_code": "RESTRICTED_ZONE_OVERRIDE",
+      "phrases": [
+        "ignore the restricted zone",
+        "bypass the restricted zone"
+      ]
+    },
+    {
+      "reason_code": "SAFETY_INTERLOCK_OVERRIDE",
+      "phrases": [
+        "disable the safety interlock",
+        "bypass the safety interlock"
+      ]
+    }
+  ],
+  "authority_rules": [
+    {
+      "role": "operator",
+      "allowed_actions": ["MOVE", "PICK", "PLACE", "WAIT", "STOP", "INSPECT"]
+    },
+    {
+      "role": "supervisor",
+      "allowed_actions": ["MOVE", "PICK", "PLACE", "WAIT", "STOP", "INSPECT"]
+    },
+    {
+      "role": "observer",
+      "allowed_actions": ["WAIT", "STOP"]
+    }
+  ]
+}
