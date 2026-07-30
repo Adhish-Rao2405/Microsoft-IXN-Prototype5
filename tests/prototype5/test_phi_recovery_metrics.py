@@ -1,3 +1,4 @@
+import inspect
 import json
 import shutil
 from pathlib import Path
@@ -121,6 +122,19 @@ def test_extract_response_text_handles_message_content():
 def test_extract_response_text_handles_delta_content():
     payload = {"choices": [{"delta": {"content": '{"action": "move"}'}}]}
     assert _extract_response_text(payload) == '{"action": "move"}'
+
+
+def test_run_phi_recovery_preserves_existing_positional_parameter_order():
+    parameters = list(inspect.signature(run_phi_recovery).parameters)
+    assert parameters[:7] == [
+        "output_dir",
+        "base_url",
+        "requested_model",
+        "timeout_seconds",
+        "max_tokens",
+        "limit_commands",
+        "docs_dir",
+    ]
 
 
 def test_limited_run_with_successful_fenced_json_is_partial(monkeypatch):

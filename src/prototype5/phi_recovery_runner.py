@@ -125,12 +125,12 @@ def _append_jsonl(row: dict[str, Any], path: Path) -> None:
 
 def run_phi_recovery(
     output_dir: Path = PHI_RECOVERY_DIR,
-    docs_dir: Path = DOCS_DIR,
     base_url: str | None = None,
     requested_model: str | None = None,
     timeout_seconds: float | None = None,
     max_tokens: int | None = None,
     limit_commands: int | None = None,
+    docs_dir: Path = DOCS_DIR,
 ) -> dict[str, Any]:
     if timeout_seconds is None:
         timeout_seconds = float(os.environ.get("FOUNDRY_LOCAL_TIMEOUT_SECONDS", "180"))
