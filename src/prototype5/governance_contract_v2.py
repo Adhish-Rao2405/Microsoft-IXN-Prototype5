@@ -190,24 +190,40 @@ class RoutingRecordV2(ContractModel):
                 raise ValueError("fallback is permitted only in AUTO mode")
             if self.fallback_reason is FallbackReason.NONE:
                 raise ValueError("fallback requires an operational fallback reason")
-            if not self.local_attempted or not self.cloud_attempted:
-                raise ValueError("fallback requires both local and cloud attempts")
+            if not self.cloud_attempted:
+                raise ValueError("fallback requires a cloud inference attempt")
+            local_skip_reasons = {
+                FallbackReason.LOCAL_UNAVAILABLE,
+                FallbackReason.LOCAL_MODEL_NOT_READY,
+                FallbackReason.LOCAL_CIRCUIT_OPEN,
+                FallbackReason.LOCAL_ROLLING_RELIABILITY_BELOW_THRESHOLD,
+                FallbackReason.LOCAL_LATENCY_THRESHOLD_EXCEEDED,
+            }
+            if not self.local_attempted and self.fallback_reason not in local_skip_reasons:
+                raise ValueError(
+                    "fallback without a local inference attempt requires a "
+                    "pre-attempt local health reason"
+                )
             if self.selected_provider not in (ProviderId.CLOUD, ProviderId.NONE):
                 raise ValueError("fallback can select cloud or end without a provider")
         elif self.fallback_reason is not FallbackReason.NONE:
             raise ValueError("fallback_reason must be NONE when fallback was not triggered")
 
         if self.requested_mode is InferenceMode.LOCAL:
-            if not self.local_attempted or self.cloud_attempted:
-                raise ValueError("LOCAL mode must attempt local only")
+            if self.cloud_attempted:
+                raise ValueError("LOCAL mode cannot attempt cloud")
             if self.selected_provider not in (ProviderId.FOUNDRY_LOCAL, ProviderId.NONE):
                 raise ValueError("LOCAL mode cannot select cloud")
+            if not self.local_attempted and self.selected_provider is not ProviderId.NONE:
+                raise ValueError("skipped LOCAL mode cannot select a provider")
         elif self.requested_mode is InferenceMode.CLOUD:
-            if self.local_attempted or not self.cloud_attempted:
-                raise ValueError("CLOUD mode must attempt cloud only")
+            if self.local_attempted:
+                raise ValueError("CLOUD mode cannot attempt local")
             if self.selected_provider not in (ProviderId.CLOUD, ProviderId.NONE):
                 raise ValueError("CLOUD mode cannot select local")
-        elif not self.local_attempted:
+            if not self.cloud_attempted and self.selected_provider is not ProviderId.NONE:
+                raise ValueError("skipped CLOUD mode cannot select a provider")
+        elif not self.local_attempted and not self.fallback_triggered:
             if self.cloud_attempted or self.selected_provider is not ProviderId.NONE:
                 raise ValueError("AUTO mode cannot select or attempt cloud before local")
 

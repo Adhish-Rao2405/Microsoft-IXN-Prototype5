@@ -1,0 +1,11 @@
+{
+  "routing_policy_id": "prototype5_hybrid_routing_policy_v1",
+  "routing_policy_version": "1.0.0",
+  "local_timeout_ms": 15000,
+  "local_max_consecutive_failures": 2,
+  "local_circuit_open_seconds": 30,
+  "rolling_window_size": 20,
+  "minimum_structured_success_rate": 0.7,
+  "maximum_local_p95_latency_ms": 20000,
+  "maximum_provider_attempts": 1
+}

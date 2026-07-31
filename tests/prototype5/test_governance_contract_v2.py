@@ -283,7 +283,7 @@ def test_auto_fallback_accepts_only_operational_structural_reason():
 
 
 def test_local_and_cloud_modes_cannot_cross_route():
-    with pytest.raises(ValidationError, match="LOCAL mode must attempt local only"):
+    with pytest.raises(ValidationError, match="LOCAL mode cannot attempt cloud"):
         RoutingRecordV2.model_validate(
             {
                 "requested_mode": "LOCAL",
@@ -294,7 +294,7 @@ def test_local_and_cloud_modes_cannot_cross_route():
             }
         )
 
-    with pytest.raises(ValidationError, match="CLOUD mode must attempt cloud only"):
+    with pytest.raises(ValidationError, match="CLOUD mode cannot attempt local"):
         RoutingRecordV2.model_validate(
             {
                 "requested_mode": "CLOUD",
@@ -302,6 +302,58 @@ def test_local_and_cloud_modes_cannot_cross_route():
                 "selected_model": "local",
                 "local_attempted": True,
                 "cloud_attempted": True,
+            }
+        )
+
+
+def test_direct_mode_can_record_pre_provider_unavailability_without_false_attempt():
+    local = RoutingRecordV2.model_validate(
+        {
+            "requested_mode": "LOCAL",
+            "selected_provider": "NONE",
+            "selected_model": None,
+            "local_attempted": False,
+            "cloud_attempted": False,
+        }
+    )
+    cloud = RoutingRecordV2.model_validate(
+        {
+            "requested_mode": "CLOUD",
+            "selected_provider": "NONE",
+            "selected_model": None,
+            "local_attempted": False,
+            "cloud_attempted": False,
+        }
+    )
+
+    assert local.selected_provider is ProviderId.NONE
+    assert cloud.selected_provider is ProviderId.NONE
+
+
+def test_auto_can_fallback_after_pre_attempt_local_health_failure():
+    route = RoutingRecordV2.model_validate(
+        {
+            "requested_mode": "AUTO",
+            "selected_provider": "CLOUD",
+            "selected_model": "qualified-cloud-model",
+            "local_attempted": False,
+            "cloud_attempted": True,
+            "fallback_triggered": True,
+            "fallback_reason": "LOCAL_UNAVAILABLE",
+            "cloud_latency_ms": 40.0,
+        }
+    )
+
+    assert route.fallback_triggered is True
+    assert route.local_attempted is False
+
+    with pytest.raises(
+        ValidationError, match="pre-attempt local health reason"
+    ):
+        RoutingRecordV2.model_validate(
+            {
+                **route.model_dump(mode="json"),
+                "fallback_reason": "LOCAL_SCHEMA_FAILURE",
             }
         )
 

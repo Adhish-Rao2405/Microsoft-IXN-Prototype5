@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import time
 from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
-from pydantic import Field, ValidationError, model_validator
+from pydantic import Field, model_validator
 
 from .foundry_sdk_backend import ModelBackendResponse, PlannerBackend
 from .governance_contract_v2 import (
@@ -41,7 +40,10 @@ from .manufacturing_policy_v2 import (
     RequesterContextV2,
     evaluate_manufacturing_proposal,
 )
-from .task_proposal_v2 import StructuredTaskProposalV2
+from .task_proposal_v2 import (
+    StructuredTaskProposalV2,
+    assess_structured_proposal,
+)
 
 
 class CanonicalGovernanceRequestV2(ContractModel):
@@ -166,6 +168,20 @@ class CanonicalGovernanceRunner:
         self._timer = timer or time.perf_counter
         self._id_factory = id_factory or (lambda: str(uuid4()))
 
+    def build_planner_context(
+        self, request: CanonicalGovernanceRequestV2
+    ) -> dict[str, Any]:
+        """Build the one planner context shared by direct and hybrid routes."""
+
+        return {
+            "domain_id": request.domain_id.value,
+            "scene": request.scene.model_dump(mode="json"),
+            "requester": request.requester.model_dump(mode="json"),
+            "policy_id": self.policy.config.policy_id,
+            "policy_version": self.policy.config.policy_version,
+            "prompt_id": self.configuration.prompt_id,
+        }
+
     def run(
         self,
         request: CanonicalGovernanceRequestV2,
@@ -192,14 +208,7 @@ class CanonicalGovernanceRunner:
         try:
             response = backend.generate(
                 request.command,
-                {
-                    "domain_id": request.domain_id.value,
-                    "scene": request.scene.model_dump(mode="json"),
-                    "requester": request.requester.model_dump(mode="json"),
-                    "policy_id": self.policy.config.policy_id,
-                    "policy_version": self.policy.config.policy_version,
-                    "prompt_id": self.configuration.prompt_id,
-                },
+                self.build_planner_context(request),
             )
         except Exception as exc:  # transport boundary must fail closed
             elapsed_ms = max(0.0, (self._timer() - start) * 1000.0)
@@ -263,6 +272,12 @@ class CanonicalGovernanceRunner:
 
         if routing.requested_mode is not request.requested_inference_mode:
             raise ValueError("routing requested mode does not match the request")
+        if (
+            routing.selected_provider is not ProviderId.NONE
+            and response.model_alias is not None
+            and routing.selected_model != response.model_alias
+        ):
+            raise ValueError("routing model does not match the provider response")
 
         validation_start = self._timer()
         raw_text = response.raw_text
@@ -285,7 +300,9 @@ class CanonicalGovernanceRunner:
             ambiguity_status = GateStatus.NOT_ASSESSABLE
             safety_status = GateStatus.NOT_ASSESSABLE
             authority_status = GateStatus.NOT_ASSESSABLE
-            gate_reasons[GateId.PARSE] = ("PROVIDER_REQUEST_FAILED",)
+            gate_reasons[GateId.PARSE] = (
+                _provider_failure_reason(response.error_type),
+            )
         elif not raw_present:
             parse_status = GateStatus.FAILED
             json_status = GateStatus.NOT_ASSESSABLE
@@ -449,61 +466,36 @@ class CanonicalGovernanceRunner:
         list[GateLatencyRecord],
     ]:
         reasons: dict[GateId, tuple[str, ...]] = {}
-        latencies: list[GateLatencyRecord] = []
         start = self._timer()
-        try:
-            payload = json.loads(raw_text)
-        except (TypeError, json.JSONDecodeError):
-            elapsed = max(0.0, (self._timer() - start) * 1000.0)
-            latencies.append(GateLatencyRecord(gate=GateId.PARSE, latency_ms=elapsed))
-            reasons[GateId.PARSE] = ("JSON_PARSE_FAILED",)
-            reasons[GateId.JSON] = ("JSON_INVALID",)
-            return (
-                GateStatus.FAILED,
-                GateStatus.FAILED,
-                GateStatus.NOT_ASSESSABLE,
-                None,
-                reasons,
-                latencies,
-            )
+        assessment = assess_structured_proposal(raw_text)
         elapsed = max(0.0, (self._timer() - start) * 1000.0)
-        latencies.append(GateLatencyRecord(gate=GateId.PARSE, latency_ms=elapsed))
+        latency_gate = (
+            GateId.SCHEMA
+            if assessment.parse_status is GateStatus.PASSED
+            and assessment.json_status is GateStatus.PASSED
+            else GateId.PARSE
+        )
+        latencies = [
+            GateLatencyRecord(gate=latency_gate, latency_ms=elapsed)
+        ]
 
-        if not isinstance(payload, dict):
-            reasons[GateId.JSON] = ("JSON_ROOT_NOT_OBJECT",)
-            return (
-                GateStatus.PASSED,
-                GateStatus.FAILED,
-                GateStatus.NOT_ASSESSABLE,
-                None,
-                reasons,
-                latencies,
+        if assessment.parse_status is GateStatus.FAILED:
+            reasons[GateId.PARSE] = ("JSON_PARSE_FAILED",)
+            if assessment.json_status is GateStatus.FAILED:
+                reasons[GateId.JSON] = ("JSON_INVALID",)
+        elif assessment.json_status is GateStatus.FAILED:
+            reasons[GateId.JSON] = (
+                assessment.reason_code or "JSON_INVALID",
             )
-
-        schema_start = self._timer()
-        try:
-            proposal = StructuredTaskProposalV2.model_validate(payload)
-        except ValidationError:
-            elapsed = max(0.0, (self._timer() - schema_start) * 1000.0)
-            latencies.append(
-                GateLatencyRecord(gate=GateId.SCHEMA, latency_ms=elapsed)
+        elif assessment.schema_status is GateStatus.FAILED:
+            reasons[GateId.SCHEMA] = (
+                assessment.reason_code or "PROPOSAL_SCHEMA_INVALID",
             )
-            reasons[GateId.SCHEMA] = ("PROPOSAL_SCHEMA_INVALID",)
-            return (
-                GateStatus.PASSED,
-                GateStatus.PASSED,
-                GateStatus.FAILED,
-                None,
-                reasons,
-                latencies,
-            )
-        elapsed = max(0.0, (self._timer() - schema_start) * 1000.0)
-        latencies.append(GateLatencyRecord(gate=GateId.SCHEMA, latency_ms=elapsed))
         return (
-            GateStatus.PASSED,
-            GateStatus.PASSED,
-            GateStatus.PASSED,
-            proposal,
+            assessment.parse_status,
+            assessment.json_status,
+            assessment.schema_status,
+            assessment.proposal,
             reasons,
             latencies,
         )
@@ -613,3 +605,14 @@ def _flatten_reasons(
 
 def _with_fallback(values: tuple[str, ...] | None, fallback: str) -> tuple[str, ...]:
     return values or (fallback,)
+
+
+def _provider_failure_reason(error_type: str | None) -> str:
+    if error_type:
+        candidate = error_type.strip().upper()
+        valid = candidate and all(
+            character.isalnum() or character == "_" for character in candidate
+        )
+        if valid and candidate.startswith(("LOCAL_", "CLOUD_", "VOICE_")):
+            return candidate
+    return "PROVIDER_REQUEST_FAILED"

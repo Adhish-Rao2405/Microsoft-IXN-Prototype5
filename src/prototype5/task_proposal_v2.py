@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import re
 from enum import StrEnum
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, ValidationError, field_validator, model_validator
 
-from .governance_contract_v2 import ContractModel
+from .governance_contract_v2 import ContractModel, GateStatus
 
 
 IDENTIFIER_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -96,3 +97,80 @@ class StructuredTaskProposalV2(ContractModel):
         if len(stop_indexes) > 1:
             raise ValueError("proposal cannot contain multiple STOP actions")
         return self
+
+
+class ProposalStructuralAssessmentV2(ContractModel):
+    parse_status: GateStatus
+    json_status: GateStatus
+    schema_status: GateStatus
+    proposal: StructuredTaskProposalV2 | None
+    reason_code: str | None = None
+
+    @model_validator(mode="after")
+    def proposal_requires_all_structural_gates(
+        self,
+    ) -> "ProposalStructuralAssessmentV2":
+        all_pass = all(
+            status is GateStatus.PASSED
+            for status in (
+                self.parse_status,
+                self.json_status,
+                self.schema_status,
+            )
+        )
+        if all_pass != (self.proposal is not None):
+            raise ValueError("proposal must exist exactly when all structural gates pass")
+        if all_pass and self.reason_code is not None:
+            raise ValueError("successful structural assessment cannot have a reason")
+        if not all_pass and self.reason_code is None:
+            raise ValueError("failed structural assessment requires a reason")
+        return self
+
+
+def assess_structured_proposal(
+    raw_text: str | None,
+) -> ProposalStructuralAssessmentV2:
+    """Apply the one shared parse/JSON/schema contract used by routing and governance."""
+
+    if raw_text is None or not raw_text.strip():
+        return ProposalStructuralAssessmentV2(
+            parse_status=GateStatus.FAILED,
+            json_status=GateStatus.NOT_ASSESSABLE,
+            schema_status=GateStatus.NOT_ASSESSABLE,
+            proposal=None,
+            reason_code="PROVIDER_RESPONSE_EMPTY",
+        )
+    try:
+        payload = json.loads(raw_text)
+    except (TypeError, json.JSONDecodeError):
+        return ProposalStructuralAssessmentV2(
+            parse_status=GateStatus.FAILED,
+            json_status=GateStatus.FAILED,
+            schema_status=GateStatus.NOT_ASSESSABLE,
+            proposal=None,
+            reason_code="JSON_PARSE_FAILED",
+        )
+    if not isinstance(payload, dict):
+        return ProposalStructuralAssessmentV2(
+            parse_status=GateStatus.PASSED,
+            json_status=GateStatus.FAILED,
+            schema_status=GateStatus.NOT_ASSESSABLE,
+            proposal=None,
+            reason_code="JSON_ROOT_NOT_OBJECT",
+        )
+    try:
+        proposal = StructuredTaskProposalV2.model_validate(payload)
+    except ValidationError:
+        return ProposalStructuralAssessmentV2(
+            parse_status=GateStatus.PASSED,
+            json_status=GateStatus.PASSED,
+            schema_status=GateStatus.FAILED,
+            proposal=None,
+            reason_code="PROPOSAL_SCHEMA_INVALID",
+        )
+    return ProposalStructuralAssessmentV2(
+        parse_status=GateStatus.PASSED,
+        json_status=GateStatus.PASSED,
+        schema_status=GateStatus.PASSED,
+        proposal=proposal,
+    )
