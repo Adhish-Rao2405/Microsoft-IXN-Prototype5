@@ -10,6 +10,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 from .canonical_governance_runner import (
@@ -31,6 +32,10 @@ from .hybrid_inference_router import (
     load_hybrid_routing_policy,
 )
 from .manufacturing_policy_v2 import load_manufacturing_policy
+from .recorded_speech import (
+    NemotronRecordedAudioClient,
+    RecordedSpeechClientConfiguration,
+)
 
 
 DEFAULT_LOCAL_MODEL = "qwen2.5-coder-0.5b-instruct-generic-cpu:4"
@@ -124,10 +129,33 @@ def build_demo_service(repo_root: Path | None = None) -> DemoApplicationService:
         governance_runner=governance_runner,
         routing_policy=routing_policy,
     )
+    speech_python = Path(
+        os.getenv("PROTOTYPE5_SPEECH_PYTHON", sys.executable)
+    ).expanduser()
+    speech_temp_root_value = os.getenv("PROTOTYPE5_SPEECH_TEMP_ROOT")
+    speech_transcriber = NemotronRecordedAudioClient(
+        RecordedSpeechClientConfiguration(
+            repository_root=root,
+            speech_python_executable=speech_python,
+            process_timeout_seconds=float(
+                os.getenv("PROTOTYPE5_SPEECH_TIMEOUT_SECONDS", "120")
+            ),
+            allow_model_download=(
+                os.getenv("PROTOTYPE5_SPEECH_ALLOW_MODEL_DOWNLOAD", "0")
+                == "1"
+            ),
+            temporary_root=(
+                Path(speech_temp_root_value).expanduser()
+                if speech_temp_root_value
+                else None
+            ),
+        )
+    )
     return DemoApplicationService(
         router=router,
         software_commit=software_commit,
         cloud_configured=bool(cloud_api_key),
+        speech_transcriber=speech_transcriber,
     )
 
 

@@ -69,6 +69,8 @@ def accepted_live_record() -> dict:
         "input_mode": "TYPED",
         "normalised_command": "Move the blue component to fixture B.",
         "typed_text": "Move the blue component to fixture B.",
+        "transcription_id": None,
+        "original_transcript_text": None,
         "transcript_text": None,
         "transcript_status": "NOT_APPLICABLE",
         "transcript_backend": None,
@@ -364,7 +366,9 @@ def test_voice_ready_record_requires_real_transcript_provenance():
         {
             "input_mode": "VOICE",
             "typed_text": None,
+            "transcription_id": "TRANSCRIPTION-001",
             "normalised_command": "Move the blue component to fixture B.",
+            "original_transcript_text": "Move the blue component to fixture B.",
             "transcript_text": "Move the blue component to fixture B.",
             "transcript_status": "READY",
             "transcript_backend": "nemotron-speech-streaming-en-0.6b",
@@ -376,8 +380,16 @@ def test_voice_ready_record_requires_real_transcript_provenance():
     record = GovernanceRecordV2.model_validate(payload)
 
     assert record.input_mode is InputMode.VOICE
+    assert record.transcription_id == "TRANSCRIPTION-001"
     assert record.transcript_status is TranscriptStatus.READY
     assert record.audio_sha256 == SHA_B
+
+    payload["original_transcript_text"] = None
+    with pytest.raises(
+        ValidationError,
+        match="requires original_transcript_text",
+    ):
+        GovernanceRecordV2.model_validate(payload)
 
 
 def test_partial_voice_transcript_cannot_call_planner_or_be_eligible():
@@ -386,7 +398,9 @@ def test_partial_voice_transcript_cannot_call_planner_or_be_eligible():
         {
             "input_mode": "VOICE",
             "typed_text": None,
+            "transcription_id": "TRANSCRIPTION-002",
             "normalised_command": "Move the part",
+            "original_transcript_text": "Move the part",
             "transcript_text": "Move the part",
             "transcript_status": "PARTIAL",
             "transcript_backend": "nemotron-speech-streaming-en-0.6b",
@@ -433,6 +447,7 @@ def test_non_ready_voice_transcript_cannot_call_provider():
         {
             "input_mode": "VOICE",
             "typed_text": None,
+            "transcription_id": "TRANSCRIPTION-003",
             "normalised_command": None,
             "transcript_text": None,
             "transcript_status": "BACKEND_UNAVAILABLE",
@@ -450,6 +465,7 @@ def test_voice_backend_unavailable_is_recorded_without_fabricated_command():
         {
             "input_mode": "VOICE",
             "typed_text": None,
+            "transcription_id": "TRANSCRIPTION-004",
             "normalised_command": None,
             "transcript_text": None,
             "transcript_status": "BACKEND_UNAVAILABLE",

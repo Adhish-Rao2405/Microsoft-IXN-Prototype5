@@ -30,6 +30,42 @@ const status = {
   },
 };
 
+const transcription = {
+  result_schema_version: "1.0.0",
+  transcription_id: "transcription-ui-001",
+  timestamp_utc: "2026-07-31T12:00:00Z",
+  transcript_status: "READY",
+  transcript_text: "Move the blue component.",
+  transcript_backend: "foundry_nemotron",
+  transcript_confidence: null,
+  audio: {
+    original_filename: "operator.wav",
+    audio_sha256: "b".repeat(64),
+    audio_bytes: 32044,
+    sample_rate_hz: 16000,
+    channels: 1,
+    bits_per_sample: 16,
+    frame_count: 16000,
+    duration_ms: 1000,
+  },
+  requested_model_alias: "nemotron-speech-streaming-en-0.6b",
+  resolved_model_id: "nemotron-speech-streaming-en-0.6b-generic-cpu:3",
+  execution_provider: "CPUExecutionProvider",
+  sdk_distribution: "foundry-local-sdk-winml",
+  sdk_version: "1.2.3",
+  core_distribution: "foundry-local-core-winml",
+  core_version: "1.2.3",
+  model_cached_before: true,
+  model_loaded_before: false,
+  model_downloaded_for_request: false,
+  model_loaded_for_request: true,
+  model_unloaded_after_request: true,
+  segment_count: 1,
+  transcription_latency_ms: 860,
+  error_code: null,
+  error_detail: null,
+};
+
 function governanceResult({
   decision = "ACCEPT",
   fallback = false,
@@ -65,6 +101,7 @@ function governanceResult({
         trace_id: "trace-ui-001",
         timestamp_utc: "2026-07-30T12:00:00+00:00",
         normalised_command: "Move the blue component.",
+        original_transcript_text: null,
         policy_id: "prototype5_manufacturing_policy_v2@2.0.0",
         evidence_schema_version: "2.0.0",
         parse_status: "PASSED",
@@ -119,6 +156,12 @@ function mockFetch(result = governanceResult()) {
           headers: { "Content-Type": "application/json" },
         });
       }
+      if (url.includes("/api/v1/speech/recorded")) {
+        return new Response(JSON.stringify(transcription), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       return new Response(JSON.stringify(result), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -146,8 +189,11 @@ describe("Prototype 5 typed UI", () => {
     expect(screen.getByRole("textbox", { name: "Operator command" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: "Microphone unavailable" }),
+      screen.getByRole("button", { name: "Microphone available in V2" }),
     ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Upload WAV recording" }),
+    ).toBeEnabled();
     expect(screen.getByText("No command submitted.")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Available")).toBeInTheDocument());
   });
@@ -241,5 +287,45 @@ describe("Prototype 5 typed UI", () => {
     await waitFor(() => expect(screen.getByText("Request failed")).toBeInTheDocument());
     expect(screen.getByText("LOCAL_BACKEND_UNAVAILABLE")).toBeInTheDocument();
     expect(screen.queryByText("Structured proposal")).not.toBeInTheDocument();
+  });
+
+  it("reviews a real recorded transcript before using the voice endpoint", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    const recording = new File([new Uint8Array([1, 2, 3])], "operator.wav", {
+      type: "audio/wav",
+    });
+
+    await user.upload(
+      screen.getByLabelText("Recorded WAV file"),
+      recording,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("Nemotron transcript")).toBeInTheDocument(),
+    );
+    expect(
+      screen.getByRole("textbox", { name: "Operator command" }),
+    ).toHaveValue("Move the blue component.");
+    expect(screen.getByText("operator.wav · 860.0 ms")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("Reviewed voice transcript")).toBeInTheDocument(),
+    );
+    expect(screen.getByText("Submitted")).toBeInTheDocument();
+    const calls = vi.mocked(fetch).mock.calls;
+    const transcriptionCall = calls.find(([url]) =>
+      String(url).includes("/api/v1/speech/recorded"),
+    );
+    const governanceCall = calls.find(([url]) =>
+      String(url).includes("/api/v1/governance/voice"),
+    );
+    expect(transcriptionCall?.[1]?.body).toBe(recording);
+    const body = JSON.parse(String(governanceCall?.[1]?.body));
+    expect(body.transcription_id).toBe("transcription-ui-001");
+    expect(body.reviewed_transcript_text).toBe("Move the blue component.");
+    expect(body.inference_mode).toBe("AUTO");
   });
 });

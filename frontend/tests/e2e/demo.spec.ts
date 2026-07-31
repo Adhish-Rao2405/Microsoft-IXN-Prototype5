@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { Buffer } from "node:buffer";
 
 const status = {
   service_status: "READY",
@@ -79,11 +80,53 @@ const accepted = {
   },
 };
 
+const transcription = {
+  result_schema_version: "1.0.0",
+  transcription_id: "transcription-e2e-001",
+  timestamp_utc: "2026-07-31T12:00:00Z",
+  transcript_status: "READY",
+  transcript_text: "Move the blue component.",
+  transcript_backend: "foundry_nemotron",
+  transcript_confidence: null,
+  audio: {
+    original_filename: "operator.wav",
+    audio_sha256: "b".repeat(64),
+    audio_bytes: 32044,
+    sample_rate_hz: 16000,
+    channels: 1,
+    bits_per_sample: 16,
+    frame_count: 16000,
+    duration_ms: 1000,
+  },
+  requested_model_alias: "nemotron-speech-streaming-en-0.6b",
+  resolved_model_id: "nemotron-speech-streaming-en-0.6b-generic-cpu:3",
+  execution_provider: "CPUExecutionProvider",
+  sdk_distribution: "foundry-local-sdk-winml",
+  sdk_version: "1.2.3",
+  core_distribution: "foundry-local-core-winml",
+  core_version: "1.2.3",
+  model_cached_before: true,
+  model_loaded_before: false,
+  model_downloaded_for_request: false,
+  model_loaded_for_request: true,
+  model_unloaded_after_request: true,
+  segment_count: 1,
+  transcription_latency_ms: 860,
+  error_code: null,
+  error_detail: null,
+};
+
 test.beforeEach(async ({ page }) => {
   await page.route("**/api/v1/status", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(status) }),
   );
   await page.route("**/api/v1/governance/typed", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(accepted) }),
+  );
+  await page.route("**/api/v1/speech/recorded", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(transcription) }),
+  );
+  await page.route("**/api/v1/governance/voice", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(accepted) }),
   );
 });
@@ -103,6 +146,29 @@ test("typed command renders a complete governance trace", async ({ page }, testI
 
   await page.screenshot({
     path: testInfo.outputPath("governance-trace.png"),
+    fullPage: true,
+  });
+});
+
+test("recorded transcript is reviewable before voice governance", async ({ page }, testInfo) => {
+  await page.goto("/");
+  await page.getByLabel("Recorded WAV file").setInputFiles({
+    name: "operator.wav",
+    mimeType: "audio/wav",
+    buffer: Buffer.from([1, 2, 3]),
+  });
+
+  await expect(page.getByText("Nemotron transcript")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Operator command" })).toHaveValue(
+    "Move the blue component.",
+  );
+  await page.getByRole("button", { name: "Submit" }).click();
+
+  await expect(page.getByText("Reviewed voice transcript")).toBeVisible();
+  await expect(page.getByText("Submitted")).toBeVisible();
+  await expect(page.getByText("Governance decision")).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("recorded-voice-governance.png"),
     fullPage: true,
   });
 });

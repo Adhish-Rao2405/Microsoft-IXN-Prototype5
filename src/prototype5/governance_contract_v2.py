@@ -281,7 +281,9 @@ class GovernanceRecordV2(ContractModel):
     input_mode: InputMode
     normalised_command: str | None = None
     typed_text: str | None = None
-    transcript_text: str | None = None
+    transcription_id: str | None = Field(default=None, min_length=1, max_length=200)
+    original_transcript_text: str | None = Field(default=None, max_length=1000)
+    transcript_text: str | None = Field(default=None, max_length=1000)
     transcript_status: TranscriptStatus = TranscriptStatus.NOT_APPLICABLE
     transcript_backend: str | None = None
     transcript_confidence: float | None = Field(default=None, ge=0, le=1)
@@ -386,6 +388,8 @@ class GovernanceRecordV2(ContractModel):
                 value is not None
                 for value in (
                     self.transcript_text,
+                    self.original_transcript_text,
+                    self.transcription_id,
                     self.transcript_backend,
                     self.transcript_confidence,
                     self.audio_sha256,
@@ -396,9 +400,18 @@ class GovernanceRecordV2(ContractModel):
 
         if self.typed_text is not None:
             raise ValueError("voice input cannot populate typed_text")
+        if not self.transcription_id or not self.transcription_id.strip():
+            raise ValueError("voice input requires transcription_id")
         if self.transcript_status is TranscriptStatus.NOT_APPLICABLE:
             raise ValueError("voice input requires a transcript status")
         if self.transcript_status in (TranscriptStatus.READY, TranscriptStatus.PARTIAL):
+            if (
+                not self.original_transcript_text
+                or not self.original_transcript_text.strip()
+            ):
+                raise ValueError(
+                    "ready or partial voice input requires original_transcript_text"
+                )
             if not self.transcript_text or not self.transcript_text.strip():
                 raise ValueError("ready or partial voice input requires transcript_text")
             if not self.transcript_backend or not self.transcript_backend.strip():
@@ -407,8 +420,10 @@ class GovernanceRecordV2(ContractModel):
                 raise ValueError("ready or partial voice input requires normalised_command")
             if not self.audio_sha256:
                 raise ValueError("ready or partial voice input requires audio_sha256")
-        elif self.transcript_text:
-            raise ValueError("failed, empty, cancelled, or unavailable voice input has no transcript")
+        elif self.transcript_text or self.original_transcript_text:
+            raise ValueError(
+                "failed, empty, cancelled, or unavailable voice input has no transcript"
+            )
         elif self.normalised_command is not None:
             raise ValueError(
                 "failed, empty, cancelled, or unavailable voice input has no command"

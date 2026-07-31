@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+} from "react";
 import {
   Badge,
   Button,
@@ -13,15 +20,22 @@ import {
 } from "@fluentui/react-components";
 import {
   ArrowDownload24Regular,
+  ArrowUpload24Regular,
   Bot24Regular,
   Cloud24Regular,
   Desktop24Regular,
+  Dismiss24Regular,
   Mic24Regular,
   Send24Regular,
   ShieldCheckmark24Regular,
   Stop24Regular,
 } from "@fluentui/react-icons";
-import { getDemoStatus, submitTypedCommand } from "./api";
+import {
+  getDemoStatus,
+  submitTypedCommand,
+  submitVoiceCommand,
+  transcribeRecordedAudio,
+} from "./api";
 import type {
   AvailabilityStatus,
   DemoStatus,
@@ -29,6 +43,7 @@ import type {
   GateDisplayStatus,
   HybridGovernanceResult,
   InferenceMode,
+  RecordedTranscription,
 } from "./types";
 
 const gateDefinitions = [
@@ -82,6 +97,17 @@ export function App() {
   const [submittedCommand, setSubmittedCommand] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [transcription, setTranscription] =
+    useState<RecordedTranscription | null>(null);
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcriptConsumed, setTranscriptConsumed] = useState(false);
+  const [transcriptionError, setTranscriptionError] = useState<string | null>(
+    null,
+  );
+  const [submittedInputMode, setSubmittedInputMode] = useState<"TYPED" | "VOICE">(
+    "TYPED",
+  );
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -106,17 +132,30 @@ export function App() {
 
   async function handleSubmit() {
     const trimmed = command.trim();
-    if (!trimmed || pending) return;
+    if (!trimmed || pending || transcribing || transcriptConsumed) return;
     setPending(true);
     setRequestError(null);
     setSubmittedCommand(trimmed);
+    const isVoice = transcription?.transcript_status === "READY";
+    setSubmittedInputMode(isVoice ? "VOICE" : "TYPED");
+    // The server claims a transcript before provider invocation. Treat any
+    // voice submission attempt as consumed so the UI cannot suggest replay.
+    if (isVoice) setTranscriptConsumed(true);
     try {
-      const nextResult = await submitTypedCommand({
-        command: trimmed,
-        inference_mode: mode,
-        domain_id: domain,
-        requester_role: requesterRole,
-      });
+      const nextResult = isVoice
+        ? await submitVoiceCommand({
+            transcription_id: transcription.transcription_id,
+            reviewed_transcript_text: trimmed,
+            inference_mode: mode,
+            domain_id: domain,
+            requester_role: requesterRole,
+          })
+        : await submitTypedCommand({
+            command: trimmed,
+            inference_mode: mode,
+            domain_id: domain,
+            requester_role: requesterRole,
+          });
       setResult(nextResult);
     } catch (error) {
       setResult(null);
@@ -126,11 +165,77 @@ export function App() {
     }
   }
 
+  async function handleAudioSelection(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || transcribing || pending) return;
+    setTranscribing(true);
+    setTranscriptionError(null);
+    setRequestError(null);
+    setResult(null);
+    setTranscriptConsumed(false);
+    try {
+      const nextTranscription = await transcribeRecordedAudio(file);
+      setTranscription(nextTranscription);
+      setStatus((current) =>
+        current
+          ? {
+              ...current,
+              speech_status:
+                nextTranscription.transcript_status === "READY" ||
+                nextTranscription.transcript_status === "EMPTY"
+                  ? "AVAILABLE"
+                  : "UNAVAILABLE",
+            }
+          : current,
+      );
+      if (
+        nextTranscription.transcript_status === "READY" &&
+        nextTranscription.transcript_text
+      ) {
+        setCommand(nextTranscription.transcript_text);
+      } else {
+        setTranscriptionError(
+          nextTranscription.error_code ?? nextTranscription.transcript_status,
+        );
+      }
+    } catch (error) {
+      setTranscription(null);
+      setTranscriptionError((error as Error).message);
+      setStatus((current) =>
+        current ? { ...current, speech_status: "UNAVAILABLE" } : current,
+      );
+    } finally {
+      setTranscribing(false);
+    }
+  }
+
+  function discardTranscript() {
+    setTranscription(null);
+    setTranscriptionError(null);
+    setTranscriptConsumed(false);
+    setCommand("");
+  }
+
   function downloadTrace() {
     if (!result || !record) return;
-    const blob = new Blob([JSON.stringify(result, null, 2)], {
-      type: "application/json",
-    });
+    const blob = new Blob(
+      [
+        JSON.stringify(
+          {
+            transcription,
+            governance: result,
+          },
+          null,
+          2,
+        ),
+      ],
+      {
+        type: "application/json",
+      },
+    );
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
@@ -253,7 +358,11 @@ export function App() {
             )}
             {submittedCommand && (
               <div className="message-row operator-message">
-                <span className="message-label">Operator</span>
+                <span className="message-label">
+                  {submittedInputMode === "VOICE"
+                    ? "Reviewed voice transcript"
+                    : "Operator"}
+                </span>
                 <p>{submittedCommand}</p>
               </div>
             )}
@@ -266,6 +375,12 @@ export function App() {
               <div className="request-error" role="alert">
                 <strong>Request failed</strong>
                 <span>{requestError}</span>
+              </div>
+            )}
+            {transcriptionError && (
+              <div className="request-error" role="alert">
+                <strong>Transcription failed</strong>
+                <span>{transcriptionError}</span>
               </div>
             )}
             {record && (
@@ -298,6 +413,36 @@ export function App() {
           </div>
 
           <div className="composer">
+            {transcription?.transcript_status === "READY" && (
+              <div className="transcript-review" role="status">
+                <div className="transcript-identity">
+                  <Mic24Regular aria-hidden="true" />
+                  <div>
+                    <strong>Nemotron transcript</strong>
+                    <span>
+                      {transcription.audio.original_filename} ·{" "}
+                      {formatLatency(transcription.transcription_latency_ms)}
+                    </span>
+                  </div>
+                </div>
+                <div className="transcript-actions">
+                  <Badge
+                    appearance="tint"
+                    color={transcriptConsumed ? "subtle" : "success"}
+                  >
+                    {transcriptConsumed ? "Submitted" : "Ready"}
+                  </Badge>
+                  <Tooltip content="Discard transcript" relationship="label">
+                    <Button
+                      appearance="subtle"
+                      icon={<Dismiss24Regular />}
+                      aria-label="Discard transcript"
+                      onClick={discardTranscript}
+                    />
+                  </Tooltip>
+                </div>
+              </div>
+            )}
             <Field label="Operator command">
               <Textarea
                 value={command}
@@ -314,18 +459,43 @@ export function App() {
               />
             </Field>
             <div className="composer-actions">
-              <Tooltip content="Microphone unavailable" relationship="label">
+              <input
+                ref={audioInputRef}
+                className="visually-hidden"
+                type="file"
+                accept=".wav,audio/wav,audio/x-wav"
+                onChange={(event) => void handleAudioSelection(event)}
+                aria-label="Recorded WAV file"
+              />
+              <Tooltip content="Upload WAV recording" relationship="label">
+                <Button
+                  appearance="subtle"
+                  icon={<ArrowUpload24Regular />}
+                  aria-label="Upload WAV recording"
+                  disabled={pending || transcribing}
+                  onClick={() => audioInputRef.current?.click()}
+                />
+              </Tooltip>
+              <Tooltip content="Microphone available in V2" relationship="label">
                 <Button
                   appearance="subtle"
                   icon={<Mic24Regular />}
-                  aria-label="Microphone unavailable"
+                  aria-label="Microphone available in V2"
                   disabled
                 />
               </Tooltip>
+              {transcribing && (
+                <Spinner size="tiny" label="Transcribing recording" />
+              )}
               <Button
                 appearance="primary"
                 icon={<Send24Regular />}
-                disabled={!command.trim() || pending}
+                disabled={
+                  !command.trim() ||
+                  pending ||
+                  transcribing ||
+                  transcriptConsumed
+                }
                 onClick={() => void handleSubmit()}
               >
                 Submit

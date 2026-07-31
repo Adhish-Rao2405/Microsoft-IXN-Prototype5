@@ -4,19 +4,28 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 
 from .demo_runtime import build_demo_service
 from .demo_service import (
     DemoApplicationService,
     DemoStatusResponse,
     DomainNotAvailableError,
+    SpeechBackendUnavailableError,
+    TranscriptRegistryError,
+    TranscriptNotReadyError,
     TypedCommandApiRequest,
+    VoiceCommandApiRequest,
 )
 from .hybrid_inference_router import HybridGovernanceResultV1
+from .recorded_speech import (
+    DEFAULT_MAX_AUDIO_BYTES,
+    RecordedTranscriptionResultV1,
+)
 
 
 def create_demo_app(
@@ -39,7 +48,7 @@ def create_demo_app(
         ],
         allow_credentials=False,
         allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type"],
+        allow_headers=["Content-Type", "X-Audio-Filename"],
     )
 
     @app.get("/api/v1/status", response_model=DemoStatusResponse)
@@ -56,6 +65,95 @@ def create_demo_app(
         try:
             return service.submit_typed(request)
         except DomainNotAvailableError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail={"code": str(exc)},
+            ) from exc
+
+    @app.post(
+        "/api/v1/speech/recorded",
+        response_model=RecordedTranscriptionResultV1,
+    )
+    async def transcribe_recorded(
+        request: Request,
+    ) -> RecordedTranscriptionResultV1:
+        content_type = request.headers.get("content-type", "").split(";", 1)[0]
+        if content_type not in {
+            "audio/wav",
+            "audio/x-wav",
+            "application/octet-stream",
+        }:
+            raise HTTPException(
+                status_code=415,
+                detail={"code": "AUDIO_CONTENT_TYPE_UNSUPPORTED"},
+            )
+        declared_length = request.headers.get("content-length")
+        if declared_length:
+            try:
+                parsed_length = int(declared_length)
+                if parsed_length < 0:
+                    raise ValueError
+                if parsed_length > DEFAULT_MAX_AUDIO_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail={"code": "AUDIO_TOO_LARGE"},
+                    )
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=400,
+                    detail={"code": "CONTENT_LENGTH_INVALID"},
+                ) from exc
+
+        audio = bytearray()
+        async for chunk in request.stream():
+            audio.extend(chunk)
+            if len(audio) > DEFAULT_MAX_AUDIO_BYTES:
+                raise HTTPException(
+                    status_code=413,
+                    detail={"code": "AUDIO_TOO_LARGE"},
+                )
+        filename = request.headers.get("x-audio-filename", "recording.wav")
+        if (
+            Path(filename).name != filename
+            or len(filename) > 255
+            or any(ord(character) < 32 for character in filename)
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail={"code": "AUDIO_FILENAME_INVALID"},
+            )
+        try:
+            return await run_in_threadpool(
+                service.transcribe_recorded,
+                bytes(audio),
+                original_filename=filename,
+            )
+        except SpeechBackendUnavailableError as exc:
+            raise HTTPException(
+                status_code=503,
+                detail={"code": str(exc)},
+            ) from exc
+        except TranscriptRegistryError as exc:
+            raise HTTPException(
+                status_code=503,
+                detail={"code": str(exc)},
+            ) from exc
+
+    @app.post(
+        "/api/v1/governance/voice",
+        response_model=HybridGovernanceResultV1,
+    )
+    def submit_voice(
+        request: VoiceCommandApiRequest,
+    ) -> HybridGovernanceResultV1:
+        try:
+            return service.submit_voice(request)
+        except DomainNotAvailableError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail={"code": str(exc)},
+            ) from exc
+        except TranscriptNotReadyError as exc:
             raise HTTPException(
                 status_code=409,
                 detail={"code": str(exc)},

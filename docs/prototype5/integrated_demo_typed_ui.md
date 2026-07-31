@@ -94,9 +94,13 @@ availability, and fallback conditions are injected.
 
 ## Current boundaries
 
-U1 supports typed manufacturing input. The healthcare option is visible but
-disabled until its separate policy milestone. The microphone and simulator stop
-controls are present in explicit unavailable states; U1 does not fabricate
-speech or simulation behavior.
+U1 established typed manufacturing input. V1 subsequently added a recorded WAV
+upload and explicit transcript-review path, documented in
+`integrated_demo_recorded_speech.md`. Typed and reviewed voice input use the
+same H1 router and A2.2 governance runner.
+
+The healthcare option remains disabled until its separate policy milestone.
+Live microphone capture and the simulator stop control remain in explicit
+unavailable states; the UI does not fabricate speech or simulation behavior.
 
 No execution permit is issued and PyBullet is not invoked in U1.

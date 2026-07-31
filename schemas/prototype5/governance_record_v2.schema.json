@@ -468,6 +468,19 @@
       "default": null,
       "title": "Oracle Version"
     },
+    "original_transcript_text": {
+      "anyOf": [
+        {
+          "maxLength": 1000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Original Transcript Text"
+    },
     "parse_status": {
       "$ref": "#/$defs/GateStatus"
     },
@@ -576,6 +589,7 @@
     "transcript_text": {
       "anyOf": [
         {
+          "maxLength": 1000,
           "type": "string"
         },
         {
@@ -584,6 +598,20 @@
       ],
       "default": null,
       "title": "Transcript Text"
+    },
+    "transcription_id": {
+      "anyOf": [
+        {
+          "maxLength": 200,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Transcription Id"
     },
     "typed_text": {
       "anyOf": [

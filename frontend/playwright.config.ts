@@ -11,9 +11,9 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   webServer: {
-    command: "npm run dev",
+    command: "npm run preview -- --port 5173",
     url: "http://127.0.0.1:5173",
-    reuseExistingServer: true,
+    reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },
   projects: [

@@ -49,7 +49,9 @@ from .task_proposal_v2 import (
 class CanonicalGovernanceRequestV2(ContractModel):
     input_mode: InputMode
     typed_text: str | None = None
-    transcript_text: str | None = None
+    transcription_id: str | None = Field(default=None, min_length=1, max_length=200)
+    original_transcript_text: str | None = Field(default=None, max_length=1000)
+    transcript_text: str | None = Field(default=None, max_length=1000)
     transcript_status: TranscriptStatus = TranscriptStatus.NOT_APPLICABLE
     transcript_backend: str | None = None
     transcript_confidence: float | None = Field(default=None, ge=0, le=1)
@@ -80,6 +82,8 @@ class CanonicalGovernanceRequestV2(ContractModel):
                 value is not None
                 for value in (
                     self.transcript_text,
+                    self.original_transcript_text,
+                    self.transcription_id,
                     self.transcript_backend,
                     self.transcript_confidence,
                     self.audio_sha256,
@@ -89,9 +93,18 @@ class CanonicalGovernanceRequestV2(ContractModel):
         else:
             if self.typed_text is not None:
                 raise ValueError("voice input cannot define typed_text")
+            if not self.transcription_id or not self.transcription_id.strip():
+                raise ValueError("voice input requires transcription_id")
             if self.transcript_status is not TranscriptStatus.READY:
                 raise ValueError(
                     "canonical planning accepts only a reviewed READY transcript"
+                )
+            if (
+                not self.original_transcript_text
+                or not self.original_transcript_text.strip()
+            ):
+                raise ValueError(
+                    "ready voice input requires original_transcript_text"
                 )
             if not self.transcript_text or not self.transcript_text.strip():
                 raise ValueError("ready voice input requires transcript_text")
@@ -403,6 +416,12 @@ class CanonicalGovernanceRunner:
             normalised_command=request.command,
             typed_text=(
                 request.typed_text if request.input_mode is InputMode.TYPED else None
+            ),
+            transcription_id=request.transcription_id,
+            original_transcript_text=(
+                request.original_transcript_text
+                if request.input_mode is InputMode.VOICE
+                else None
             ),
             transcript_text=(
                 request.transcript_text

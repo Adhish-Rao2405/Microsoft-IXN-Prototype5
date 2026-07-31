@@ -141,8 +141,11 @@ Only a `READY` transcript can enter provider routing. Partial, empty, failed,
 cancelled, or unavailable transcripts cannot select a model provider or become
 execution eligible.
 
-The contract records the transcript backend and optional audio SHA-256. It does
-not permit a fabricated transcript fallback.
+The contract records a non-predictable transcription identifier, the original
+ASR text, the operator-reviewed text, the transcript backend, and optional
+audio SHA-256. The reviewed text is the command evaluated by the canonical
+runner; the original text remains available for edit-trace analysis. The
+contract does not permit a fabricated transcript fallback.
 
 ## Simulation boundary
 

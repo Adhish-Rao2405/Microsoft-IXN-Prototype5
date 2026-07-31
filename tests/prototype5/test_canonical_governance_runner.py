@@ -312,6 +312,11 @@ def test_voice_and_typed_inputs_converge_on_same_governance_gates():
     voice_request = request(
         input_mode="VOICE",
         typed_text=None,
+        transcription_id="TRANSCRIPTION-VOICE-001",
+        original_transcript_text=(
+            "Move the blue component from input tray A "
+            "to assembly fixture B."
+        ),
         transcript_text=(
             "Move the blue component from input tray A "
             "to assembly fixture B."
@@ -354,6 +359,8 @@ def test_partial_voice_transcript_cannot_enter_planning():
         request(
             input_mode="VOICE",
             typed_text=None,
+            transcription_id="TRANSCRIPTION-VOICE-002",
+            original_transcript_text="Move the part",
             transcript_text="Move the part",
             transcript_status="PARTIAL",
             transcript_backend="nemotron-speech-streaming-en-0.6b",
