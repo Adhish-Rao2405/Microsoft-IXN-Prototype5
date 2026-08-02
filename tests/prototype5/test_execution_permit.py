@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from src.prototype5.execution_permit import (
     PERMIT_SIGNING_DOMAIN,
+    _verify_permit_signature,
     ExecutionPermitV1,
     PermitVerificationResult,
     SupportedOperationV1,
@@ -17,6 +18,7 @@ from src.prototype5.execution_permit import (
     format_canonical_timestamp,
     parse_canonical_timestamp,
     sign_permit_payload,
+    verify_execution_permit,
 )
 from src.prototype5.governance_contract_v2 import ContractModel
 from src.prototype5.task_proposal_v2 import (
@@ -351,12 +353,63 @@ def test_permit_verifies_against_the_equivalent_pick_place_proposal():
     )
 
 
-def test_a_different_secret_fails_verification():
-    from src.prototype5.execution_permit import verify_execution_permit
+@pytest.mark.parametrize(
+    "omitted",
+    [
+        "proposal",
+        "expected_scene_id",
+        "expected_scene_state_version",
+        "expected_policy_id",
+        "expected_policy_version",
+        "expected_policy_sha256",
+    ],
+)
+def test_execution_verification_cannot_omit_any_binding(omitted: str):
+    """A partial call must not be able to yield VALID; it must not compile."""
 
-    assert (
-        verify_execution_permit(permit(), secret=OTHER_SECRET, now=ISSUED_AT)
-        is PermitVerificationResult.INVALID_SIGNATURE
+    context = {
+        "proposal": move_proposal(),
+        "expected_scene_id": "manufacturing_demo_scene",
+        "expected_scene_state_version": "1.0.0",
+        "expected_policy_id": "prototype5_manufacturing_policy_v2",
+        "expected_policy_version": "2.0.0",
+        "expected_policy_sha256": POLICY_SHA,
+    }
+    context.pop(omitted)
+    with pytest.raises(TypeError):
+        verify_execution_permit(
+            permit(), secret=SECRET, now=ISSUED_AT, **context
+        )
+
+
+def test_signature_only_check_is_not_sufficient_for_execution():
+    """The narrow helper says the bytes are authentic, nothing more."""
+
+    proposal = move_proposal()
+    operation = derive_supported_operation(proposal)
+    assert operation is not None
+    mismatched_scene = build_execution_permit(
+        permit_id="permit-scene",
+        trace_id="trace-golden-1",
+        governance_record_id="record-golden-1",
+        plan_hash=compute_plan_hash(proposal),
+        policy_id="prototype5_manufacturing_policy_v2",
+        policy_version="2.0.0",
+        policy_sha256=POLICY_SHA,
+        scene_id="some_other_scene",
+        scene_state_version="1.0.0",
+        operation=operation,
+        issued_at=ISSUED_AT,
+        secret=SECRET,
+        ttl_seconds=60,
+    )
+    assert _verify_permit_signature(mismatched_scene, secret=SECRET) is True
+    assert verify(mismatched_scene) is PermitVerificationResult.SCENE_MISMATCH
+
+
+def test_a_different_secret_fails_verification():
+    assert verify(permit(), secret=OTHER_SECRET) is (
+        PermitVerificationResult.INVALID_SIGNATURE
     )
 
 
@@ -446,7 +499,7 @@ def test_a_permit_bound_to_a_different_operation_than_its_plan_is_refused():
         secret=SECRET,
         ttl_seconds=60,
     )
-    assert verify(divergent) is PermitVerificationResult.VALID
+    assert _verify_permit_signature(divergent, secret=SECRET) is True
     assert verify(divergent, proposal=proposal) is (
         PermitVerificationResult.OBJECT_MISMATCH
     )
@@ -493,8 +546,6 @@ def test_matching_local_context_verifies():
 
 
 def test_short_or_non_bytes_secrets_are_refused():
-    operation = derive_supported_operation(move_proposal())
-    assert operation is not None
     with pytest.raises(ValueError):
         sign_permit_payload(permit().signing_payload(), secret=b"\x00" * 31)
     with pytest.raises(TypeError):
@@ -527,8 +578,18 @@ def verify(
     issued: ExecutionPermitV1,
     *,
     now: datetime = ISSUED_AT,
-    **kwargs: object,
+    secret: bytes = SECRET,
+    **overrides: object,
 ) -> PermitVerificationResult:
-    from src.prototype5.execution_permit import verify_execution_permit
+    """Verify with the complete S1 execution context unless a test overrides it."""
 
-    return verify_execution_permit(issued, secret=SECRET, now=now, **kwargs)
+    context: dict[str, object] = {
+        "proposal": move_proposal(),
+        "expected_scene_id": "manufacturing_demo_scene",
+        "expected_scene_state_version": "1.0.0",
+        "expected_policy_id": "prototype5_manufacturing_policy_v2",
+        "expected_policy_version": "2.0.0",
+        "expected_policy_sha256": POLICY_SHA,
+    }
+    context.update(overrides)
+    return verify_execution_permit(issued, secret=secret, now=now, **context)

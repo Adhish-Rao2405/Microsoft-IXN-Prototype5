@@ -44,9 +44,15 @@ DEFAULT_SESSION_CAPACITY = 20
 
 
 class PermitState(StrEnum):
+    """Irreversible parent-side authority lifecycle.
+
+    Temporal validity is a separate axis: a consumed permit may later verify
+    as expired without the session ever ceasing to record that this trace
+    already spent its single execution authority.
+    """
+
     NOT_ISSUED = "NOT_ISSUED"
     CONSUMED = "CONSUMED"
-    EXPIRED = "EXPIRED"
 
 
 class SimulationOutcome(StrEnum):
@@ -60,6 +66,7 @@ class SimulationOutcome(StrEnum):
     REJECTED_POLICY_MISMATCH = "REJECTED_POLICY_MISMATCH"
     REJECTED_SCENE_MISMATCH = "REJECTED_SCENE_MISMATCH"
     REJECTED_OBJECT_MISMATCH = "REJECTED_OBJECT_MISMATCH"
+    REJECTED_SOURCE_MISMATCH = "REJECTED_SOURCE_MISMATCH"
     REJECTED_DESTINATION_MISMATCH = "REJECTED_DESTINATION_MISMATCH"
     EXECUTION_TIMEOUT = "EXECUTION_TIMEOUT"
     WORKER_FAILED = "WORKER_FAILED"
@@ -75,7 +82,27 @@ class ExecutionClaimReason(StrEnum):
     )
     EXECUTION_PROVENANCE_INCOMPLETE = "EXECUTION_PROVENANCE_INCOMPLETE"
     UNSUPPORTED_SIMULATION_OPERATION = "UNSUPPORTED_SIMULATION_OPERATION"
-    SIMULATION_ALREADY_EXECUTED = "SIMULATION_ALREADY_EXECUTED"
+    EXECUTION_AUTHORITY_ALREADY_CLAIMED = "EXECUTION_AUTHORITY_ALREADY_CLAIMED"
+
+
+class DuplicateExecutionTraceError(RuntimeError):
+    """Raised when a trace_id would replace an existing governance snapshot."""
+
+    code = "DUPLICATE_EXECUTION_TRACE"
+
+
+class ExecutionRegistryAtCapacityError(RuntimeError):
+    """Raised when capacity can only be reclaimed by deleting active authority."""
+
+    code = "EXECUTION_REGISTRY_AT_CAPACITY"
+
+
+ACTIVE_SIMULATION_STATUSES = frozenset(
+    {
+        SimulationStatus.QUEUED,
+        SimulationStatus.RUNNING,
+    }
+)
 
 
 class ExecutionGovernanceSnapshotV1(ContractModel):
@@ -198,6 +225,15 @@ class ExecutionSessionRegistry:
 
     Process-local by design: the Prototype 5 demonstrator runs as a single
     FastAPI application process.
+
+    Two independent reclamation axes:
+
+    * TTL expiry, which is the unconditional time-based backstop;
+    * capacity pressure, which is registration-order (FIFO) and never removes
+      a QUEUED or RUNNING session.
+
+    Reads do not refresh ordering, so polling a trace's status cannot keep it
+    alive past its registration position.
     """
 
     def __init__(
@@ -240,10 +276,12 @@ class ExecutionSessionRegistry:
         expiry = now + timedelta(seconds=self.ttl_seconds)
         with self._lock:
             self._evict_expired_locked(now)
+            if snapshot.trace_id in self._sessions:
+                raise DuplicateExecutionTraceError(
+                    DuplicateExecutionTraceError.code
+                )
+            self._make_room_locked()
             self._sessions[snapshot.trace_id] = (session, expiry)
-            self._sessions.move_to_end(snapshot.trace_id)
-            while len(self._sessions) > self.capacity:
-                self._sessions.popitem(last=False)
             return session.state_view()
 
     def get_state(self, trace_id: str) -> ExecutionSessionStateV1 | None:
@@ -273,7 +311,7 @@ class ExecutionSessionRegistry:
             if session.permit_state is not PermitState.NOT_ISSUED:
                 return PermitClaimResultV1(
                     claimed=False,
-                    reason_code=ExecutionClaimReason.SIMULATION_ALREADY_EXECUTED,
+                    reason_code=ExecutionClaimReason.EXECUTION_AUTHORITY_ALREADY_CLAIMED,
                 )
 
             snapshot = session.snapshot
@@ -325,10 +363,10 @@ class ExecutionSessionRegistry:
             )
 
             # A just-in-time permit cannot be expired at claim time: the clock
-            # is read once and the expiry is derived from that same instant.
-            # Expiry is therefore enforced where it can actually occur, at the
-            # worker verification boundary, which transitions the session to
-            # PermitState.EXPIRED rather than treating it as consumed work.
+            # is read once and the expiry derives from that same instant.
+            # Later expiry is a temporal fact reported by verification, not a
+            # lifecycle change: the session stays CONSUMED because this trace
+            # has irreversibly spent its one execution authority.
             session.permit = permit
             session.permit_state = PermitState.CONSUMED
             session.execution_id = self._id_factory()
@@ -346,6 +384,30 @@ class ExecutionSessionRegistry:
         """Expose the signing secret to in-process trusted components only."""
 
         return self._secret
+
+    def _make_room_locked(self) -> None:
+        """Free one slot using registration-order eviction, never active authority.
+
+        Eviction is FIFO by registration order; reads deliberately do not
+        refresh position, so status polling cannot keep a stale trace alive.
+        A QUEUED or RUNNING session is never evicted, because deleting it
+        would orphan an execution that still owes an audit result.
+        """
+
+        while len(self._sessions) >= self.capacity:
+            victim = next(
+                (
+                    trace_id
+                    for trace_id, (session, _) in self._sessions.items()
+                    if session.simulation_status not in ACTIVE_SIMULATION_STATUSES
+                ),
+                None,
+            )
+            if victim is None:
+                raise ExecutionRegistryAtCapacityError(
+                    ExecutionRegistryAtCapacityError.code
+                )
+            self._sessions.pop(victim, None)
 
     def _evict_expired_locked(self, now: datetime) -> None:
         expired = [

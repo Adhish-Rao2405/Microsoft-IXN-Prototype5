@@ -24,7 +24,9 @@ from src.prototype5.execution_permit import (
     verify_execution_permit,
 )
 from src.prototype5.execution_session import (
+    DuplicateExecutionTraceError,
     ExecutionClaimReason,
+    ExecutionRegistryAtCapacityError,
     ExecutionSessionRegistry,
     PermitState,
 )
@@ -526,7 +528,7 @@ def test_a_trace_yields_at_most_one_permit():
         assert repeat.claimed is False
         assert repeat.permit is None
         assert repeat.reason_code is (
-            ExecutionClaimReason.SIMULATION_ALREADY_EXECUTED
+            ExecutionClaimReason.EXECUTION_AUTHORITY_ALREADY_CLAIMED
         )
 
     state = registry.get_state(trace_id)
@@ -571,18 +573,17 @@ def test_concurrent_claims_produce_exactly_one_permit():
     assert len(claimed) == 1
     assert len(refused) == 3
     assert {result.reason_code for result in refused} == {
-        ExecutionClaimReason.SIMULATION_ALREADY_EXECUTED
+        ExecutionClaimReason.EXECUTION_AUTHORITY_ALREADY_CLAIMED
     }
     assert len({result.execution_id for result in claimed}) == 1
     assert len({result.permit.permit_id for result in claimed}) == 1
 
 
-def test_claimed_permit_is_valid_at_claim_time_and_expires_afterwards():
-    """JIT issuance cannot mint an already-expired permit.
+def test_consumed_authority_survives_the_permit_becoming_expired():
+    """Lifecycle and temporal validity are separate axes.
 
-    The claim reads the clock once and derives expiry from that same instant,
-    so claim-time expiry is unreachable by construction. Expiry is enforced
-    where it can actually occur: at permit verification.
+    The permit may later verify as EXPIRED while the session still records
+    that this trace irreversibly spent its one execution authority.
     """
 
     registry = build_registry(permit_ttl_seconds=60)
@@ -594,24 +595,130 @@ def test_claimed_permit_is_valid_at_claim_time_and_expires_afterwards():
     assert claim.claimed is True
     permit = claim.permit
     assert permit is not None
-    assert permit.expires_at_utc > permit.issued_at_utc
-
     secret = registry.verification_secret()
-    assert (
-        verify_execution_permit(permit, secret=secret, now=FIXED_TIME)
-        is PermitVerificationResult.VALID
-    )
-    assert (
-        verify_execution_permit(
-            permit, secret=secret, now=FIXED_TIME + timedelta(seconds=60)
+
+    def check(now):
+        return verify_execution_permit(
+            permit,
+            secret=secret,
+            now=now,
+            proposal=claim.proposal,
+            expected_scene_id=context.result.request.scene.scene_id,
+            expected_scene_state_version=(
+                context.result.request.scene.state_version
+            ),
+            expected_policy_id=context.policy_id,
+            expected_policy_version=context.policy_version,
+            expected_policy_sha256=context.policy_sha256,
         )
-        is PermitVerificationResult.EXPIRED
+
+    assert check(FIXED_TIME) is PermitVerificationResult.VALID
+    assert check(FIXED_TIME + timedelta(seconds=60)) is (
+        PermitVerificationResult.EXPIRED
     )
 
+    state = registry.get_state(trace_id)
+    assert state is not None
+    assert state.permit_state is PermitState.CONSUMED
+    assert registry.issue_and_claim(trace_id).claimed is False
 
-def test_permit_state_expired_is_reserved_and_distinct_from_consumed():
-    assert PermitState.EXPIRED is not PermitState.CONSUMED
-    assert PermitState.EXPIRED.value == "EXPIRED"
+
+def test_permit_state_has_no_expired_member():
+    assert {member.value for member in PermitState} == {
+        "NOT_ISSUED",
+        "CONSUMED",
+    }
+
+
+# --------------------------------------------------------------------------
+# registry invariants: duplicate traces and capacity safety
+# --------------------------------------------------------------------------
+
+
+def test_duplicate_trace_registration_is_refused():
+    registry = build_registry()
+    context = context_for(move_json())
+    registry.register(context)
+    trace_id = context.result.governance_record.trace_id
+
+    with pytest.raises(DuplicateExecutionTraceError):
+        registry.register(context)
+
+    state = registry.get_state(trace_id)
+    assert state is not None
+    assert state.permit_state is PermitState.NOT_ISSUED
+
+
+def test_duplicate_registration_cannot_reset_a_claimed_session():
+    registry = build_registry()
+    context = context_for(move_json())
+    registry.register(context)
+    trace_id = context.result.governance_record.trace_id
+    claim = registry.issue_and_claim(trace_id)
+    assert claim.claimed is True
+
+    with pytest.raises(DuplicateExecutionTraceError):
+        registry.register(context)
+
+    state = registry.get_state(trace_id)
+    assert state is not None
+    assert state.permit_state is PermitState.CONSUMED
+    assert state.permit_id == claim.permit.permit_id
+    assert state.execution_id == claim.execution_id
+    assert registry.issue_and_claim(trace_id).claimed is False
+
+
+def test_capacity_pressure_never_evicts_a_claimed_session():
+    registry = build_registry(capacity=2)
+    active = context_for(move_json())
+    registry.register(active)
+    active_trace = active.result.governance_record.trace_id
+    assert registry.issue_and_claim(active_trace).claimed is True
+
+    later = []
+    for _ in range(3):
+        context = context_for("this is not json")
+        registry.register(context)
+        later.append(context.result.governance_record.trace_id)
+
+    state = registry.get_state(active_trace)
+    assert state is not None
+    assert state.simulation_status is SimulationStatus.QUEUED
+    assert registry.get_state(later[-1]) is not None
+    assert registry.get_state(later[0]) is None
+
+
+def test_registration_is_refused_when_only_active_sessions_remain():
+    registry = build_registry(capacity=1)
+    active = context_for(move_json())
+    registry.register(active)
+    active_trace = active.result.governance_record.trace_id
+    assert registry.issue_and_claim(active_trace).claimed is True
+
+    with pytest.raises(ExecutionRegistryAtCapacityError):
+        registry.register(context_for(move_json()))
+
+    state = registry.get_state(active_trace)
+    assert state is not None
+    assert state.permit_state is PermitState.CONSUMED
+
+
+def test_capacity_eviction_is_registration_order_not_read_order():
+    registry = build_registry(capacity=2)
+    contexts = [context_for("this is not json") for _ in range(2)]
+    for context in contexts:
+        registry.register(context)
+    first, second = (
+        context.result.governance_record.trace_id for context in contexts
+    )
+
+    # Reading the oldest entry must not protect it from FIFO eviction.
+    assert registry.get_state(first) is not None
+
+    third = context_for("this is not json")
+    registry.register(third)
+    assert registry.get_state(first) is None
+    assert registry.get_state(second) is not None
 
 
 def test_sessions_expire_after_their_ttl():
@@ -629,7 +736,7 @@ def test_sessions_expire_after_their_ttl():
     )
 
 
-def test_registry_evicts_least_recently_registered_over_capacity():
+def test_registry_evicts_in_registration_order_over_capacity():
     registry = build_registry(capacity=2)
     trace_ids = []
     for _ in range(3):

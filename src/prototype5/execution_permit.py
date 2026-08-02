@@ -308,29 +308,42 @@ def build_execution_permit(
     )
 
 
+def _verify_permit_signature(
+    permit: ExecutionPermitV1, *, secret: bytes
+) -> bool:
+    """Constant-time signature check only.
+
+    This is deliberately not sufficient to authorise execution: a correctly
+    signed permit still has to bind to a proposal, a policy and a scene. Use
+    verify_execution_permit for anything that can cause motion.
+    """
+
+    _require_secret(secret)
+    expected = sign_permit_payload(permit.signing_payload(), secret=secret)
+    return hmac.compare_digest(expected, permit.signature)
+
+
 def verify_execution_permit(
     permit: ExecutionPermitV1,
     *,
     secret: bytes,
     now: datetime,
-    proposal: StructuredTaskProposalV2 | None = None,
-    expected_scene_id: str | None = None,
-    expected_scene_state_version: str | None = None,
-    expected_policy_id: str | None = None,
-    expected_policy_version: str | None = None,
-    expected_policy_sha256: str | None = None,
+    proposal: StructuredTaskProposalV2,
+    expected_scene_id: str,
+    expected_scene_state_version: str,
+    expected_policy_id: str,
+    expected_policy_version: str,
+    expected_policy_sha256: str,
 ) -> PermitVerificationResult:
-    """Verify a permit against a secret, a clock and optional local context.
+    """Verify complete execution authority. Every binding is mandatory.
 
-    When a proposal is supplied the plan hash preimage is recomputed and the
-    proposal's bounded operation must equal the operation the permit
-    authorises, so a signed permit cannot bind one plan's hash to a different
-    operation.
+    A VALID result always means the signature, expiry, plan-hash preimage,
+    proposal-to-operation binding, scene and policy were all checked. None of
+    the execution bindings are optional, so a caller cannot accidentally
+    obtain VALID from a partial check.
     """
 
-    _require_secret(secret)
-    expected_signature = sign_permit_payload(permit.signing_payload(), secret=secret)
-    if not hmac.compare_digest(expected_signature, permit.signature):
+    if not _verify_permit_signature(permit, secret=secret):
         return PermitVerificationResult.INVALID_SIGNATURE
 
     if now.tzinfo is None or now.utcoffset() is None:
@@ -338,39 +351,29 @@ def verify_execution_permit(
     if now >= parse_canonical_timestamp(permit.expires_at_utc):
         return PermitVerificationResult.EXPIRED
 
-    if proposal is not None:
-        if compute_plan_hash(proposal) != permit.plan_hash:
-            return PermitVerificationResult.PLAN_MISMATCH
-        operation = derive_supported_operation(proposal)
-        if operation is None:
-            return PermitVerificationResult.UNSUPPORTED_OPERATION
-        if operation.object_id != permit.object_id:
-            return PermitVerificationResult.OBJECT_MISMATCH
-        if operation.source_id != permit.source_id:
-            return PermitVerificationResult.SOURCE_MISMATCH
-        if operation.destination_id != permit.destination_id:
-            return PermitVerificationResult.DESTINATION_MISMATCH
-        if operation.action is not permit.action:
-            return PermitVerificationResult.PLAN_MISMATCH
+    if compute_plan_hash(proposal) != permit.plan_hash:
+        return PermitVerificationResult.PLAN_MISMATCH
+    operation = derive_supported_operation(proposal)
+    if operation is None:
+        return PermitVerificationResult.UNSUPPORTED_OPERATION
+    if operation.action is not permit.action:
+        return PermitVerificationResult.PLAN_MISMATCH
+    if operation.object_id != permit.object_id:
+        return PermitVerificationResult.OBJECT_MISMATCH
+    if operation.source_id != permit.source_id:
+        return PermitVerificationResult.SOURCE_MISMATCH
+    if operation.destination_id != permit.destination_id:
+        return PermitVerificationResult.DESTINATION_MISMATCH
 
-    if expected_scene_id is not None and expected_scene_id != permit.scene_id:
+    if expected_scene_id != permit.scene_id:
         return PermitVerificationResult.SCENE_MISMATCH
-    if (
-        expected_scene_state_version is not None
-        and expected_scene_state_version != permit.scene_state_version
-    ):
+    if expected_scene_state_version != permit.scene_state_version:
         return PermitVerificationResult.SCENE_MISMATCH
-    if expected_policy_id is not None and expected_policy_id != permit.policy_id:
+    if expected_policy_id != permit.policy_id:
         return PermitVerificationResult.POLICY_MISMATCH
-    if (
-        expected_policy_version is not None
-        and expected_policy_version != permit.policy_version
-    ):
+    if expected_policy_version != permit.policy_version:
         return PermitVerificationResult.POLICY_MISMATCH
-    if (
-        expected_policy_sha256 is not None
-        and expected_policy_sha256.lower() != permit.policy_sha256
-    ):
+    if expected_policy_sha256.lower() != permit.policy_sha256:
         return PermitVerificationResult.POLICY_MISMATCH
 
     return PermitVerificationResult.VALID
