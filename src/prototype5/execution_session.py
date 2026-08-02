@@ -240,7 +240,7 @@ class ExecutionSessionRegistry:
     def __init__(
         self,
         *,
-        secret: bytes | None = None,
+        secret: bytes | bytearray | None = None,
         ttl_seconds: int = DEFAULT_SESSION_TTL_SECONDS,
         capacity: int = DEFAULT_SESSION_CAPACITY,
         permit_ttl_seconds: int = DEFAULT_PERMIT_TTL_SECONDS,

@@ -379,19 +379,19 @@ def verify_execution_permit(
     return PermitVerificationResult.VALID
 
 
-def validate_permit_secret(secret: bytes) -> bytes:
+def validate_permit_secret(secret: bytes | bytearray) -> bytes:
     """Validate a signing key and return an immutable copy.
 
-    Callers that retain a key should store the returned value, so a mutable
-    bytearray supplied by configuration cannot later be changed underneath
-    the signer.
+    A mutable bytearray is accepted at this external input boundary and is
+    defensively copied, so configuration cannot change a key underneath the
+    signer after construction. The returned value is always immutable bytes.
     """
 
     _require_secret(secret)
     return bytes(secret)
 
 
-def _require_secret(secret: bytes) -> None:
+def _require_secret(secret: bytes | bytearray) -> None:
     if not isinstance(secret, (bytes, bytearray)):
         raise TypeError("permit secret must be raw bytes")
     if len(secret) < MINIMUM_SECRET_BYTES:
