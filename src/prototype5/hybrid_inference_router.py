@@ -20,6 +20,7 @@ from .canonical_governance_runner import (
     CanonicalGovernanceRequestV2,
     CanonicalGovernanceResultV2,
     CanonicalGovernanceRunner,
+    InternalGovernanceExecutionContextV1,
 )
 from .foundry_sdk_backend import ModelBackendResponse, PlannerBackend
 from .governance_contract_v2 import (
@@ -161,19 +162,27 @@ class HybridInferenceRouter:
     def route(
         self, request: CanonicalGovernanceRequestV2
     ) -> HybridGovernanceResultV1:
+        return self.route_with_execution_context(request)[0]
+
+    def route_with_execution_context(
+        self, request: CanonicalGovernanceRequestV2
+    ) -> tuple[HybridGovernanceResultV1, InternalGovernanceExecutionContextV1]:
+        """Return the public result and the context of that same final result."""
+
         if request.requested_inference_mode is InferenceMode.LOCAL:
-            result = self._route_local_only(request)
+            context = self._route_local_only(request)
         elif request.requested_inference_mode is InferenceMode.CLOUD:
-            result = self._route_cloud_only(request)
+            context = self._route_cloud_only(request)
         else:
-            result = self._route_auto(request)
+            context = self._route_auto(request)
+        result = context.result
         return HybridGovernanceResultV1(
             routing_policy_id=self.routing_policy.config.routing_policy_id,
             routing_policy_version=self.routing_policy.config.routing_policy_version,
             routing_policy_sha256=self.routing_policy.sha256,
             local_health=self.local_health_snapshot(),
             canonical_result=result,
-        )
+        ), context
 
     def local_health_snapshot(self) -> LocalHealthSnapshotV1:
         latencies = [sample.latency_ms for sample in self._samples]
@@ -200,7 +209,7 @@ class HybridInferenceRouter:
 
     def _route_local_only(
         self, request: CanonicalGovernanceRequestV2
-    ) -> CanonicalGovernanceResultV2:
+    ) -> InternalGovernanceExecutionContextV1:
         preflight_reason = self._local_preflight()
         if preflight_reason is not None:
             return self._evaluate_skipped_direct(
@@ -216,26 +225,26 @@ class HybridInferenceRouter:
         if failure_reason is not None and not response.success:
             response = _with_error_type(response, failure_reason.value)
         route = self._direct_route(request, self.local, response)
-        return self.governance_runner.evaluate_response(
+        return self.governance_runner.evaluate_response_with_execution_context(
             request, response=response, routing=route
         )
 
     def _route_cloud_only(
         self, request: CanonicalGovernanceRequestV2
-    ) -> CanonicalGovernanceResultV2:
+    ) -> InternalGovernanceExecutionContextV1:
         response = self._invoke(self.cloud, request)
         if not response.success:
             response = _with_error_type(
                 response, _classify_cloud_failure(response)
             )
         route = self._direct_route(request, self.cloud, response)
-        return self.governance_runner.evaluate_response(
+        return self.governance_runner.evaluate_response_with_execution_context(
             request, response=response, routing=route
         )
 
     def _route_auto(
         self, request: CanonicalGovernanceRequestV2
-    ) -> CanonicalGovernanceResultV2:
+    ) -> InternalGovernanceExecutionContextV1:
         preflight_reason = self._local_preflight()
         if preflight_reason is not None:
             return self._fallback_to_cloud(
@@ -257,7 +266,7 @@ class HybridInferenceRouter:
                 cloud_attempted=False,
                 local_latency_ms=local_response.latency_ms,
             )
-            return self.governance_runner.evaluate_response(
+            return self.governance_runner.evaluate_response_with_execution_context(
                 request, response=local_response, routing=route
             )
         return self._fallback_to_cloud(
@@ -274,7 +283,7 @@ class HybridInferenceRouter:
         reason: FallbackReason,
         local_attempted: bool,
         local_latency_ms: float | None,
-    ) -> CanonicalGovernanceResultV2:
+    ) -> InternalGovernanceExecutionContextV1:
         cloud_response = self._invoke(self.cloud, request)
         if not cloud_response.success:
             cloud_response = _with_error_type(
@@ -291,7 +300,7 @@ class HybridInferenceRouter:
             local_latency_ms=local_latency_ms,
             cloud_latency_ms=cloud_response.latency_ms,
         )
-        return self.governance_runner.evaluate_response(
+        return self.governance_runner.evaluate_response_with_execution_context(
             request, response=cloud_response, routing=route
         )
 
@@ -300,7 +309,7 @@ class HybridInferenceRouter:
         request: CanonicalGovernanceRequestV2,
         *,
         reason_code: str,
-    ) -> CanonicalGovernanceResultV2:
+    ) -> InternalGovernanceExecutionContextV1:
         response = ModelBackendResponse(
             backend=ProviderId.NONE.value,
             model_alias=None,
@@ -319,7 +328,7 @@ class HybridInferenceRouter:
             local_attempted=False,
             cloud_attempted=False,
         )
-        return self.governance_runner.evaluate_response(
+        return self.governance_runner.evaluate_response_with_execution_context(
             request, response=response, routing=route
         )
 
