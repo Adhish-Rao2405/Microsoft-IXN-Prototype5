@@ -379,6 +379,18 @@ def verify_execution_permit(
     return PermitVerificationResult.VALID
 
 
+def validate_permit_secret(secret: bytes) -> bytes:
+    """Validate a signing key and return an immutable copy.
+
+    Callers that retain a key should store the returned value, so a mutable
+    bytearray supplied by configuration cannot later be changed underneath
+    the signer.
+    """
+
+    _require_secret(secret)
+    return bytes(secret)
+
+
 def _require_secret(secret: bytes) -> None:
     if not isinstance(secret, (bytes, bytearray)):
         raise TypeError("permit secret must be raw bytes")

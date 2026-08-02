@@ -721,6 +721,81 @@ def test_capacity_eviction_is_registration_order_not_read_order():
     assert registry.get_state(second) is not None
 
 
+def test_active_session_survives_its_registration_ttl():
+    """An execution can outlive the TTL of the trace that authorised it.
+
+    Deleting it would orphan the execution and break the governance-to-audit
+    chain, so TTL reclamation must skip QUEUED and RUNNING sessions.
+    """
+
+    now = [FIXED_TIME]
+    registry = build_registry(clock=lambda: now[0], ttl_seconds=60, capacity=5)
+    context = context_for(move_json())
+    registry.register(context)
+    trace_id = context.result.governance_record.trace_id
+
+    claim = registry.issue_and_claim(trace_id)
+    assert claim.claimed is True
+
+    now[0] = FIXED_TIME + timedelta(seconds=601)
+
+    # get_state() runs TTL reclamation
+    state = registry.get_state(trace_id)
+    assert state is not None
+    assert state.simulation_status is SimulationStatus.QUEUED
+    assert state.permit_id == claim.permit.permit_id
+    assert state.execution_id == claim.execution_id
+
+    # register() runs TTL reclamation
+    registry.register(context_for("this is not json"))
+    assert registry.get_state(trace_id) is not None
+
+    # issue_and_claim() runs TTL reclamation
+    repeat = registry.issue_and_claim(trace_id)
+    assert repeat.reason_code is (
+        ExecutionClaimReason.EXECUTION_AUTHORITY_ALREADY_CLAIMED
+    )
+    survivor = registry.get_state(trace_id)
+    assert survivor is not None
+    assert survivor.execution_id == claim.execution_id
+
+
+def test_ttl_still_reclaims_inactive_sessions_around_an_active_one():
+    now = [FIXED_TIME]
+    registry = build_registry(clock=lambda: now[0], ttl_seconds=60, capacity=5)
+
+    active = context_for(move_json())
+    registry.register(active)
+    active_trace = active.result.governance_record.trace_id
+    assert registry.issue_and_claim(active_trace).claimed is True
+
+    inactive = context_for("this is not json")
+    registry.register(inactive)
+    inactive_trace = inactive.result.governance_record.trace_id
+
+    now[0] = FIXED_TIME + timedelta(seconds=61)
+    assert registry.get_state(inactive_trace) is None
+    assert registry.get_state(active_trace) is not None
+
+
+def test_terminal_retention_is_a_slice_two_contract():
+    """Placeholder guard: terminal retention must not reuse registration age.
+
+    Slice 2 must recompute the retention deadline from the terminal time when
+    a session leaves an active state. Until the controller exists, only the
+    active-state exemption is implemented here.
+    """
+
+    from src.prototype5.execution_session import ACTIVE_SIMULATION_STATUSES
+
+    assert ACTIVE_SIMULATION_STATUSES == frozenset(
+        {SimulationStatus.QUEUED, SimulationStatus.RUNNING}
+    )
+    assert SimulationStatus.COMPLETED not in ACTIVE_SIMULATION_STATUSES
+    assert SimulationStatus.FAILED not in ACTIVE_SIMULATION_STATUSES
+    assert SimulationStatus.STOPPED_BY_OPERATOR not in ACTIVE_SIMULATION_STATUSES
+
+
 def test_sessions_expire_after_their_ttl():
     now = [FIXED_TIME]
     registry = build_registry(clock=lambda: now[0], ttl_seconds=60)
@@ -769,3 +844,42 @@ def test_registry_generates_its_own_secret_when_none_is_supplied():
     second = ExecutionSessionRegistry()
     assert len(first.verification_secret()) >= 32
     assert first.verification_secret() != second.verification_secret()
+
+
+# --------------------------------------------------------------------------
+# signing-key configuration fails fast
+# --------------------------------------------------------------------------
+
+
+def test_short_signing_key_fails_at_construction():
+    with pytest.raises(ValueError):
+        ExecutionSessionRegistry(secret=bytes(31))
+
+
+@pytest.mark.parametrize("secret", ["not-bytes", 12345, memoryview(bytes(32))])
+def test_invalid_signing_key_type_fails_at_construction(secret):
+    with pytest.raises(TypeError):
+        ExecutionSessionRegistry(secret=secret)
+
+
+def test_exact_minimum_signing_key_is_accepted():
+    registry = ExecutionSessionRegistry(secret=bytes(32))
+    assert registry.verification_secret() == bytes(32)
+
+
+def test_mutable_signing_key_is_defensively_copied():
+    supplied = bytearray(bytes(32))
+    registry = ExecutionSessionRegistry(secret=supplied)
+    assert isinstance(registry.verification_secret(), bytes)
+    assert not isinstance(registry.verification_secret(), bytearray)
+
+    supplied[0] = 0xFF
+    assert registry.verification_secret()[0] == 0x00
+    assert registry.verification_secret() == bytes(32)
+
+
+def test_signing_key_failure_is_not_deferred_to_claim_time():
+    """A bad key must not let the app start and fail only at motion time."""
+
+    with pytest.raises((ValueError, TypeError)):
+        ExecutionSessionRegistry(secret=b"too-short")

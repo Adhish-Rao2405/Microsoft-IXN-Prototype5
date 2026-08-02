@@ -29,6 +29,7 @@ from .execution_permit import (
     compute_plan_hash,
     derive_supported_operation,
     format_canonical_timestamp,
+    validate_permit_secret,
 )
 from .governance_contract_v2 import (
     ContractModel,
@@ -255,7 +256,11 @@ class ExecutionSessionRegistry:
         self.ttl_seconds = ttl_seconds
         self.capacity = capacity
         self.permit_ttl_seconds = permit_ttl_seconds
-        self._secret = secret if secret is not None else secrets.token_bytes(32)
+        self._secret = (
+            secrets.token_bytes(32)
+            if secret is None
+            else validate_permit_secret(secret)
+        )
         self._utc_clock = utc_clock or (lambda: datetime.now(timezone.utc))
         self._id_factory = id_factory or (lambda: secrets.token_hex(16))
         self._lock = threading.Lock()
@@ -410,10 +415,24 @@ class ExecutionSessionRegistry:
             self._sessions.pop(victim, None)
 
     def _evict_expired_locked(self, now: datetime) -> None:
+        """Reclaim aged sessions, never an execution that still owes a result.
+
+        An execution can legitimately outlive the registration TTL of the
+        governance trace that authorised it. Deleting it here would orphan
+        the execution and break the governance-to-audit chain, so QUEUED and
+        RUNNING sessions are exempt from TTL as well as capacity reclamation.
+
+        Slice-2 contract: when a session leaves an active state, its
+        retention deadline must be recomputed from the terminal time, not
+        from the original governance-registration time, or a just-completed
+        result would be eligible for immediate deletion.
+        """
+
         expired = [
             trace_id
-            for trace_id, (_, expiry) in self._sessions.items()
+            for trace_id, (session, expiry) in self._sessions.items()
             if expiry <= now
+            and session.simulation_status not in ACTIVE_SIMULATION_STATUSES
         ]
         for trace_id in expired:
             self._sessions.pop(trace_id, None)
