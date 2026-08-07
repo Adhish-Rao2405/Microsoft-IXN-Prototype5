@@ -26,3 +26,7 @@ scripts/prototype5/run_scene_collision_qualification_b3_1.py text eol=lf
 tests/prototype5/test_scene_collision_qualification_b3_1.py text eol=lf
 results/prototype5/scene_calibration/phase_b3_1_collision_qualification.json text eol=lf
 results/prototype5/scene_calibration/phase_b3_1_collision_qualification.json.sha256 text eol=lf
+
+# Vendored qualified CI-only binary dependency.
+ci/wheels/*.whl -text
+ci/wheels/*.whl.sha256 text eol=lf
