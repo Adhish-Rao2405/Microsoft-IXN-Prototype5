@@ -30,3 +30,5 @@ results/prototype5/scene_calibration/phase_b3_1_collision_qualification.json.sha
 # Vendored qualified CI-only binary dependency.
 ci/wheels/*.whl -text
 ci/wheels/*.whl.sha256 text eol=lf
+
+docs/prototype5/phase_b3_2_discrete_route_collision_qualification_spec.md text eol=lf
