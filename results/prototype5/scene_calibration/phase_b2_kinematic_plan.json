@@ -1,0 +1,4639 @@
+{
+  "claim_boundaries": {
+    "does_not_establish": [
+      "collision freedom",
+      "continuous path safety",
+      "dynamic executability",
+      "velocity or acceleration safety",
+      "controller stability",
+      "physical grasp validity",
+      "settled placement accuracy",
+      "real-robot validity",
+      "industrial safety"
+    ],
+    "establishes": "deterministic joint-limit-qualified FK-verified ordered static joint-state plan under the pinned PyBullet environment"
+  },
+  "frozen_calibration": {
+    "destination_xy_m": [
+      0.5,
+      0.2
+    ],
+    "layout": "C",
+    "lift_m": 0.14,
+    "orientation": "down_x_pi",
+    "orientation_euler_rad": [
+      3.141592653589793,
+      0.0,
+      0.0
+    ],
+    "selected_b1_2_candidate_id": "b1_1-C-down_x_pi-tcp_0p080-lift_0p140",
+    "source_xy_m": [
+      0.5,
+      -0.2
+    ],
+    "virtual_tcp_local_pose": {
+      "position": [
+        0.0,
+        0.0,
+        0.08
+      ],
+      "quaternion_xyzw": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    "virtual_tcp_m": 0.08
+  },
+  "gate_identifier": "B2_HOME_AND_KINEMATIC_PLAN",
+  "home_selection": {
+    "h0": {
+      "evaluated": true,
+      "evidence": {
+        "accepted": false,
+        "candidate": "H0",
+        "incoming_leg": {
+          "absolute_joint_delta_rad": [
+            1.178346292011804,
+            1.3642955535947991,
+            1.3386580662951193,
+            1.7084768780201194,
+            1.7495712535378452,
+            1.316845416044329,
+            0.4831097960375711
+          ],
+          "endpoint_joint_delta_exceeded": true,
+          "from": "DESTINATION_HIGH_RETURN",
+          "max_abs_endpoint_joint_delta_rad": 1.7495712535378452,
+          "responsible_joint_index": 4,
+          "responsible_joint_name": "lbr_iiwa_joint_5",
+          "responsible_signed_delta_rad": 1.7495712535378452,
+          "signed_joint_delta_rad": [
+            -1.178346292011804,
+            -1.3642955535947991,
+            1.3386580662951193,
+            1.7084768780201194,
+            1.7495712535378452,
+            1.316845416044329,
+            0.4831097960375711
+          ],
+          "threshold_comparison": "strict_greater_than",
+          "threshold_rad": 1.5707963267948966,
+          "to": "HOME"
+        },
+        "joint_limit_evidence": [
+          {
+            "joint_index": 0,
+            "joint_name": "lbr_iiwa_joint_1",
+            "lower_limit_rad": -2.96705972839,
+            "margin_to_lower_rad": 2.96705972839,
+            "margin_to_upper_rad": 2.96705972839,
+            "nearest_limit_margin_rad": 2.96705972839,
+            "upper_limit_rad": 2.96705972839,
+            "value_rad": 0.0
+          },
+          {
+            "joint_index": 1,
+            "joint_name": "lbr_iiwa_joint_2",
+            "lower_limit_rad": -2.09439510239,
+            "margin_to_lower_rad": 2.09439510239,
+            "margin_to_upper_rad": 2.09439510239,
+            "nearest_limit_margin_rad": 2.09439510239,
+            "upper_limit_rad": 2.09439510239,
+            "value_rad": 0.0
+          },
+          {
+            "joint_index": 2,
+            "joint_name": "lbr_iiwa_joint_3",
+            "lower_limit_rad": -2.96705972839,
+            "margin_to_lower_rad": 2.96705972839,
+            "margin_to_upper_rad": 2.96705972839,
+            "nearest_limit_margin_rad": 2.96705972839,
+            "upper_limit_rad": 2.96705972839,
+            "value_rad": 0.0
+          },
+          {
+            "joint_index": 3,
+            "joint_name": "lbr_iiwa_joint_4",
+            "lower_limit_rad": -2.09439510239,
+            "margin_to_lower_rad": 2.09439510239,
+            "margin_to_upper_rad": 2.09439510239,
+            "nearest_limit_margin_rad": 2.09439510239,
+            "upper_limit_rad": 2.09439510239,
+            "value_rad": 0.0
+          },
+          {
+            "joint_index": 4,
+            "joint_name": "lbr_iiwa_joint_5",
+            "lower_limit_rad": -2.96705972839,
+            "margin_to_lower_rad": 2.96705972839,
+            "margin_to_upper_rad": 2.96705972839,
+            "nearest_limit_margin_rad": 2.96705972839,
+            "upper_limit_rad": 2.96705972839,
+            "value_rad": 0.0
+          },
+          {
+            "joint_index": 5,
+            "joint_name": "lbr_iiwa_joint_6",
+            "lower_limit_rad": -2.09439510239,
+            "margin_to_lower_rad": 2.09439510239,
+            "margin_to_upper_rad": 2.09439510239,
+            "nearest_limit_margin_rad": 2.09439510239,
+            "upper_limit_rad": 2.09439510239,
+            "value_rad": 0.0
+          },
+          {
+            "joint_index": 6,
+            "joint_name": "lbr_iiwa_joint_7",
+            "lower_limit_rad": -3.05432619099,
+            "margin_to_lower_rad": 3.05432619099,
+            "margin_to_upper_rad": 3.05432619099,
+            "nearest_limit_margin_rad": 3.05432619099,
+            "upper_limit_rad": 3.05432619099,
+            "value_rad": 0.0
+          }
+        ],
+        "joint_vector": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "minimum_joint_margin_rad": 2.09439510239,
+        "outgoing_leg": {
+          "absolute_joint_delta_rad": [
+            0.42030065189865085,
+            1.3750633719954326,
+            1.3503357336551804,
+            1.7087453044902847,
+            1.7396162073334869,
+            1.329244396107751,
+            1.246175376911863
+          ],
+          "endpoint_joint_delta_exceeded": true,
+          "from": "HOME",
+          "max_abs_endpoint_joint_delta_rad": 1.7396162073334869,
+          "responsible_joint_index": 4,
+          "responsible_joint_name": "lbr_iiwa_joint_5",
+          "responsible_signed_delta_rad": -1.7396162073334869,
+          "signed_joint_delta_rad": [
+            0.42030065189865085,
+            1.3750633719954326,
+            -1.3503357336551804,
+            -1.7087453044902847,
+            -1.7396162073334869,
+            -1.329244396107751,
+            -1.246175376911863
+          ],
+          "threshold_comparison": "strict_greater_than",
+          "threshold_rad": 1.5707963267948966,
+          "to": "SOURCE_HIGH"
+        },
+        "rejection_reasons": [
+          "HOME_TO_SOURCE_HIGH_ENDPOINT_JOINT_DELTA_EXCEEDED",
+          "DESTINATION_HIGH_RETURN_TO_HOME_ENDPOINT_JOINT_DELTA_EXCEEDED"
+        ]
+      }
+    },
+    "h1": {
+      "evaluated": true,
+      "evidence": {
+        "accepted": true,
+        "candidate": "H1",
+        "incoming_leg": {
+          "absolute_joint_delta_rad": [
+            0.3790228200565766,
+            0.005383909200316728,
+            0.005838833680030575,
+            0.00013421323508255867,
+            0.004977523102179138,
+            0.00619949003171083,
+            0.38153279043714605
+          ],
+          "endpoint_joint_delta_exceeded": false,
+          "from": "DESTINATION_HIGH_RETURN",
+          "max_abs_endpoint_joint_delta_rad": 0.38153279043714605,
+          "responsible_joint_index": 6,
+          "responsible_joint_name": "lbr_iiwa_joint_7",
+          "responsible_signed_delta_rad": -0.38153279043714605,
+          "signed_joint_delta_rad": [
+            -0.3790228200565766,
+            0.005383909200316728,
+            -0.005838833680030575,
+            -0.00013421323508255867,
+            0.004977523102179138,
+            -0.00619949003171083,
+            -0.38153279043714605
+          ],
+          "threshold_comparison": "strict_greater_than",
+          "threshold_rad": 1.5707963267948966,
+          "to": "HOME"
+        },
+        "joint_limit_evidence": [
+          {
+            "joint_index": 0,
+            "joint_name": "lbr_iiwa_joint_1",
+            "lower_limit_rad": -2.96705972839,
+            "margin_to_lower_rad": 3.7663832003452278,
+            "margin_to_upper_rad": 2.1677362564347726,
+            "nearest_limit_margin_rad": 2.1677362564347726,
+            "upper_limit_rad": 2.96705972839,
+            "value_rad": 0.7993234719552273
+          },
+          {
+            "joint_index": 1,
+            "joint_name": "lbr_iiwa_joint_2",
+            "lower_limit_rad": -2.09439510239,
+            "margin_to_lower_rad": 3.4640745651851157,
+            "margin_to_upper_rad": 0.7247156395948842,
+            "nearest_limit_margin_rad": 0.7247156395948842,
+            "upper_limit_rad": 2.09439510239,
+            "value_rad": 1.3696794627951159
+          },
+          {
+            "joint_index": 2,
+            "joint_name": "lbr_iiwa_joint_3",
+            "lower_limit_rad": -2.96705972839,
+            "margin_to_lower_rad": 1.6225628284148503,
+            "margin_to_upper_rad": 4.31155662836515,
+            "nearest_limit_margin_rad": 1.6225628284148503,
+            "upper_limit_rad": 2.96705972839,
+            "value_rad": -1.3444968999751499
+          },
+          {
+            "joint_index": 3,
+            "joint_name": "lbr_iiwa_joint_4",
+            "lower_limit_rad": -2.09439510239,
+            "margin_to_lower_rad": 0.3857840111347981,
+            "margin_to_upper_rad": 3.803006193645202,
+            "nearest_limit_margin_rad": 0.3857840111347981,
+            "upper_limit_rad": 2.09439510239,
+            "value_rad": -1.708611091255202
+          },
+          {
+            "joint_index": 4,
+            "joint_name": "lbr_iiwa_joint_5",
+            "lower_limit_rad": -2.96705972839,
+            "margin_to_lower_rad": 1.2224659979543342,
+            "margin_to_upper_rad": 4.711653458825666,
+            "nearest_limit_margin_rad": 1.2224659979543342,
+            "upper_limit_rad": 2.96705972839,
+            "value_rad": -1.744593730435666
+          },
+          {
+            "joint_index": 5,
+            "joint_name": "lbr_iiwa_joint_6",
+            "lower_limit_rad": -2.09439510239,
+            "margin_to_lower_rad": 0.7713501963139602,
+            "margin_to_upper_rad": 3.41744000846604,
+            "nearest_limit_margin_rad": 0.7713501963139602,
+            "upper_limit_rad": 2.09439510239,
+            "value_rad": -1.3230449060760399
+          },
+          {
+            "joint_index": 6,
+            "joint_name": "lbr_iiwa_joint_7",
+            "lower_limit_rad": -3.05432619099,
+            "margin_to_lower_rad": 2.1896836045152828,
+            "margin_to_upper_rad": 3.918968777464717,
+            "nearest_limit_margin_rad": 2.1896836045152828,
+            "upper_limit_rad": 3.05432619099,
+            "value_rad": -0.8646425864747171
+          }
+        ],
+        "joint_vector": [
+          0.7993234719552273,
+          1.3696794627951159,
+          -1.3444968999751499,
+          -1.708611091255202,
+          -1.744593730435666,
+          -1.3230449060760399,
+          -0.8646425864747171
+        ],
+        "minimum_joint_margin_rad": 0.3857840111347981,
+        "outgoing_leg": {
+          "absolute_joint_delta_rad": [
+            0.3790228200565765,
+            0.005383909200316728,
+            0.005838833680030575,
+            0.0001342132350827807,
+            0.004977523102179138,
+            0.006199490031711052,
+            0.38153279043714594
+          ],
+          "endpoint_joint_delta_exceeded": false,
+          "from": "HOME",
+          "max_abs_endpoint_joint_delta_rad": 0.38153279043714594,
+          "responsible_joint_index": 6,
+          "responsible_joint_name": "lbr_iiwa_joint_7",
+          "responsible_signed_delta_rad": -0.38153279043714594,
+          "signed_joint_delta_rad": [
+            -0.3790228200565765,
+            0.005383909200316728,
+            -0.005838833680030575,
+            -0.0001342132350827807,
+            0.004977523102179138,
+            -0.006199490031711052,
+            -0.38153279043714594
+          ],
+          "threshold_comparison": "strict_greater_than",
+          "threshold_rad": 1.5707963267948966,
+          "to": "SOURCE_HIGH"
+        },
+        "rejection_reasons": []
+      }
+    },
+    "policy": "evaluate H0=[0]*7; only if rejected evaluate H1 midpoint of SOURCE_HIGH and DESTINATION_HIGH_RETURN; no H2",
+    "selected_candidate": "H1",
+    "simulation_home_joint_state": [
+      0.7993234719552273,
+      1.3696794627951159,
+      -1.3444968999751499,
+      -1.708611091255202,
+      -1.744593730435666,
+      -1.3230449060760399,
+      -0.8646425864747171
+    ]
+  },
+  "ordered_plan": [
+    {
+      "cartesian_target_evaluated": false,
+      "joint_limit_evidence": [
+        {
+          "joint_index": 0,
+          "joint_name": "lbr_iiwa_joint_1",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 3.7663832003452278,
+          "margin_to_upper_rad": 2.1677362564347726,
+          "nearest_limit_margin_rad": 2.1677362564347726,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": 0.7993234719552273
+        },
+        {
+          "joint_index": 1,
+          "joint_name": "lbr_iiwa_joint_2",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 3.4640745651851157,
+          "margin_to_upper_rad": 0.7247156395948842,
+          "nearest_limit_margin_rad": 0.7247156395948842,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": 1.3696794627951159
+        },
+        {
+          "joint_index": 2,
+          "joint_name": "lbr_iiwa_joint_3",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 1.6225628284148503,
+          "margin_to_upper_rad": 4.31155662836515,
+          "nearest_limit_margin_rad": 1.6225628284148503,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": -1.3444968999751499
+        },
+        {
+          "joint_index": 3,
+          "joint_name": "lbr_iiwa_joint_4",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 0.3857840111347981,
+          "margin_to_upper_rad": 3.803006193645202,
+          "nearest_limit_margin_rad": 0.3857840111347981,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": -1.708611091255202
+        },
+        {
+          "joint_index": 4,
+          "joint_name": "lbr_iiwa_joint_5",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 1.2224659979543342,
+          "margin_to_upper_rad": 4.711653458825666,
+          "nearest_limit_margin_rad": 1.2224659979543342,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": -1.744593730435666
+        },
+        {
+          "joint_index": 5,
+          "joint_name": "lbr_iiwa_joint_6",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 0.7713501963139602,
+          "margin_to_upper_rad": 3.41744000846604,
+          "nearest_limit_margin_rad": 0.7713501963139602,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": -1.3230449060760399
+        },
+        {
+          "joint_index": 6,
+          "joint_name": "lbr_iiwa_joint_7",
+          "lower_limit_rad": -3.05432619099,
+          "margin_to_lower_rad": 2.1896836045152828,
+          "margin_to_upper_rad": 3.918968777464717,
+          "nearest_limit_margin_rad": 2.1896836045152828,
+          "upper_limit_rad": 3.05432619099,
+          "value_rad": -0.8646425864747171
+        }
+      ],
+      "joint_vector": [
+        0.7993234719552273,
+        1.3696794627951159,
+        -1.3444968999751499,
+        -1.708611091255202,
+        -1.744593730435666,
+        -1.3230449060760399,
+        -0.8646425864747171
+      ],
+      "minimum_joint_margin_rad": 0.3857840111347981,
+      "replay": {
+        "orientation_residual_rad": null,
+        "position_residual_m": null,
+        "route_index": 0,
+        "state": "HOME",
+        "virtual_tcp_pose": {
+          "position": [
+            0.5385576588808636,
+            -3.542393651656713e-05,
+            0.18481711867569162
+          ],
+          "quaternion_xyzw": [
+            0.9999999998242963,
+            -1.2561831679316313e-05,
+            1.3847445186297443e-05,
+            -1.3624486425549467e-06
+          ]
+        },
+        "world_link_frame_pose": {
+          "position": [
+            0.5385554432868958,
+            -3.5641900467453524e-05,
+            0.26481711864471436
+          ],
+          "quaternion_xyzw": [
+            0.9999999998242963,
+            -1.2561831679316313e-05,
+            1.3847445186297443e-05,
+            -1.3624486425549467e-06
+          ]
+        }
+      },
+      "route_index": 0,
+      "state": "HOME",
+      "task_waypoint": null
+    },
+    {
+      "cartesian_target_evaluated": true,
+      "joint_limit_evidence": [
+        {
+          "joint_index": 0,
+          "joint_name": "lbr_iiwa_joint_1",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 3.387360380288651,
+          "margin_to_upper_rad": 2.5467590764913495,
+          "nearest_limit_margin_rad": 2.5467590764913495,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": 0.42030065189865085
+        },
+        {
+          "joint_index": 1,
+          "joint_name": "lbr_iiwa_joint_2",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 3.4694584743854326,
+          "margin_to_upper_rad": 0.7193317303945674,
+          "nearest_limit_margin_rad": 0.7193317303945674,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": 1.3750633719954326
+        },
+        {
+          "joint_index": 2,
+          "joint_name": "lbr_iiwa_joint_3",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 1.6167239947348198,
+          "margin_to_upper_rad": 4.31739546204518,
+          "nearest_limit_margin_rad": 1.6167239947348198,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": -1.3503357336551804
+        },
+        {
+          "joint_index": 3,
+          "joint_name": "lbr_iiwa_joint_4",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 0.3856497978997153,
+          "margin_to_upper_rad": 3.803140406880285,
+          "nearest_limit_margin_rad": 0.3856497978997153,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": -1.7087453044902847
+        },
+        {
+          "joint_index": 4,
+          "joint_name": "lbr_iiwa_joint_5",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 1.2274435210565133,
+          "margin_to_upper_rad": 4.706675935723487,
+          "nearest_limit_margin_rad": 1.2274435210565133,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": -1.7396162073334869
+        },
+        {
+          "joint_index": 5,
+          "joint_name": "lbr_iiwa_joint_6",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 0.7651507062822491,
+          "margin_to_upper_rad": 3.423639498497751,
+          "nearest_limit_margin_rad": 0.7651507062822491,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": -1.329244396107751
+        },
+        {
+          "joint_index": 6,
+          "joint_name": "lbr_iiwa_joint_7",
+          "lower_limit_rad": -3.05432619099,
+          "margin_to_lower_rad": 1.8081508140781368,
+          "margin_to_upper_rad": 4.300501567901863,
+          "nearest_limit_margin_rad": 1.8081508140781368,
+          "upper_limit_rad": 3.05432619099,
+          "value_rad": -1.246175376911863
+        }
+      ],
+      "joint_vector": [
+        0.42030065189865085,
+        1.3750633719954326,
+        -1.3503357336551804,
+        -1.7087453044902847,
+        -1.7396162073334869,
+        -1.329244396107751,
+        -1.246175376911863
+      ],
+      "minimum_joint_margin_rad": 0.3856497978997153,
+      "replay": {
+        "orientation_residual_rad": 2.366282277416317e-08,
+        "position_residual_m": 1.553899472905733e-08,
+        "route_index": 1,
+        "state": "SOURCE_HIGH",
+        "virtual_tcp_pose": {
+          "position": [
+            0.4999999997363895,
+            -0.2000000011078906,
+            0.18500001549720765
+          ],
+          "quaternion_xyzw": [
+            1.0,
+            -5.725834251180117e-10,
+            -1.6475656394732141e-09,
+            -1.170213526080488e-08
+          ]
+        },
+        "world_link_frame_pose": {
+          "position": [
+            0.5,
+            -0.20000000298023224,
+            0.26500001549720764
+          ],
+          "quaternion_xyzw": [
+            1.0,
+            -5.725834251180117e-10,
+            -1.6475656394732141e-09,
+            -1.170213526080488e-08
+          ]
+        }
+      },
+      "route_index": 1,
+      "state": "SOURCE_HIGH",
+      "task_waypoint": {
+        "joint_vector": [
+          0.42030065189865085,
+          1.3750633719954326,
+          -1.3503357336551804,
+          -1.7087453044902847,
+          -1.7396162073334869,
+          -1.329244396107751,
+          -1.246175376911863
+        ],
+        "predecessor_actual_world_link_frame_pose": {
+          "position": [
+            0.5,
+            -0.20000000298023224,
+            0.26500001549720764
+          ],
+          "quaternion_xyzw": [
+            1.0,
+            -5.725834251180117e-10,
+            -1.6475656394732141e-09,
+            -1.170213526080488e-08
+          ]
+        },
+        "predecessor_joint_margin_rad": 0.3856497978997153,
+        "predecessor_orientation_residual_rad": 2.366282277416317e-08,
+        "predecessor_position_residual_m": 1.5781166889834608e-08,
+        "predecessor_target_link_pose": {
+          "position": [
+            0.5,
+            -0.2,
+            0.265
+          ],
+          "quaternion_xyzw": [
+            1.0,
+            0.0,
+            0.0,
+            6.123233995736766e-17
+          ]
+        },
+        "predecessor_waypoint_name": "source_high",
+        "state": "SOURCE_HIGH",
+        "target_virtual_tcp_derivation": "compose predecessor target link pose with local (0,0,0.080 m), identity rotation exactly once",
+        "target_virtual_tcp_pose": {
+          "position": [
+            0.5,
+            -0.2,
+            0.185
+          ],
+          "quaternion_xyzw": [
+            1.0,
+            0.0,
+            0.0,
+            6.123233995736766e-17
+          ]
+        }
+      }
+    },
+    {
+      "cartesian_target_evaluated": true,
+      "joint_limit_evidence": [
+        {
+          "joint_index": 0,
+          "joint_name": "lbr_iiwa_joint_1",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 3.337889577138922,
+          "margin_to_upper_rad": 2.5962298796410783,
+          "nearest_limit_margin_rad": 2.5962298796410783,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": 0.3708298487489221
+        },
+        {
+          "joint_index": 1,
+          "joint_name": "lbr_iiwa_joint_2",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 3.660703672114068,
+          "margin_to_upper_rad": 0.5280865326659319,
+          "nearest_limit_margin_rad": 0.5280865326659319,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": 1.5663085697240682
+        },
+        {
+          "joint_index": 2,
+          "joint_name": "lbr_iiwa_joint_3",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 1.7962705277989073,
+          "margin_to_upper_rad": 4.137848928981093,
+          "nearest_limit_margin_rad": 1.7962705277989073,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": -1.170789200591093
+        },
+        {
+          "joint_index": 3,
+          "joint_name": "lbr_iiwa_joint_4",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 0.45577305907539034,
+          "margin_to_upper_rad": 3.7330171457046095,
+          "nearest_limit_margin_rad": 0.45577305907539034,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": -1.6386220433146097
+        },
+        {
+          "joint_index": 4,
+          "joint_name": "lbr_iiwa_joint_5",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 1.4199622741002302,
+          "margin_to_upper_rad": 4.51415718267977,
+          "nearest_limit_margin_rad": 1.4199622741002302,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": -1.54709745428977
+        },
+        {
+          "joint_index": 5,
+          "joint_name": "lbr_iiwa_joint_6",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 0.9229064710485295,
+          "margin_to_upper_rad": 3.265883733731471,
+          "nearest_limit_margin_rad": 0.9229064710485295,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": -1.1714886313414705
+        },
+        {
+          "joint_index": 6,
+          "joint_name": "lbr_iiwa_joint_7",
+          "lower_limit_rad": -3.05432619099,
+          "margin_to_lower_rad": 1.7826733683597975,
+          "margin_to_upper_rad": 4.325979013620202,
+          "nearest_limit_margin_rad": 1.7826733683597975,
+          "upper_limit_rad": 3.05432619099,
+          "value_rad": -1.2716528226302024
+        }
+      ],
+      "joint_vector": [
+        0.3708298487489221,
+        1.5663085697240682,
+        -1.170789200591093,
+        -1.6386220433146097,
+        -1.54709745428977,
+        -1.1714886313414705,
+        -1.2716528226302024
+      ],
+      "minimum_joint_margin_rad": 0.45577305907539034,
+      "replay": {
+        "orientation_residual_rad": 9.922122957560803e-05,
+        "position_residual_m": 0.00035629125055135696,
+        "route_index": 2,
+        "state": "SOURCE_PICK",
+        "virtual_tcp_pose": {
+          "position": [
+            0.500021114666992,
+            -0.1999561317702547,
+            0.04535294929448333
+          ],
+          "quaternion_xyzw": [
+            0.9999999987693935,
+            -4.574554162727805e-06,
+            -4.7592384303792966e-05,
+            -1.3238259254728982e-05
+          ]
+        },
+        "world_link_frame_pose": {
+          "position": [
+            0.5000287294387817,
+            -0.19995824992656708,
+            0.12535294890403748
+          ],
+          "quaternion_xyzw": [
+            0.9999999987693935,
+            -4.574554162727805e-06,
+            -4.7592384303792966e-05,
+            -1.3238259254728982e-05
+          ]
+        }
+      },
+      "route_index": 2,
+      "state": "SOURCE_PICK",
+      "task_waypoint": {
+        "joint_vector": [
+          0.3708298487489221,
+          1.5663085697240682,
+          -1.170789200591093,
+          -1.6386220433146097,
+          -1.54709745428977,
+          -1.1714886313414705,
+          -1.2716528226302024
+        ],
+        "predecessor_actual_world_link_frame_pose": {
+          "position": [
+            0.5000287294387817,
+            -0.19995824992656708,
+            0.12535294890403748
+          ],
+          "quaternion_xyzw": [
+            0.9999999987693935,
+            -4.574554162727805e-06,
+            -4.7592384303792966e-05,
+            -1.3238259254728982e-05
+          ]
+        },
+        "predecessor_joint_margin_rad": 0.45577305907539034,
+        "predecessor_orientation_residual_rad": 9.922122957560803e-05,
+        "predecessor_position_residual_m": 0.00035656889677259307,
+        "predecessor_target_link_pose": {
+          "position": [
+            0.5,
+            -0.2,
+            0.125
+          ],
+          "quaternion_xyzw": [
+            1.0,
+            0.0,
+            0.0,
+            6.123233995736766e-17
+          ]
+        },
+        "predecessor_waypoint_name": "source_tool",
+        "state": "SOURCE_PICK",
+        "target_virtual_tcp_derivation": "compose predecessor target link pose with local (0,0,0.080 m), identity rotation exactly once",
+        "target_virtual_tcp_pose": {
+          "position": [
+            0.5,
+            -0.2,
+            0.045
+          ],
+          "quaternion_xyzw": [
+            1.0,
+            0.0,
+            0.0,
+            6.123233995736766e-17
+          ]
+        }
+      }
+    },
+    {
+      "cartesian_target_evaluated": true,
+      "joint_limit_evidence": [
+        {
+          "joint_index": 0,
+          "joint_name": "lbr_iiwa_joint_1",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 3.3875401819180717,
+          "margin_to_upper_rad": 2.5465792748619287,
+          "nearest_limit_margin_rad": 2.5465792748619287,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": 0.4204804535280717
+        },
+        {
+          "joint_index": 1,
+          "joint_name": "lbr_iiwa_joint_2",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 3.4721090139276485,
+          "margin_to_upper_rad": 0.7166811908523516,
+          "nearest_limit_margin_rad": 0.7166811908523516,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": 1.3777139115376484
+        },
+        {
+          "joint_index": 2,
+          "joint_name": "lbr_iiwa_joint_3",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 1.6150869869436875,
+          "margin_to_upper_rad": 4.319032469836313,
+          "nearest_limit_margin_rad": 1.6150869869436875,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": -1.3519727414463127
+        },
+        {
+          "joint_index": 3,
+          "joint_name": "lbr_iiwa_joint_4",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 0.3859203740184942,
+          "margin_to_upper_rad": 3.802869830761506,
+          "nearest_limit_margin_rad": 0.3859203740184942,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": -1.7084747283715058
+        },
+        {
+          "joint_index": 4,
+          "joint_name": "lbr_iiwa_joint_5",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 1.2300074589195376,
+          "margin_to_upper_rad": 4.704111997860463,
+          "nearest_limit_margin_rad": 1.2300074589195376,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": -1.7370522694704627
+        },
+        {
+          "joint_index": 5,
+          "joint_name": "lbr_iiwa_joint_6",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 0.7633038175955291,
+          "margin_to_upper_rad": 3.425486387184471,
+          "nearest_limit_margin_rad": 0.7633038175955291,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": -1.331091284794471
+        },
+        {
+          "joint_index": 6,
+          "joint_name": "lbr_iiwa_joint_7",
+          "lower_limit_rad": -3.05432619099,
+          "margin_to_lower_rad": 1.8076537484380548,
+          "margin_to_upper_rad": 4.300998633541945,
+          "nearest_limit_margin_rad": 1.8076537484380548,
+          "upper_limit_rad": 3.05432619099,
+          "value_rad": -1.246672442551945
+        }
+      ],
+      "joint_vector": [
+        0.4204804535280717,
+        1.3777139115376484,
+        -1.3519727414463127,
+        -1.7084747283715058,
+        -1.7370522694704627,
+        -1.331091284794471,
+        -1.246672442551945
+      ],
+      "minimum_joint_margin_rad": 0.3859203740184942,
+      "replay": {
+        "orientation_residual_rad": 8.653961393585675e-05,
+        "position_residual_m": 0.00036902437730713483,
+        "route_index": 3,
+        "state": "SOURCE_HIGH_RETURN",
+        "virtual_tcp_pose": {
+          "position": [
+            0.5000633601168846,
+            -0.20007867195731935,
+            0.18464507013401682
+          ],
+          "quaternion_xyzw": [
+            0.9999999990638619,
+            4.414139762463082e-06,
+            4.0980506999238955e-05,
+            1.3167748862948888e-05
+          ]
+        },
+        "world_link_frame_pose": {
+          "position": [
+            0.500056803226471,
+            -0.20007656514644623,
+            0.2646450698375702
+          ],
+          "quaternion_xyzw": [
+            0.9999999990638619,
+            4.414139762463082e-06,
+            4.0980506999238955e-05,
+            1.3167748862948888e-05
+          ]
+        }
+      },
+      "route_index": 3,
+      "state": "SOURCE_HIGH_RETURN",
+      "task_waypoint": {
+        "joint_vector": [
+          0.4204804535280717,
+          1.3777139115376484,
+          -1.3519727414463127,
+          -1.7084747283715058,
+          -1.7370522694704627,
+          -1.331091284794471,
+          -1.246672442551945
+        ],
+        "predecessor_actual_world_link_frame_pose": {
+          "position": [
+            0.500056803226471,
+            -0.20007656514644623,
+            0.2646450698375702
+          ],
+          "quaternion_xyzw": [
+            0.9999999990638619,
+            4.414139762463082e-06,
+            4.0980506999238955e-05,
+            1.3167748862948888e-05
+          ]
+        },
+        "predecessor_joint_margin_rad": 0.3859203740184942,
+        "predecessor_orientation_residual_rad": 8.653961393585675e-05,
+        "predecessor_position_residual_m": 0.00036751088200256174,
+        "predecessor_target_link_pose": {
+          "position": [
+            0.5,
+            -0.2,
+            0.265
+          ],
+          "quaternion_xyzw": [
+            1.0,
+            0.0,
+            0.0,
+            6.123233995736766e-17
+          ]
+        },
+        "predecessor_waypoint_name": "source_high_return",
+        "state": "SOURCE_HIGH_RETURN",
+        "target_virtual_tcp_derivation": "compose predecessor target link pose with local (0,0,0.080 m), identity rotation exactly once",
+        "target_virtual_tcp_pose": {
+          "position": [
+            0.5,
+            -0.2,
+            0.185
+          ],
+          "quaternion_xyzw": [
+            1.0,
+            0.0,
+            0.0,
+            6.123233995736766e-17
+          ]
+        }
+      }
+    },
+    {
+      "cartesian_target_evaluated": true,
+      "joint_limit_evidence": [
+        {
+          "joint_index": 0,
+          "joint_name": "lbr_iiwa_joint_1",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 4.143338019085778,
+          "margin_to_upper_rad": 1.7907814376942226,
+          "nearest_limit_margin_rad": 1.7907814376942226,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": 1.1762782906957776
+        },
+        {
+          "joint_index": 1,
+          "joint_name": "lbr_iiwa_joint_2",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 3.456180603138602,
+          "margin_to_upper_rad": 0.7326096016413979,
+          "nearest_limit_margin_rad": 0.7326096016413979,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": 1.3617855007486022
+        },
+        {
+          "joint_index": 2,
+          "joint_name": "lbr_iiwa_joint_3",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 1.630337102777472,
+          "margin_to_upper_rad": 4.303782354002529,
+          "nearest_limit_margin_rad": 1.630337102777472,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": -1.3367226256125282
+        },
+        {
+          "joint_index": 3,
+          "joint_name": "lbr_iiwa_joint_4",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 0.38543255541093613,
+          "margin_to_upper_rad": 3.803357649369064,
+          "nearest_limit_margin_rad": 0.38543255541093613,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": -1.708962546979064
+        },
+        {
+          "joint_index": 4,
+          "joint_name": "lbr_iiwa_joint_5",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 1.2152702838937723,
+          "margin_to_upper_rad": 4.7188491728862285,
+          "nearest_limit_margin_rad": 1.2152702838937723,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": -1.7517894444962279
+        },
+        {
+          "joint_index": 5,
+          "joint_name": "lbr_iiwa_joint_6",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 0.7796363798868209,
+          "margin_to_upper_rad": 3.4091538248931794,
+          "nearest_limit_margin_rad": 0.7796363798868209,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": -1.3147587225031792
+        },
+        {
+          "joint_index": 6,
+          "joint_name": "lbr_iiwa_joint_7",
+          "lower_limit_rad": -3.05432619099,
+          "margin_to_lower_rad": 2.5693806898927685,
+          "margin_to_upper_rad": 3.5392716920872314,
+          "nearest_limit_margin_rad": 2.5693806898927685,
+          "upper_limit_rad": 3.05432619099,
+          "value_rad": -0.4849455010972315
+        }
+      ],
+      "joint_vector": [
+        1.1762782906957776,
+        1.3617855007486022,
+        -1.3367226256125282,
+        -1.708962546979064,
+        -1.7517894444962279,
+        -1.3147587225031792,
+        -0.4849455010972315
+      ],
+      "minimum_joint_margin_rad": 0.38543255541093613,
+      "replay": {
+        "orientation_residual_rad": 0.0003100917346067135,
+        "position_residual_m": 0.0010214838864022382,
+        "route_index": 4,
+        "state": "DESTINATION_HIGH",
+        "virtual_tcp_pose": {
+          "position": [
+            0.5003144112695417,
+            0.19904434620125888,
+            0.1848230799595403
+          ],
+          "quaternion_xyzw": [
+            0.9999999879803896,
+            0.0001368376526366723,
+            3.3425287309238576e-06,
+            -7.282516802439597e-05
+          ]
+        },
+        "world_link_frame_pose": {
+          "position": [
+            0.5003138780593872,
+            0.19903269410133362,
+            0.2648230791091919
+          ],
+          "quaternion_xyzw": [
+            0.9999999879803895,
+            0.00013683765263667228,
+            3.342528730923857e-06,
+            -7.282516802439596e-05
+          ]
+        }
+      },
+      "route_index": 4,
+      "state": "DESTINATION_HIGH",
+      "task_waypoint": {
+        "joint_vector": [
+          1.1762782906957776,
+          1.3617855007486022,
+          -1.3367226256125282,
+          -1.708962546979064,
+          -1.7517894444962279,
+          -1.3147587225031792,
+          -0.4849455010972315
+        ],
+        "predecessor_actual_world_link_frame_pose": {
+          "position": [
+            0.5003138780593872,
+            0.19903269410133362,
+            0.2648230791091919
+          ],
+          "quaternion_xyzw": [
+            0.9999999879803896,
+            0.0001368376526366723,
+            3.3425287309238576e-06,
+            -7.282516802439597e-05
+          ]
+        },
+        "predecessor_joint_margin_rad": 0.38543255541093613,
+        "predecessor_orientation_residual_rad": 0.0003100917346067135,
+        "predecessor_position_residual_m": 0.001032231146286439,
+        "predecessor_target_link_pose": {
+          "position": [
+            0.5,
+            0.2,
+            0.265
+          ],
+          "quaternion_xyzw": [
+            1.0,
+            0.0,
+            0.0,
+            6.123233995736766e-17
+          ]
+        },
+        "predecessor_waypoint_name": "destination_high",
+        "state": "DESTINATION_HIGH",
+        "target_virtual_tcp_derivation": "compose predecessor target link pose with local (0,0,0.080 m), identity rotation exactly once",
+        "target_virtual_tcp_pose": {
+          "position": [
+            0.5,
+            0.2,
+            0.185
+          ],
+          "quaternion_xyzw": [
+            1.0,
+            0.0,
+            0.0,
+            6.123233995736766e-17
+          ]
+        }
+      }
+    },
+    {
+      "cartesian_target_evaluated": true,
+      "joint_limit_evidence": [
+        {
+          "joint_index": 0,
+          "joint_name": "lbr_iiwa_joint_1",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 4.093556547518928,
+          "margin_to_upper_rad": 1.8405629092610718,
+          "nearest_limit_margin_rad": 1.8405629092610718,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": 1.1264968191289284
+        },
+        {
+          "joint_index": 1,
+          "joint_name": "lbr_iiwa_joint_2",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 3.6482913819913954,
+          "margin_to_upper_rad": 0.5404988227886047,
+          "nearest_limit_margin_rad": 0.5404988227886047,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": 1.5538962796013953
+        },
+        {
+          "joint_index": 2,
+          "joint_name": "lbr_iiwa_joint_3",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 1.8096301499109986,
+          "margin_to_upper_rad": 4.124489306869002,
+          "nearest_limit_margin_rad": 1.8096301499109986,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": -1.1574295784790016
+        },
+        {
+          "joint_index": 3,
+          "joint_name": "lbr_iiwa_joint_4",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 0.45577568538398805,
+          "margin_to_upper_rad": 3.7330145193960123,
+          "nearest_limit_margin_rad": 0.45577568538398805,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": -1.638619417006012
+        },
+        {
+          "joint_index": 4,
+          "joint_name": "lbr_iiwa_joint_5",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 1.4074847351215598,
+          "margin_to_upper_rad": 4.526634721658441,
+          "nearest_limit_margin_rad": 1.4074847351215598,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": -1.5595749932684404
+        },
+        {
+          "joint_index": 5,
+          "joint_name": "lbr_iiwa_joint_6",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 0.9370919278317709,
+          "margin_to_upper_rad": 3.251698276948229,
+          "nearest_limit_margin_rad": 0.9370919278317709,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": -1.1573031745582292
+        },
+        {
+          "joint_index": 6,
+          "joint_name": "lbr_iiwa_joint_7",
+          "lower_limit_rad": -3.05432619099,
+          "margin_to_lower_rad": 2.5434202184733308,
+          "margin_to_upper_rad": 3.565232163506669,
+          "nearest_limit_margin_rad": 2.5434202184733308,
+          "upper_limit_rad": 3.05432619099,
+          "value_rad": -0.510905972516669
+        }
+      ],
+      "joint_vector": [
+        1.1264968191289284,
+        1.5538962796013953,
+        -1.1574295784790016,
+        -1.638619417006012,
+        -1.5595749932684404,
+        -1.1573031745582292,
+        -0.510905972516669
+      ],
+      "minimum_joint_margin_rad": 0.45577568538398805,
+      "replay": {
+        "orientation_residual_rad": 9.976668561878351e-05,
+        "position_residual_m": 0.00035737265263683857,
+        "route_index": 5,
+        "state": "DESTINATION_PLACE",
+        "virtual_tcp_pose": {
+          "position": [
+            0.4999858217982174,
+            0.2000471665673031,
+            0.045353962577648746
+          ],
+          "quaternion_xyzw": [
+            0.9999999987558261,
+            -4.667414481095924e-06,
+            -4.372390316365128e-05,
+            2.355384091768313e-05
+          ]
+        },
+        "world_link_frame_pose": {
+          "position": [
+            0.49999281764030457,
+            0.2000509351491928,
+            0.12535396218299866
+          ],
+          "quaternion_xyzw": [
+            0.9999999987558261,
+            -4.667414481095924e-06,
+            -4.372390316365128e-05,
+            2.355384091768313e-05
+          ]
+        }
+      },
+      "route_index": 5,
+      "state": "DESTINATION_PLACE",
+      "task_waypoint": {
+        "joint_vector": [
+          1.1264968191289284,
+          1.5538962796013953,
+          -1.1574295784790016,
+          -1.638619417006012,
+          -1.5595749932684404,
+          -1.1573031745582292,
+          -0.510905972516669
+        ],
+        "predecessor_actual_world_link_frame_pose": {
+          "position": [
+            0.49999281764030457,
+            0.2000509351491928,
+            0.12535396218299866
+          ],
+          "quaternion_xyzw": [
+            0.9999999987558261,
+            -4.667414481095924e-06,
+            -4.372390316365128e-05,
+            2.355384091768313e-05
+          ]
+        },
+        "predecessor_joint_margin_rad": 0.45577568538398805,
+        "predecessor_orientation_residual_rad": 9.976668561878351e-05,
+        "predecessor_position_residual_m": 0.00035768030796685214,
+        "predecessor_target_link_pose": {
+          "position": [
+            0.5,
+            0.2,
+            0.125
+          ],
+          "quaternion_xyzw": [
+            1.0,
+            0.0,
+            0.0,
+            6.123233995736766e-17
+          ]
+        },
+        "predecessor_waypoint_name": "destination_tool",
+        "state": "DESTINATION_PLACE",
+        "target_virtual_tcp_derivation": "compose predecessor target link pose with local (0,0,0.080 m), identity rotation exactly once",
+        "target_virtual_tcp_pose": {
+          "position": [
+            0.5,
+            0.2,
+            0.045
+          ],
+          "quaternion_xyzw": [
+            1.0,
+            0.0,
+            0.0,
+            6.123233995736766e-17
+          ]
+        }
+      }
+    },
+    {
+      "cartesian_target_evaluated": true,
+      "joint_limit_evidence": [
+        {
+          "joint_index": 0,
+          "joint_name": "lbr_iiwa_joint_1",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 4.145406020401804,
+          "margin_to_upper_rad": 1.7887134363781962,
+          "nearest_limit_margin_rad": 1.7887134363781962,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": 1.178346292011804
+        },
+        {
+          "joint_index": 1,
+          "joint_name": "lbr_iiwa_joint_2",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 3.458690655984799,
+          "margin_to_upper_rad": 0.7300995487952009,
+          "nearest_limit_margin_rad": 0.7300995487952009,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": 1.3642955535947991
+        },
+        {
+          "joint_index": 2,
+          "joint_name": "lbr_iiwa_joint_3",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 1.628401662094881,
+          "margin_to_upper_rad": 4.305717794685119,
+          "nearest_limit_margin_rad": 1.628401662094881,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": -1.3386580662951193
+        },
+        {
+          "joint_index": 3,
+          "joint_name": "lbr_iiwa_joint_4",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 0.38591822436988066,
+          "margin_to_upper_rad": 3.8028719804101194,
+          "nearest_limit_margin_rad": 0.38591822436988066,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": -1.7084768780201194
+        },
+        {
+          "joint_index": 4,
+          "joint_name": "lbr_iiwa_joint_5",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 1.217488474852155,
+          "margin_to_upper_rad": 4.716630981927845,
+          "nearest_limit_margin_rad": 1.217488474852155,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": -1.7495712535378452
+        },
+        {
+          "joint_index": 5,
+          "joint_name": "lbr_iiwa_joint_6",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 0.777549686345671,
+          "margin_to_upper_rad": 3.411240518434329,
+          "nearest_limit_margin_rad": 0.777549686345671,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": -1.316845416044329
+        },
+        {
+          "joint_index": 6,
+          "joint_name": "lbr_iiwa_joint_7",
+          "lower_limit_rad": -3.05432619099,
+          "margin_to_lower_rad": 2.5712163949524287,
+          "margin_to_upper_rad": 3.537435987027571,
+          "nearest_limit_margin_rad": 2.5712163949524287,
+          "upper_limit_rad": 3.05432619099,
+          "value_rad": -0.4831097960375711
+        }
+      ],
+      "joint_vector": [
+        1.178346292011804,
+        1.3642955535947991,
+        -1.3386580662951193,
+        -1.7084768780201194,
+        -1.7495712535378452,
+        -1.316845416044329,
+        -0.4831097960375711
+      ],
+      "minimum_joint_margin_rad": 0.38591822436988066,
+      "replay": {
+        "orientation_residual_rad": 8.72328565173458e-05,
+        "position_residual_m": 0.00037139971273028735,
+        "route_index": 6,
+        "state": "DESTINATION_HIGH_RETURN",
+        "virtual_tcp_pose": {
+          "position": [
+            0.5001008067332594,
+            0.19998348502989588,
+            0.1846429243708846
+          ],
+          "quaternion_xyzw": [
+            0.9999999990488037,
+            4.909516969624178e-06,
+            3.88386069602171e-05,
+            -1.9231538299106132e-05
+          ]
+        },
+        "world_link_frame_pose": {
+          "position": [
+            0.5000945925712585,
+            0.19998040795326233,
+            0.2646429240703583
+          ],
+          "quaternion_xyzw": [
+            0.9999999990488035,
+            4.909516969624177e-06,
+            3.8838606960217096e-05,
+            -1.923153829910613e-05
+          ]
+        }
+      },
+      "route_index": 6,
+      "state": "DESTINATION_HIGH_RETURN",
+      "task_waypoint": {
+        "joint_vector": [
+          1.178346292011804,
+          1.3642955535947991,
+          -1.3386580662951193,
+          -1.7084768780201194,
+          -1.7495712535378452,
+          -1.316845416044329,
+          -0.4831097960375711
+        ],
+        "predecessor_actual_world_link_frame_pose": {
+          "position": [
+            0.5000945925712585,
+            0.19998040795326233,
+            0.2646429240703583
+          ],
+          "quaternion_xyzw": [
+            0.9999999990488037,
+            4.909516969624178e-06,
+            3.88386069602171e-05,
+            -1.9231538299106132e-05
+          ]
+        },
+        "predecessor_joint_margin_rad": 0.38591822436988066,
+        "predecessor_orientation_residual_rad": 8.72328565173458e-05,
+        "predecessor_position_residual_m": 0.00036991191162516663,
+        "predecessor_target_link_pose": {
+          "position": [
+            0.5,
+            0.2,
+            0.265
+          ],
+          "quaternion_xyzw": [
+            1.0,
+            0.0,
+            0.0,
+            6.123233995736766e-17
+          ]
+        },
+        "predecessor_waypoint_name": "destination_high_return",
+        "state": "DESTINATION_HIGH_RETURN",
+        "target_virtual_tcp_derivation": "compose predecessor target link pose with local (0,0,0.080 m), identity rotation exactly once",
+        "target_virtual_tcp_pose": {
+          "position": [
+            0.5,
+            0.2,
+            0.185
+          ],
+          "quaternion_xyzw": [
+            1.0,
+            0.0,
+            0.0,
+            6.123233995736766e-17
+          ]
+        }
+      }
+    },
+    {
+      "cartesian_target_evaluated": false,
+      "joint_limit_evidence": [
+        {
+          "joint_index": 0,
+          "joint_name": "lbr_iiwa_joint_1",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 3.7663832003452278,
+          "margin_to_upper_rad": 2.1677362564347726,
+          "nearest_limit_margin_rad": 2.1677362564347726,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": 0.7993234719552273
+        },
+        {
+          "joint_index": 1,
+          "joint_name": "lbr_iiwa_joint_2",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 3.4640745651851157,
+          "margin_to_upper_rad": 0.7247156395948842,
+          "nearest_limit_margin_rad": 0.7247156395948842,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": 1.3696794627951159
+        },
+        {
+          "joint_index": 2,
+          "joint_name": "lbr_iiwa_joint_3",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 1.6225628284148503,
+          "margin_to_upper_rad": 4.31155662836515,
+          "nearest_limit_margin_rad": 1.6225628284148503,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": -1.3444968999751499
+        },
+        {
+          "joint_index": 3,
+          "joint_name": "lbr_iiwa_joint_4",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 0.3857840111347981,
+          "margin_to_upper_rad": 3.803006193645202,
+          "nearest_limit_margin_rad": 0.3857840111347981,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": -1.708611091255202
+        },
+        {
+          "joint_index": 4,
+          "joint_name": "lbr_iiwa_joint_5",
+          "lower_limit_rad": -2.96705972839,
+          "margin_to_lower_rad": 1.2224659979543342,
+          "margin_to_upper_rad": 4.711653458825666,
+          "nearest_limit_margin_rad": 1.2224659979543342,
+          "upper_limit_rad": 2.96705972839,
+          "value_rad": -1.744593730435666
+        },
+        {
+          "joint_index": 5,
+          "joint_name": "lbr_iiwa_joint_6",
+          "lower_limit_rad": -2.09439510239,
+          "margin_to_lower_rad": 0.7713501963139602,
+          "margin_to_upper_rad": 3.41744000846604,
+          "nearest_limit_margin_rad": 0.7713501963139602,
+          "upper_limit_rad": 2.09439510239,
+          "value_rad": -1.3230449060760399
+        },
+        {
+          "joint_index": 6,
+          "joint_name": "lbr_iiwa_joint_7",
+          "lower_limit_rad": -3.05432619099,
+          "margin_to_lower_rad": 2.1896836045152828,
+          "margin_to_upper_rad": 3.918968777464717,
+          "nearest_limit_margin_rad": 2.1896836045152828,
+          "upper_limit_rad": 3.05432619099,
+          "value_rad": -0.8646425864747171
+        }
+      ],
+      "joint_vector": [
+        0.7993234719552273,
+        1.3696794627951159,
+        -1.3444968999751499,
+        -1.708611091255202,
+        -1.744593730435666,
+        -1.3230449060760399,
+        -0.8646425864747171
+      ],
+      "minimum_joint_margin_rad": 0.3857840111347981,
+      "replay": {
+        "orientation_residual_rad": null,
+        "position_residual_m": null,
+        "route_index": 7,
+        "state": "HOME",
+        "virtual_tcp_pose": {
+          "position": [
+            0.5385576588808636,
+            -3.542393651656713e-05,
+            0.18481711867569162
+          ],
+          "quaternion_xyzw": [
+            0.9999999998242963,
+            -1.2561831679316313e-05,
+            1.3847445186297443e-05,
+            -1.3624486425549467e-06
+          ]
+        },
+        "world_link_frame_pose": {
+          "position": [
+            0.5385554432868958,
+            -3.5641900467453524e-05,
+            0.26481711864471436
+          ],
+          "quaternion_xyzw": [
+            0.9999999998242963,
+            -1.2561831679316313e-05,
+            1.3847445186297443e-05,
+            -1.3624486425549467e-06
+          ]
+        }
+      },
+      "route_index": 7,
+      "state": "HOME",
+      "task_waypoint": null
+    }
+  ],
+  "plan_metrics": {
+    "leg_count": 7,
+    "maximum_delta_joint_index": 6,
+    "maximum_delta_joint_name": "lbr_iiwa_joint_7",
+    "maximum_delta_leg": "SOURCE_HIGH_RETURN->DESTINATION_HIGH",
+    "maximum_delta_signed_rad": 0.7617269414547136,
+    "maximum_route_endpoint_joint_delta_rad": 0.7617269414547136,
+    "minimum_margin_joint_index": 3,
+    "minimum_margin_joint_name": "lbr_iiwa_joint_4",
+    "minimum_margin_state": "DESTINATION_HIGH",
+    "minimum_route_joint_margin_rad": 0.38543255541093613,
+    "state_count": 8
+  },
+  "provenance": {
+    "b1_2_artifact_path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\results\\prototype5\\scene_calibration\\phase_b1_2_results.jsonl",
+    "b1_2_artifact_sha256": "b852fcdba89a89e0a83abc83c80cdf6eceb6b5a33babaf0558fce6d479b80f2c",
+    "b1_2_digest_file_sha256": "c81946e7e4f06bf51617d2e72ca84275e35abd2ee345f0dd993a1d8639b62781",
+    "branch": "feature/s1-pybullet-governed-simulation",
+    "calibration_freeze_commit": "86c02ed3f90ad5f17a84101f35cd483d5e1afe83",
+    "generator_module_sha256": "e1355e070d2c4fd354a5c3657979857db11225ea87faa99a353449a13ef8d75a",
+    "git_diff_check": "clean",
+    "head": "86c02ed3f90ad5f17a84101f35cd483d5e1afe83",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "pybullet_api_version": 202010061,
+    "pybullet_binary_path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\.venv\\Lib\\site-packages\\pybullet.cp312-win_amd64.pyd",
+    "pybullet_binary_sha256": "e8a99694353e508f9e934a57494c177ddb9317cde94781da8bb68670c2334e40",
+    "pybullet_data_path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\.venv\\Lib\\site-packages\\pybullet_data",
+    "pybullet_package_version": "3.2.7",
+    "python_executable": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\.venv\\Scripts\\python.exe",
+    "python_version": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+    "repository_root": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo",
+    "runner_sha256": "5ef8ee06337f8b77a42afee8900f2f4e02641f2d1dabe8fa1b96b6314c531b41",
+    "staged_files": [],
+    "status_short_before_generation": "?? results/prototype5/scene_calibration/failed_attempts/\n?? scripts/prototype5/run_scene_kinematic_plan_b2.py\n?? src/prototype5/scene_kinematic_plan_b2.py\n?? tests/prototype5/test_scene_kinematic_plan_b2.py",
+    "task_waypoint_source": "exact committed B1.2 joint vectors; no B2 inverse-kinematics solve",
+    "tests_sha256": "e1c4d3ae5dfcd1a026a70098ad38388c85a864c4dfec0122e026b5a4c14016cc",
+    "urdf_path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\.venv\\Lib\\site-packages\\pybullet_data\\kuka_iiwa\\model.urdf",
+    "urdf_sha256": "5c13c5b4bb88b5265223e0ec9a7706cbf81e9bb21cc0e18534273755a041788c"
+  },
+  "reproducibility": {
+    "fresh_direct_session_per_trial": true,
+    "physics_steps_per_trial": 0,
+    "summary": {
+      "link_orientation_responsible_state": "HOME[0]",
+      "link_position_responsible_state": "HOME[0]",
+      "maximum_link_orientation_spread_rad": 0.0,
+      "maximum_link_position_spread_m": 0.0,
+      "maximum_tcp_orientation_spread_rad": 0.0,
+      "maximum_tcp_position_spread_m": 0.0,
+      "tcp_orientation_responsible_state": "HOME[0]",
+      "tcp_position_responsible_state": "HOME[0]"
+    },
+    "trial_count": 10,
+    "trials": [
+      {
+        "states": [
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 0,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 2.366282277416317e-08,
+            "position_residual_m": 1.553899472905733e-08,
+            "route_index": 1,
+            "state": "SOURCE_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999999997363895,
+                -0.2000000011078906,
+                0.18500001549720765
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5,
+                -0.20000000298023224,
+                0.26500001549720764
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.922122957560803e-05,
+            "position_residual_m": 0.00035629125055135696,
+            "route_index": 2,
+            "state": "SOURCE_PICK",
+            "virtual_tcp_pose": {
+              "position": [
+                0.500021114666992,
+                -0.1999561317702547,
+                0.04535294929448333
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000287294387817,
+                -0.19995824992656708,
+                0.12535294890403748
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.653961393585675e-05,
+            "position_residual_m": 0.00036902437730713483,
+            "route_index": 3,
+            "state": "SOURCE_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5000633601168846,
+                -0.20007867195731935,
+                0.18464507013401682
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.500056803226471,
+                -0.20007656514644623,
+                0.2646450698375702
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 0.0003100917346067135,
+            "position_residual_m": 0.0010214838864022382,
+            "route_index": 4,
+            "state": "DESTINATION_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5003144112695417,
+                0.19904434620125888,
+                0.1848230799595403
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803896,
+                0.0001368376526366723,
+                3.3425287309238576e-06,
+                -7.282516802439597e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5003138780593872,
+                0.19903269410133362,
+                0.2648230791091919
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803895,
+                0.00013683765263667228,
+                3.342528730923857e-06,
+                -7.282516802439596e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.976668561878351e-05,
+            "position_residual_m": 0.00035737265263683857,
+            "route_index": 5,
+            "state": "DESTINATION_PLACE",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999858217982174,
+                0.2000471665673031,
+                0.045353962577648746
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.49999281764030457,
+                0.2000509351491928,
+                0.12535396218299866
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.72328565173458e-05,
+            "position_residual_m": 0.00037139971273028735,
+            "route_index": 6,
+            "state": "DESTINATION_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5001008067332594,
+                0.19998348502989588,
+                0.1846429243708846
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488037,
+                4.909516969624178e-06,
+                3.88386069602171e-05,
+                -1.9231538299106132e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000945925712585,
+                0.19998040795326233,
+                0.2646429240703583
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488035,
+                4.909516969624177e-06,
+                3.8838606960217096e-05,
+                -1.923153829910613e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 7,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          }
+        ],
+        "trial_index": 0
+      },
+      {
+        "states": [
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 0,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 2.366282277416317e-08,
+            "position_residual_m": 1.553899472905733e-08,
+            "route_index": 1,
+            "state": "SOURCE_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999999997363895,
+                -0.2000000011078906,
+                0.18500001549720765
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5,
+                -0.20000000298023224,
+                0.26500001549720764
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.922122957560803e-05,
+            "position_residual_m": 0.00035629125055135696,
+            "route_index": 2,
+            "state": "SOURCE_PICK",
+            "virtual_tcp_pose": {
+              "position": [
+                0.500021114666992,
+                -0.1999561317702547,
+                0.04535294929448333
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000287294387817,
+                -0.19995824992656708,
+                0.12535294890403748
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.653961393585675e-05,
+            "position_residual_m": 0.00036902437730713483,
+            "route_index": 3,
+            "state": "SOURCE_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5000633601168846,
+                -0.20007867195731935,
+                0.18464507013401682
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.500056803226471,
+                -0.20007656514644623,
+                0.2646450698375702
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 0.0003100917346067135,
+            "position_residual_m": 0.0010214838864022382,
+            "route_index": 4,
+            "state": "DESTINATION_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5003144112695417,
+                0.19904434620125888,
+                0.1848230799595403
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803896,
+                0.0001368376526366723,
+                3.3425287309238576e-06,
+                -7.282516802439597e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5003138780593872,
+                0.19903269410133362,
+                0.2648230791091919
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803895,
+                0.00013683765263667228,
+                3.342528730923857e-06,
+                -7.282516802439596e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.976668561878351e-05,
+            "position_residual_m": 0.00035737265263683857,
+            "route_index": 5,
+            "state": "DESTINATION_PLACE",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999858217982174,
+                0.2000471665673031,
+                0.045353962577648746
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.49999281764030457,
+                0.2000509351491928,
+                0.12535396218299866
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.72328565173458e-05,
+            "position_residual_m": 0.00037139971273028735,
+            "route_index": 6,
+            "state": "DESTINATION_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5001008067332594,
+                0.19998348502989588,
+                0.1846429243708846
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488037,
+                4.909516969624178e-06,
+                3.88386069602171e-05,
+                -1.9231538299106132e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000945925712585,
+                0.19998040795326233,
+                0.2646429240703583
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488035,
+                4.909516969624177e-06,
+                3.8838606960217096e-05,
+                -1.923153829910613e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 7,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          }
+        ],
+        "trial_index": 1
+      },
+      {
+        "states": [
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 0,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 2.366282277416317e-08,
+            "position_residual_m": 1.553899472905733e-08,
+            "route_index": 1,
+            "state": "SOURCE_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999999997363895,
+                -0.2000000011078906,
+                0.18500001549720765
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5,
+                -0.20000000298023224,
+                0.26500001549720764
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.922122957560803e-05,
+            "position_residual_m": 0.00035629125055135696,
+            "route_index": 2,
+            "state": "SOURCE_PICK",
+            "virtual_tcp_pose": {
+              "position": [
+                0.500021114666992,
+                -0.1999561317702547,
+                0.04535294929448333
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000287294387817,
+                -0.19995824992656708,
+                0.12535294890403748
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.653961393585675e-05,
+            "position_residual_m": 0.00036902437730713483,
+            "route_index": 3,
+            "state": "SOURCE_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5000633601168846,
+                -0.20007867195731935,
+                0.18464507013401682
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.500056803226471,
+                -0.20007656514644623,
+                0.2646450698375702
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 0.0003100917346067135,
+            "position_residual_m": 0.0010214838864022382,
+            "route_index": 4,
+            "state": "DESTINATION_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5003144112695417,
+                0.19904434620125888,
+                0.1848230799595403
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803896,
+                0.0001368376526366723,
+                3.3425287309238576e-06,
+                -7.282516802439597e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5003138780593872,
+                0.19903269410133362,
+                0.2648230791091919
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803895,
+                0.00013683765263667228,
+                3.342528730923857e-06,
+                -7.282516802439596e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.976668561878351e-05,
+            "position_residual_m": 0.00035737265263683857,
+            "route_index": 5,
+            "state": "DESTINATION_PLACE",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999858217982174,
+                0.2000471665673031,
+                0.045353962577648746
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.49999281764030457,
+                0.2000509351491928,
+                0.12535396218299866
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.72328565173458e-05,
+            "position_residual_m": 0.00037139971273028735,
+            "route_index": 6,
+            "state": "DESTINATION_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5001008067332594,
+                0.19998348502989588,
+                0.1846429243708846
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488037,
+                4.909516969624178e-06,
+                3.88386069602171e-05,
+                -1.9231538299106132e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000945925712585,
+                0.19998040795326233,
+                0.2646429240703583
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488035,
+                4.909516969624177e-06,
+                3.8838606960217096e-05,
+                -1.923153829910613e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 7,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          }
+        ],
+        "trial_index": 2
+      },
+      {
+        "states": [
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 0,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 2.366282277416317e-08,
+            "position_residual_m": 1.553899472905733e-08,
+            "route_index": 1,
+            "state": "SOURCE_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999999997363895,
+                -0.2000000011078906,
+                0.18500001549720765
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5,
+                -0.20000000298023224,
+                0.26500001549720764
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.922122957560803e-05,
+            "position_residual_m": 0.00035629125055135696,
+            "route_index": 2,
+            "state": "SOURCE_PICK",
+            "virtual_tcp_pose": {
+              "position": [
+                0.500021114666992,
+                -0.1999561317702547,
+                0.04535294929448333
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000287294387817,
+                -0.19995824992656708,
+                0.12535294890403748
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.653961393585675e-05,
+            "position_residual_m": 0.00036902437730713483,
+            "route_index": 3,
+            "state": "SOURCE_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5000633601168846,
+                -0.20007867195731935,
+                0.18464507013401682
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.500056803226471,
+                -0.20007656514644623,
+                0.2646450698375702
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 0.0003100917346067135,
+            "position_residual_m": 0.0010214838864022382,
+            "route_index": 4,
+            "state": "DESTINATION_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5003144112695417,
+                0.19904434620125888,
+                0.1848230799595403
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803896,
+                0.0001368376526366723,
+                3.3425287309238576e-06,
+                -7.282516802439597e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5003138780593872,
+                0.19903269410133362,
+                0.2648230791091919
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803895,
+                0.00013683765263667228,
+                3.342528730923857e-06,
+                -7.282516802439596e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.976668561878351e-05,
+            "position_residual_m": 0.00035737265263683857,
+            "route_index": 5,
+            "state": "DESTINATION_PLACE",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999858217982174,
+                0.2000471665673031,
+                0.045353962577648746
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.49999281764030457,
+                0.2000509351491928,
+                0.12535396218299866
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.72328565173458e-05,
+            "position_residual_m": 0.00037139971273028735,
+            "route_index": 6,
+            "state": "DESTINATION_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5001008067332594,
+                0.19998348502989588,
+                0.1846429243708846
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488037,
+                4.909516969624178e-06,
+                3.88386069602171e-05,
+                -1.9231538299106132e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000945925712585,
+                0.19998040795326233,
+                0.2646429240703583
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488035,
+                4.909516969624177e-06,
+                3.8838606960217096e-05,
+                -1.923153829910613e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 7,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          }
+        ],
+        "trial_index": 3
+      },
+      {
+        "states": [
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 0,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 2.366282277416317e-08,
+            "position_residual_m": 1.553899472905733e-08,
+            "route_index": 1,
+            "state": "SOURCE_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999999997363895,
+                -0.2000000011078906,
+                0.18500001549720765
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5,
+                -0.20000000298023224,
+                0.26500001549720764
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.922122957560803e-05,
+            "position_residual_m": 0.00035629125055135696,
+            "route_index": 2,
+            "state": "SOURCE_PICK",
+            "virtual_tcp_pose": {
+              "position": [
+                0.500021114666992,
+                -0.1999561317702547,
+                0.04535294929448333
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000287294387817,
+                -0.19995824992656708,
+                0.12535294890403748
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.653961393585675e-05,
+            "position_residual_m": 0.00036902437730713483,
+            "route_index": 3,
+            "state": "SOURCE_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5000633601168846,
+                -0.20007867195731935,
+                0.18464507013401682
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.500056803226471,
+                -0.20007656514644623,
+                0.2646450698375702
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 0.0003100917346067135,
+            "position_residual_m": 0.0010214838864022382,
+            "route_index": 4,
+            "state": "DESTINATION_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5003144112695417,
+                0.19904434620125888,
+                0.1848230799595403
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803896,
+                0.0001368376526366723,
+                3.3425287309238576e-06,
+                -7.282516802439597e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5003138780593872,
+                0.19903269410133362,
+                0.2648230791091919
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803895,
+                0.00013683765263667228,
+                3.342528730923857e-06,
+                -7.282516802439596e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.976668561878351e-05,
+            "position_residual_m": 0.00035737265263683857,
+            "route_index": 5,
+            "state": "DESTINATION_PLACE",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999858217982174,
+                0.2000471665673031,
+                0.045353962577648746
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.49999281764030457,
+                0.2000509351491928,
+                0.12535396218299866
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.72328565173458e-05,
+            "position_residual_m": 0.00037139971273028735,
+            "route_index": 6,
+            "state": "DESTINATION_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5001008067332594,
+                0.19998348502989588,
+                0.1846429243708846
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488037,
+                4.909516969624178e-06,
+                3.88386069602171e-05,
+                -1.9231538299106132e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000945925712585,
+                0.19998040795326233,
+                0.2646429240703583
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488035,
+                4.909516969624177e-06,
+                3.8838606960217096e-05,
+                -1.923153829910613e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 7,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          }
+        ],
+        "trial_index": 4
+      },
+      {
+        "states": [
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 0,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 2.366282277416317e-08,
+            "position_residual_m": 1.553899472905733e-08,
+            "route_index": 1,
+            "state": "SOURCE_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999999997363895,
+                -0.2000000011078906,
+                0.18500001549720765
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5,
+                -0.20000000298023224,
+                0.26500001549720764
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.922122957560803e-05,
+            "position_residual_m": 0.00035629125055135696,
+            "route_index": 2,
+            "state": "SOURCE_PICK",
+            "virtual_tcp_pose": {
+              "position": [
+                0.500021114666992,
+                -0.1999561317702547,
+                0.04535294929448333
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000287294387817,
+                -0.19995824992656708,
+                0.12535294890403748
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.653961393585675e-05,
+            "position_residual_m": 0.00036902437730713483,
+            "route_index": 3,
+            "state": "SOURCE_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5000633601168846,
+                -0.20007867195731935,
+                0.18464507013401682
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.500056803226471,
+                -0.20007656514644623,
+                0.2646450698375702
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 0.0003100917346067135,
+            "position_residual_m": 0.0010214838864022382,
+            "route_index": 4,
+            "state": "DESTINATION_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5003144112695417,
+                0.19904434620125888,
+                0.1848230799595403
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803896,
+                0.0001368376526366723,
+                3.3425287309238576e-06,
+                -7.282516802439597e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5003138780593872,
+                0.19903269410133362,
+                0.2648230791091919
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803895,
+                0.00013683765263667228,
+                3.342528730923857e-06,
+                -7.282516802439596e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.976668561878351e-05,
+            "position_residual_m": 0.00035737265263683857,
+            "route_index": 5,
+            "state": "DESTINATION_PLACE",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999858217982174,
+                0.2000471665673031,
+                0.045353962577648746
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.49999281764030457,
+                0.2000509351491928,
+                0.12535396218299866
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.72328565173458e-05,
+            "position_residual_m": 0.00037139971273028735,
+            "route_index": 6,
+            "state": "DESTINATION_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5001008067332594,
+                0.19998348502989588,
+                0.1846429243708846
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488037,
+                4.909516969624178e-06,
+                3.88386069602171e-05,
+                -1.9231538299106132e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000945925712585,
+                0.19998040795326233,
+                0.2646429240703583
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488035,
+                4.909516969624177e-06,
+                3.8838606960217096e-05,
+                -1.923153829910613e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 7,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          }
+        ],
+        "trial_index": 5
+      },
+      {
+        "states": [
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 0,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 2.366282277416317e-08,
+            "position_residual_m": 1.553899472905733e-08,
+            "route_index": 1,
+            "state": "SOURCE_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999999997363895,
+                -0.2000000011078906,
+                0.18500001549720765
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5,
+                -0.20000000298023224,
+                0.26500001549720764
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.922122957560803e-05,
+            "position_residual_m": 0.00035629125055135696,
+            "route_index": 2,
+            "state": "SOURCE_PICK",
+            "virtual_tcp_pose": {
+              "position": [
+                0.500021114666992,
+                -0.1999561317702547,
+                0.04535294929448333
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000287294387817,
+                -0.19995824992656708,
+                0.12535294890403748
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.653961393585675e-05,
+            "position_residual_m": 0.00036902437730713483,
+            "route_index": 3,
+            "state": "SOURCE_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5000633601168846,
+                -0.20007867195731935,
+                0.18464507013401682
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.500056803226471,
+                -0.20007656514644623,
+                0.2646450698375702
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 0.0003100917346067135,
+            "position_residual_m": 0.0010214838864022382,
+            "route_index": 4,
+            "state": "DESTINATION_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5003144112695417,
+                0.19904434620125888,
+                0.1848230799595403
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803896,
+                0.0001368376526366723,
+                3.3425287309238576e-06,
+                -7.282516802439597e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5003138780593872,
+                0.19903269410133362,
+                0.2648230791091919
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803895,
+                0.00013683765263667228,
+                3.342528730923857e-06,
+                -7.282516802439596e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.976668561878351e-05,
+            "position_residual_m": 0.00035737265263683857,
+            "route_index": 5,
+            "state": "DESTINATION_PLACE",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999858217982174,
+                0.2000471665673031,
+                0.045353962577648746
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.49999281764030457,
+                0.2000509351491928,
+                0.12535396218299866
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.72328565173458e-05,
+            "position_residual_m": 0.00037139971273028735,
+            "route_index": 6,
+            "state": "DESTINATION_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5001008067332594,
+                0.19998348502989588,
+                0.1846429243708846
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488037,
+                4.909516969624178e-06,
+                3.88386069602171e-05,
+                -1.9231538299106132e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000945925712585,
+                0.19998040795326233,
+                0.2646429240703583
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488035,
+                4.909516969624177e-06,
+                3.8838606960217096e-05,
+                -1.923153829910613e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 7,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          }
+        ],
+        "trial_index": 6
+      },
+      {
+        "states": [
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 0,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 2.366282277416317e-08,
+            "position_residual_m": 1.553899472905733e-08,
+            "route_index": 1,
+            "state": "SOURCE_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999999997363895,
+                -0.2000000011078906,
+                0.18500001549720765
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5,
+                -0.20000000298023224,
+                0.26500001549720764
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.922122957560803e-05,
+            "position_residual_m": 0.00035629125055135696,
+            "route_index": 2,
+            "state": "SOURCE_PICK",
+            "virtual_tcp_pose": {
+              "position": [
+                0.500021114666992,
+                -0.1999561317702547,
+                0.04535294929448333
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000287294387817,
+                -0.19995824992656708,
+                0.12535294890403748
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.653961393585675e-05,
+            "position_residual_m": 0.00036902437730713483,
+            "route_index": 3,
+            "state": "SOURCE_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5000633601168846,
+                -0.20007867195731935,
+                0.18464507013401682
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.500056803226471,
+                -0.20007656514644623,
+                0.2646450698375702
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 0.0003100917346067135,
+            "position_residual_m": 0.0010214838864022382,
+            "route_index": 4,
+            "state": "DESTINATION_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5003144112695417,
+                0.19904434620125888,
+                0.1848230799595403
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803896,
+                0.0001368376526366723,
+                3.3425287309238576e-06,
+                -7.282516802439597e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5003138780593872,
+                0.19903269410133362,
+                0.2648230791091919
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803895,
+                0.00013683765263667228,
+                3.342528730923857e-06,
+                -7.282516802439596e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.976668561878351e-05,
+            "position_residual_m": 0.00035737265263683857,
+            "route_index": 5,
+            "state": "DESTINATION_PLACE",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999858217982174,
+                0.2000471665673031,
+                0.045353962577648746
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.49999281764030457,
+                0.2000509351491928,
+                0.12535396218299866
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.72328565173458e-05,
+            "position_residual_m": 0.00037139971273028735,
+            "route_index": 6,
+            "state": "DESTINATION_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5001008067332594,
+                0.19998348502989588,
+                0.1846429243708846
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488037,
+                4.909516969624178e-06,
+                3.88386069602171e-05,
+                -1.9231538299106132e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000945925712585,
+                0.19998040795326233,
+                0.2646429240703583
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488035,
+                4.909516969624177e-06,
+                3.8838606960217096e-05,
+                -1.923153829910613e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 7,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          }
+        ],
+        "trial_index": 7
+      },
+      {
+        "states": [
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 0,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 2.366282277416317e-08,
+            "position_residual_m": 1.553899472905733e-08,
+            "route_index": 1,
+            "state": "SOURCE_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999999997363895,
+                -0.2000000011078906,
+                0.18500001549720765
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5,
+                -0.20000000298023224,
+                0.26500001549720764
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.922122957560803e-05,
+            "position_residual_m": 0.00035629125055135696,
+            "route_index": 2,
+            "state": "SOURCE_PICK",
+            "virtual_tcp_pose": {
+              "position": [
+                0.500021114666992,
+                -0.1999561317702547,
+                0.04535294929448333
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000287294387817,
+                -0.19995824992656708,
+                0.12535294890403748
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.653961393585675e-05,
+            "position_residual_m": 0.00036902437730713483,
+            "route_index": 3,
+            "state": "SOURCE_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5000633601168846,
+                -0.20007867195731935,
+                0.18464507013401682
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.500056803226471,
+                -0.20007656514644623,
+                0.2646450698375702
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 0.0003100917346067135,
+            "position_residual_m": 0.0010214838864022382,
+            "route_index": 4,
+            "state": "DESTINATION_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5003144112695417,
+                0.19904434620125888,
+                0.1848230799595403
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803896,
+                0.0001368376526366723,
+                3.3425287309238576e-06,
+                -7.282516802439597e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5003138780593872,
+                0.19903269410133362,
+                0.2648230791091919
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803895,
+                0.00013683765263667228,
+                3.342528730923857e-06,
+                -7.282516802439596e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.976668561878351e-05,
+            "position_residual_m": 0.00035737265263683857,
+            "route_index": 5,
+            "state": "DESTINATION_PLACE",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999858217982174,
+                0.2000471665673031,
+                0.045353962577648746
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.49999281764030457,
+                0.2000509351491928,
+                0.12535396218299866
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.72328565173458e-05,
+            "position_residual_m": 0.00037139971273028735,
+            "route_index": 6,
+            "state": "DESTINATION_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5001008067332594,
+                0.19998348502989588,
+                0.1846429243708846
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488037,
+                4.909516969624178e-06,
+                3.88386069602171e-05,
+                -1.9231538299106132e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000945925712585,
+                0.19998040795326233,
+                0.2646429240703583
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488035,
+                4.909516969624177e-06,
+                3.8838606960217096e-05,
+                -1.923153829910613e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 7,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          }
+        ],
+        "trial_index": 8
+      },
+      {
+        "states": [
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 0,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 2.366282277416317e-08,
+            "position_residual_m": 1.553899472905733e-08,
+            "route_index": 1,
+            "state": "SOURCE_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999999997363895,
+                -0.2000000011078906,
+                0.18500001549720765
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5,
+                -0.20000000298023224,
+                0.26500001549720764
+              ],
+              "quaternion_xyzw": [
+                1.0,
+                -5.725834251180117e-10,
+                -1.6475656394732141e-09,
+                -1.170213526080488e-08
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.922122957560803e-05,
+            "position_residual_m": 0.00035629125055135696,
+            "route_index": 2,
+            "state": "SOURCE_PICK",
+            "virtual_tcp_pose": {
+              "position": [
+                0.500021114666992,
+                -0.1999561317702547,
+                0.04535294929448333
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000287294387817,
+                -0.19995824992656708,
+                0.12535294890403748
+              ],
+              "quaternion_xyzw": [
+                0.9999999987693935,
+                -4.574554162727805e-06,
+                -4.7592384303792966e-05,
+                -1.3238259254728982e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.653961393585675e-05,
+            "position_residual_m": 0.00036902437730713483,
+            "route_index": 3,
+            "state": "SOURCE_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5000633601168846,
+                -0.20007867195731935,
+                0.18464507013401682
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.500056803226471,
+                -0.20007656514644623,
+                0.2646450698375702
+              ],
+              "quaternion_xyzw": [
+                0.9999999990638619,
+                4.414139762463082e-06,
+                4.0980506999238955e-05,
+                1.3167748862948888e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 0.0003100917346067135,
+            "position_residual_m": 0.0010214838864022382,
+            "route_index": 4,
+            "state": "DESTINATION_HIGH",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5003144112695417,
+                0.19904434620125888,
+                0.1848230799595403
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803896,
+                0.0001368376526366723,
+                3.3425287309238576e-06,
+                -7.282516802439597e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5003138780593872,
+                0.19903269410133362,
+                0.2648230791091919
+              ],
+              "quaternion_xyzw": [
+                0.9999999879803895,
+                0.00013683765263667228,
+                3.342528730923857e-06,
+                -7.282516802439596e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 9.976668561878351e-05,
+            "position_residual_m": 0.00035737265263683857,
+            "route_index": 5,
+            "state": "DESTINATION_PLACE",
+            "virtual_tcp_pose": {
+              "position": [
+                0.4999858217982174,
+                0.2000471665673031,
+                0.045353962577648746
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.49999281764030457,
+                0.2000509351491928,
+                0.12535396218299866
+              ],
+              "quaternion_xyzw": [
+                0.9999999987558261,
+                -4.667414481095924e-06,
+                -4.372390316365128e-05,
+                2.355384091768313e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": 8.72328565173458e-05,
+            "position_residual_m": 0.00037139971273028735,
+            "route_index": 6,
+            "state": "DESTINATION_HIGH_RETURN",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5001008067332594,
+                0.19998348502989588,
+                0.1846429243708846
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488037,
+                4.909516969624178e-06,
+                3.88386069602171e-05,
+                -1.9231538299106132e-05
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5000945925712585,
+                0.19998040795326233,
+                0.2646429240703583
+              ],
+              "quaternion_xyzw": [
+                0.9999999990488035,
+                4.909516969624177e-06,
+                3.8838606960217096e-05,
+                -1.923153829910613e-05
+              ]
+            }
+          },
+          {
+            "orientation_residual_rad": null,
+            "position_residual_m": null,
+            "route_index": 7,
+            "state": "HOME",
+            "virtual_tcp_pose": {
+              "position": [
+                0.5385576588808636,
+                -3.542393651656713e-05,
+                0.18481711867569162
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            },
+            "world_link_frame_pose": {
+              "position": [
+                0.5385554432868958,
+                -3.5641900467453524e-05,
+                0.26481711864471436
+              ],
+              "quaternion_xyzw": [
+                0.9999999998242963,
+                -1.2561831679316313e-05,
+                1.3847445186297443e-05,
+                -1.3624486425549467e-06
+              ]
+            }
+          }
+        ],
+        "trial_index": 9
+      }
+    ]
+  },
+  "robot": {
+    "base_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "controlled_joints": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "ee_link": 6,
+    "joint_limits": [
+      {
+        "joint_index": 0,
+        "joint_name": "lbr_iiwa_joint_1",
+        "lower_limit_rad": -2.96705972839,
+        "upper_limit_rad": 2.96705972839
+      },
+      {
+        "joint_index": 1,
+        "joint_name": "lbr_iiwa_joint_2",
+        "lower_limit_rad": -2.09439510239,
+        "upper_limit_rad": 2.09439510239
+      },
+      {
+        "joint_index": 2,
+        "joint_name": "lbr_iiwa_joint_3",
+        "lower_limit_rad": -2.96705972839,
+        "upper_limit_rad": 2.96705972839
+      },
+      {
+        "joint_index": 3,
+        "joint_name": "lbr_iiwa_joint_4",
+        "lower_limit_rad": -2.09439510239,
+        "upper_limit_rad": 2.09439510239
+      },
+      {
+        "joint_index": 4,
+        "joint_name": "lbr_iiwa_joint_5",
+        "lower_limit_rad": -2.96705972839,
+        "upper_limit_rad": 2.96705972839
+      },
+      {
+        "joint_index": 5,
+        "joint_name": "lbr_iiwa_joint_6",
+        "lower_limit_rad": -2.09439510239,
+        "upper_limit_rad": 2.09439510239
+      },
+      {
+        "joint_index": 6,
+        "joint_name": "lbr_iiwa_joint_7",
+        "lower_limit_rad": -3.05432619099,
+        "upper_limit_rad": 3.05432619099
+      }
+    ],
+    "urdf": "kuka_iiwa/model.urdf",
+    "urdf_velocity_fields_used_as_execution_policy": false,
+    "use_fixed_base": true
+  },
+  "round_trip_definition": {
+    "claim": "route-definition equality; not dynamic controller accuracy",
+    "final_home_joint_vector": [
+      0.7993234719552273,
+      1.3696794627951159,
+      -1.3444968999751499,
+      -1.708611091255202,
+      -1.744593730435666,
+      -1.3230449060760399,
+      -0.8646425864747171
+    ],
+    "home_roundtrip_definition_delta": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "initial_home_joint_vector": [
+      0.7993234719552273,
+      1.3696794627951159,
+      -1.3444968999751499,
+      -1.708611091255202,
+      -1.744593730435666,
+      -1.3230449060760399,
+      -0.8646425864747171
+    ],
+    "maximum_absolute_difference_rad": 0.0
+  },
+  "route_legs": [
+    {
+      "absolute_joint_delta_rad": [
+        0.3790228200565765,
+        0.005383909200316728,
+        0.005838833680030575,
+        0.0001342132350827807,
+        0.004977523102179138,
+        0.006199490031711052,
+        0.38153279043714594
+      ],
+      "endpoint_joint_delta_exceeded": false,
+      "from": "HOME",
+      "max_abs_endpoint_joint_delta_rad": 0.38153279043714594,
+      "responsible_joint_index": 6,
+      "responsible_joint_name": "lbr_iiwa_joint_7",
+      "responsible_signed_delta_rad": -0.38153279043714594,
+      "signed_joint_delta_rad": [
+        -0.3790228200565765,
+        0.005383909200316728,
+        -0.005838833680030575,
+        -0.0001342132350827807,
+        0.004977523102179138,
+        -0.006199490031711052,
+        -0.38153279043714594
+      ],
+      "threshold_comparison": "strict_greater_than",
+      "threshold_rad": 1.5707963267948966,
+      "to": "SOURCE_HIGH"
+    },
+    {
+      "absolute_joint_delta_rad": [
+        0.04947080314972874,
+        0.19124519772863557,
+        0.17954653306408752,
+        0.07012326117567502,
+        0.1925187530437169,
+        0.1577557647662804,
+        0.02547744571833932
+      ],
+      "endpoint_joint_delta_exceeded": false,
+      "from": "SOURCE_HIGH",
+      "max_abs_endpoint_joint_delta_rad": 0.1925187530437169,
+      "responsible_joint_index": 4,
+      "responsible_joint_name": "lbr_iiwa_joint_5",
+      "responsible_signed_delta_rad": 0.1925187530437169,
+      "signed_joint_delta_rad": [
+        -0.04947080314972874,
+        0.19124519772863557,
+        0.17954653306408752,
+        0.07012326117567502,
+        0.1925187530437169,
+        0.1577557647662804,
+        -0.02547744571833932
+      ],
+      "threshold_comparison": "strict_greater_than",
+      "threshold_rad": 1.5707963267948966,
+      "to": "SOURCE_PICK"
+    },
+    {
+      "absolute_joint_delta_rad": [
+        0.049650604779149565,
+        0.18859465818641974,
+        0.18118354085521982,
+        0.06985268505689612,
+        0.18995481518069268,
+        0.1596026534530004,
+        0.024980380078257314
+      ],
+      "endpoint_joint_delta_exceeded": false,
+      "from": "SOURCE_PICK",
+      "max_abs_endpoint_joint_delta_rad": 0.18995481518069268,
+      "responsible_joint_index": 4,
+      "responsible_joint_name": "lbr_iiwa_joint_5",
+      "responsible_signed_delta_rad": -0.18995481518069268,
+      "signed_joint_delta_rad": [
+        0.049650604779149565,
+        -0.18859465818641974,
+        -0.18118354085521982,
+        -0.06985268505689612,
+        -0.18995481518069268,
+        -0.1596026534530004,
+        0.024980380078257314
+      ],
+      "threshold_comparison": "strict_greater_than",
+      "threshold_rad": 1.5707963267948966,
+      "to": "SOURCE_HIGH_RETURN"
+    },
+    {
+      "absolute_joint_delta_rad": [
+        0.7557978371677059,
+        0.015928410789046277,
+        0.01525011583378455,
+        0.00048781860755808815,
+        0.014737175025765215,
+        0.016332562291291763,
+        0.7617269414547136
+      ],
+      "endpoint_joint_delta_exceeded": false,
+      "from": "SOURCE_HIGH_RETURN",
+      "max_abs_endpoint_joint_delta_rad": 0.7617269414547136,
+      "responsible_joint_index": 6,
+      "responsible_joint_name": "lbr_iiwa_joint_7",
+      "responsible_signed_delta_rad": 0.7617269414547136,
+      "signed_joint_delta_rad": [
+        0.7557978371677059,
+        -0.015928410789046277,
+        0.01525011583378455,
+        -0.00048781860755808815,
+        -0.014737175025765215,
+        0.016332562291291763,
+        0.7617269414547136
+      ],
+      "threshold_comparison": "strict_greater_than",
+      "threshold_rad": 1.5707963267948966,
+      "to": "DESTINATION_HIGH"
+    },
+    {
+      "absolute_joint_delta_rad": [
+        0.0497814715668492,
+        0.19211077885279315,
+        0.17929304713352656,
+        0.07034312997305192,
+        0.19221445122778746,
+        0.15745554794494998,
+        0.025960471419437525
+      ],
+      "endpoint_joint_delta_exceeded": false,
+      "from": "DESTINATION_HIGH",
+      "max_abs_endpoint_joint_delta_rad": 0.19221445122778746,
+      "responsible_joint_index": 4,
+      "responsible_joint_name": "lbr_iiwa_joint_5",
+      "responsible_signed_delta_rad": 0.19221445122778746,
+      "signed_joint_delta_rad": [
+        -0.0497814715668492,
+        0.19211077885279315,
+        0.17929304713352656,
+        0.07034312997305192,
+        0.19221445122778746,
+        0.15745554794494998,
+        -0.025960471419437525
+      ],
+      "threshold_comparison": "strict_greater_than",
+      "threshold_rad": 1.5707963267948966,
+      "to": "DESTINATION_PLACE"
+    },
+    {
+      "absolute_joint_delta_rad": [
+        0.05184947288287556,
+        0.18960072600659617,
+        0.18122848781611767,
+        0.06985746101410739,
+        0.18999626026940475,
+        0.15954224148609986,
+        0.027796176479097934
+      ],
+      "endpoint_joint_delta_exceeded": false,
+      "from": "DESTINATION_PLACE",
+      "max_abs_endpoint_joint_delta_rad": 0.18999626026940475,
+      "responsible_joint_index": 4,
+      "responsible_joint_name": "lbr_iiwa_joint_5",
+      "responsible_signed_delta_rad": -0.18999626026940475,
+      "signed_joint_delta_rad": [
+        0.05184947288287556,
+        -0.18960072600659617,
+        -0.18122848781611767,
+        -0.06985746101410739,
+        -0.18999626026940475,
+        -0.15954224148609986,
+        0.027796176479097934
+      ],
+      "threshold_comparison": "strict_greater_than",
+      "threshold_rad": 1.5707963267948966,
+      "to": "DESTINATION_HIGH_RETURN"
+    },
+    {
+      "absolute_joint_delta_rad": [
+        0.3790228200565766,
+        0.005383909200316728,
+        0.005838833680030575,
+        0.00013421323508255867,
+        0.004977523102179138,
+        0.00619949003171083,
+        0.38153279043714605
+      ],
+      "endpoint_joint_delta_exceeded": false,
+      "from": "DESTINATION_HIGH_RETURN",
+      "max_abs_endpoint_joint_delta_rad": 0.38153279043714605,
+      "responsible_joint_index": 6,
+      "responsible_joint_name": "lbr_iiwa_joint_7",
+      "responsible_signed_delta_rad": -0.38153279043714605,
+      "signed_joint_delta_rad": [
+        -0.3790228200565766,
+        0.005383909200316728,
+        -0.005838833680030575,
+        -0.00013421323508255867,
+        0.004977523102179138,
+        -0.00619949003171083,
+        -0.38153279043714605
+      ],
+      "threshold_comparison": "strict_greater_than",
+      "threshold_rad": 1.5707963267948966,
+      "to": "HOME"
+    }
+  ],
+  "schema_identifier": "prototype5.scene_kinematic_plan.b2",
+  "schema_version": "1.0.0",
+  "screens": {
+    "endpoint_joint_delta_comparison": "strict_greater_than_is_exceeded",
+    "maximum_endpoint_joint_delta_rad": 1.5707963267948966,
+    "maximum_task_orientation_residual_rad": 0.01,
+    "maximum_task_position_residual_m": 0.01,
+    "minimum_joint_margin_rad": 0.2,
+    "reproducibility_orientation_tolerance_rad": 1e-09,
+    "reproducibility_position_tolerance_m": 1e-09
+  },
+  "semantic_execution_tuple": {
+    "destination": "assembly_fixture_b",
+    "object": "blue_component",
+    "operation": "MOVE",
+    "scene_id": "manufacturing_demo_scene",
+    "scene_state_version": "1.0.0",
+    "source": "input_tray_a"
+  }
+}

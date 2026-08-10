@@ -12,6 +12,12 @@ from typing import Protocol
 from pydantic import Field, field_validator
 
 from .canonical_governance_runner import CanonicalGovernanceRequestV2
+from .execution_session import (
+    DEFAULT_SESSION_CAPACITY,
+    DEFAULT_SESSION_TTL_SECONDS,
+    ExecutionSessionRegistry,
+    ExecutionSessionStateV1,
+)
 from .governance_contract_v2 import (
     ContractModel,
     DomainId,
@@ -142,6 +148,9 @@ class DemoApplicationService:
         transcript_ttl_seconds: int = 600,
         transcript_registry_capacity: int = 20,
         utc_clock: Callable[[], datetime] | None = None,
+        execution_registry: ExecutionSessionRegistry | None = None,
+        execution_ttl_seconds: int = DEFAULT_SESSION_TTL_SECONDS,
+        execution_registry_capacity: int = DEFAULT_SESSION_CAPACITY,
     ) -> None:
         if not 1 <= transcript_ttl_seconds <= 3600:
             raise ValueError("transcript_ttl_seconds must be between 1 and 3600")
@@ -161,6 +170,11 @@ class DemoApplicationService:
             str, tuple[RecordedTranscriptionResultV1, datetime]
         ] = OrderedDict()
         self._last_speech_status = AvailabilityStatus.NOT_ASSESSED
+        self.execution_registry = execution_registry or ExecutionSessionRegistry(
+            ttl_seconds=execution_ttl_seconds,
+            capacity=execution_registry_capacity,
+            utc_clock=self._utc_clock,
+        )
 
     def status(self) -> DemoStatusResponse:
         health = self.router.local_health_snapshot()
@@ -213,7 +227,7 @@ class DemoApplicationService:
             requested_inference_mode=api_request.inference_mode,
             evaluation_mode="LIVE",
         )
-        return self.router.route(canonical_request)
+        return self._route_and_register(canonical_request)
 
     def transcribe_recorded(
         self,
@@ -281,7 +295,27 @@ class DemoApplicationService:
             requested_inference_mode=api_request.inference_mode,
             evaluation_mode="LIVE",
         )
-        return self.router.route(canonical_request)
+        return self._route_and_register(canonical_request)
+
+    def _route_and_register(
+        self, canonical_request: CanonicalGovernanceRequestV2
+    ) -> HybridGovernanceResultV1:
+        """Route one request and retain its governance-time execution context.
+
+        Every completed trace is registered, including non-executable ones, so
+        a later execution attempt can be refused with an accurate reason
+        instead of appearing never to have existed. The internal context is
+        never returned to the caller.
+        """
+
+        result, context = self.router.route_with_execution_context(
+            canonical_request
+        )
+        self.execution_registry.register(context)
+        return result
+
+    def execution_state(self, trace_id: str) -> ExecutionSessionStateV1 | None:
+        return self.execution_registry.get_state(trace_id)
 
     def _claim_transcript(
         self,

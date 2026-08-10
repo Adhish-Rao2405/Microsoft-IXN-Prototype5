@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
@@ -156,6 +157,23 @@ class CanonicalGovernanceResultV2(ContractModel):
     governance_record: GovernanceRecordV2
 
 
+@dataclass(frozen=True)
+class InternalGovernanceExecutionContextV1:
+    """Internal companion to a governance result, never a response model.
+
+    Carries the governance-time policy evaluation and the loaded-policy
+    provenance used for that exact decision, so execution authority is never
+    reconstructed later. This is deliberately not a ContractModel: it has no
+    serialisation surface and must never be returned through the API.
+    """
+
+    result: CanonicalGovernanceResultV2
+    policy_evaluation: ManufacturingPolicyEvaluationV2 | None
+    policy_id: str
+    policy_version: str
+    policy_sha256: str
+
+
 class CanonicalRunnerConfigurationV2(ContractModel):
     source_repository: str
     software_commit: str
@@ -283,6 +301,19 @@ class CanonicalGovernanceRunner:
     ) -> CanonicalGovernanceResultV2:
         """Evaluate a final provider response selected by a direct or hybrid router."""
 
+        return self.evaluate_response_with_execution_context(
+            request, response=response, routing=routing
+        ).result
+
+    def evaluate_response_with_execution_context(
+        self,
+        request: CanonicalGovernanceRequestV2,
+        *,
+        response: ModelBackendResponse,
+        routing: RoutingRecordV2,
+    ) -> InternalGovernanceExecutionContextV1:
+        """Evaluate a response and retain its governance-time execution context."""
+
         if routing.requested_mode is not request.requested_inference_mode:
             raise ValueError("routing requested mode does not match the request")
         if (
@@ -304,6 +335,7 @@ class CanonicalGovernanceRunner:
         gate_reasons: dict[GateId, tuple[str, ...]] = {}
         gate_latencies: list[GateLatencyRecord] = []
         proposal: StructuredTaskProposalV2 | None = None
+        policy_evaluation: ManufacturingPolicyEvaluationV2 | None = None
 
         if not response.success:
             parse_status = GateStatus.ERROR
@@ -351,7 +383,7 @@ class CanonicalGovernanceRunner:
                 authority_status = GateStatus.NOT_ASSESSABLE
             else:
                 policy_start = self._timer()
-                policy_result = evaluate_manufacturing_proposal(
+                policy_result = policy_evaluation = evaluate_manufacturing_proposal(
                     request.command,
                     proposal,
                     request.scene,
@@ -467,11 +499,17 @@ class CanonicalGovernanceRunner:
             simulation_status=SimulationStatus.NOT_REQUESTED,
             provenance=provenance,
         )
-        return CanonicalGovernanceResultV2(
-            request=request,
-            raw_response_text=raw_text,
-            proposal=proposal,
-            governance_record=record,
+        return InternalGovernanceExecutionContextV1(
+            result=CanonicalGovernanceResultV2(
+                request=request,
+                raw_response_text=raw_text,
+                proposal=proposal,
+                governance_record=record,
+            ),
+            policy_evaluation=policy_evaluation,
+            policy_id=self.policy.config.policy_id,
+            policy_version=self.policy.config.policy_version,
+            policy_sha256=self.policy.sha256,
         )
 
     def _parse_proposal(
