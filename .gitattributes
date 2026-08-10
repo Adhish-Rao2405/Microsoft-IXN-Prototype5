@@ -32,3 +32,9 @@ ci/wheels/*.whl -text
 ci/wheels/*.whl.sha256 text eol=lf
 
 docs/prototype5/phase_b3_2_discrete_route_collision_qualification_spec.md text eol=lf
+
+src/prototype5/scene_collision_route_qualification_b3_2.py text eol=lf
+scripts/prototype5/run_scene_collision_route_qualification_b3_2.py text eol=lf
+tests/prototype5/test_scene_collision_route_qualification_b3_2.py text eol=lf
+results/prototype5/scene_calibration/phase_b3_2_discrete_route_collision_qualification.json text eol=lf
+results/prototype5/scene_calibration/phase_b3_2_discrete_route_collision_qualification.json.sha256 text eol=lf
