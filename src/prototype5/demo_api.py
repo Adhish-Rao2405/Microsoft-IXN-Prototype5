@@ -14,12 +14,16 @@ from .demo_runtime import build_demo_service
 from .demo_service import (
     DemoApplicationService,
     DemoStatusResponse,
-    DomainNotAvailableError,
     SpeechBackendUnavailableError,
     TranscriptRegistryError,
     TranscriptNotReadyError,
-    TypedCommandApiRequest,
-    VoiceCommandApiRequest,
+    TypedCommandHttpRequest,
+    VoiceCommandHttpRequest,
+)
+from .final_demo_presentation import (
+    FinalDemoManifest,
+    FinalDemoScenarioInferenceForbiddenError,
+    FinalDemoScenarioNotFoundError,
 )
 from .hybrid_inference_router import HybridGovernanceResultV1
 from .recorded_speech import (
@@ -55,16 +59,25 @@ def create_demo_app(
     def status() -> DemoStatusResponse:
         return service.status()
 
+    @app.get("/api/v1/demo/manifest", response_model=FinalDemoManifest)
+    def demo_manifest() -> FinalDemoManifest:
+        return service.manifest()
+
     @app.post(
         "/api/v1/governance/typed",
         response_model=HybridGovernanceResultV1,
     )
     def submit_typed(
-        request: TypedCommandApiRequest,
+        request: TypedCommandHttpRequest,
     ) -> HybridGovernanceResultV1:
         try:
             return service.submit_typed(request)
-        except DomainNotAvailableError as exc:
+        except FinalDemoScenarioNotFoundError as exc:
+            raise HTTPException(
+                status_code=404,
+                detail={"code": str(exc)},
+            ) from exc
+        except FinalDemoScenarioInferenceForbiddenError as exc:
             raise HTTPException(
                 status_code=409,
                 detail={"code": str(exc)},
@@ -144,11 +157,16 @@ def create_demo_app(
         response_model=HybridGovernanceResultV1,
     )
     def submit_voice(
-        request: VoiceCommandApiRequest,
+        request: VoiceCommandHttpRequest,
     ) -> HybridGovernanceResultV1:
         try:
             return service.submit_voice(request)
-        except DomainNotAvailableError as exc:
+        except FinalDemoScenarioNotFoundError as exc:
+            raise HTTPException(
+                status_code=404,
+                detail={"code": str(exc)},
+            ) from exc
+        except FinalDemoScenarioInferenceForbiddenError as exc:
             raise HTTPException(
                 status_code=409,
                 detail={"code": str(exc)},

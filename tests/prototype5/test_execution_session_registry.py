@@ -335,7 +335,11 @@ def test_public_result_and_registered_context_describe_the_same_trace(mode):
         local_text=move_json(), cloud_text=move_json()
     )
     result = service.submit_typed(
-        TypedCommandApiRequest(command=MOVE_COMMAND, inference_mode=mode)
+        TypedCommandApiRequest(
+            scenario_id="MANUFACTURING_TYPED_ACCEPT",
+            command=MOVE_COMMAND,
+            inference_mode=mode,
+        )
     )
     trace_id = result.canonical_result.governance_record.trace_id
     state = service.execution_state(trace_id)
@@ -352,7 +356,11 @@ def test_auto_fallback_registers_the_cloud_result_not_the_local_attempt():
         cloud_text=move_json(),
     )
     result = service.submit_typed(
-        TypedCommandApiRequest(command=MOVE_COMMAND, inference_mode="AUTO")
+        TypedCommandApiRequest(
+            scenario_id="MANUFACTURING_TYPED_ACCEPT",
+            command=MOVE_COMMAND,
+            inference_mode="AUTO",
+        )
     )
     record = result.canonical_result.governance_record
     assert local.calls == 1 and cloud.calls == 1
@@ -411,6 +419,7 @@ def test_voice_submission_registers_its_execution_context():
     service.transcribe_recorded(b"\x00" * 32, original_filename="clip.wav")
     result = service.submit_voice(
         VoiceCommandApiRequest(
+            scenario_id="MANUFACTURING_TYPED_ACCEPT",
             transcription_id="transcript-1",
             reviewed_transcript_text=MOVE_COMMAND,
             inference_mode="LOCAL",
@@ -425,7 +434,11 @@ def test_voice_submission_registers_its_execution_context():
 def test_public_response_does_not_expose_internal_execution_context():
     service, _, _ = build_service(local_text=move_json())
     result = service.submit_typed(
-        TypedCommandApiRequest(command=MOVE_COMMAND, inference_mode="LOCAL")
+        TypedCommandApiRequest(
+            scenario_id="MANUFACTURING_TYPED_ACCEPT",
+            command=MOVE_COMMAND,
+            inference_mode="LOCAL",
+        )
     )
     payload = json.loads(result.model_dump_json())
     assert set(payload) == {
@@ -458,7 +471,11 @@ def test_public_response_does_not_expose_internal_execution_context():
 def test_governance_record_keeps_historical_simulation_fields():
     service, _, _ = build_service(local_text=move_json())
     result = service.submit_typed(
-        TypedCommandApiRequest(command=MOVE_COMMAND, inference_mode="LOCAL")
+        TypedCommandApiRequest(
+            scenario_id="MANUFACTURING_TYPED_ACCEPT",
+            command=MOVE_COMMAND,
+            inference_mode="LOCAL",
+        )
     )
     record = result.canonical_result.governance_record
     assert record.execution_permit_id is None

@@ -31,6 +31,7 @@ import {
   Stop24Regular,
 } from "@fluentui/react-icons";
 import {
+  getDemoManifest,
   getDemoStatus,
   submitTypedCommand,
   submitVoiceCommand,
@@ -38,9 +39,8 @@ import {
 } from "./api";
 import type {
   AvailabilityStatus,
+  DemoManifest,
   DemoStatus,
-  DomainId,
-  GateDisplayStatus,
   HybridGovernanceResult,
   InferenceMode,
   RecordedTranscription,
@@ -53,7 +53,7 @@ const gateDefinitions = [
   ["Plan semantics", "plan_semantic_status"],
   ["Ambiguity", "ambiguity_status"],
   ["Safety", "safety_status"],
-  ["Authority", "authority_status"],
+  ["Role / action authority", "authority_status"],
 ] as const;
 
 function availabilityLabel(status: AvailabilityStatus | undefined): string {
@@ -76,7 +76,7 @@ function statusTone(status: string): "success" | "danger" | "warning" | "informa
   return "subtle";
 }
 
-function formatStatus(status: GateDisplayStatus): string {
+function formatStatus(status: string): string {
   return status.replaceAll("_", " ").toLowerCase().replace(/^\w/, (value) => value.toUpperCase());
 }
 
@@ -84,15 +84,31 @@ function formatLatency(value: number | null | undefined): string {
   return value == null ? "Not recorded" : `${value.toFixed(1)} ms`;
 }
 
+export function clientErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message.slice(0, 200);
+  }
+  return "UNKNOWN_CLIENT_FAILURE";
+}
+
+export function isInferenceMode(value: unknown): value is InferenceMode {
+  return value === "LOCAL" || value === "CLOUD" || value === "AUTO";
+}
+
+export function selectInferenceMode(
+  current: InferenceMode,
+  candidate: unknown,
+): InferenceMode {
+  return isInferenceMode(candidate) ? candidate : current;
+}
+
 export function App() {
   const [status, setStatus] = useState<DemoStatus | null>(null);
+  const [manifest, setManifest] = useState<DemoManifest | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [command, setCommand] = useState("");
   const [mode, setMode] = useState<InferenceMode>("AUTO");
-  const [domain, setDomain] = useState<DomainId>("MANUFACTURING");
-  const [requesterRole, setRequesterRole] = useState<
-    "operator" | "observer" | "supervisor"
-  >("operator");
+  const [scenarioId, setScenarioId] = useState("");
   const [result, setResult] = useState<HybridGovernanceResult | null>(null);
   const [submittedCommand, setSubmittedCommand] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -111,17 +127,31 @@ export function App() {
 
   useEffect(() => {
     const controller = new AbortController();
-    getDemoStatus(controller.signal)
-      .then(setStatus)
+    Promise.all([
+      getDemoManifest(controller.signal),
+      getDemoStatus(controller.signal),
+    ])
+      .then(([nextManifest, nextStatus]) => {
+        setManifest(nextManifest);
+        setStatus(nextStatus);
+        const initial = nextManifest.scenarios.find(
+          (scenario) => scenario.model_input_enabled,
+        );
+        if (!initial) throw new Error("CONTRACT_FAILURE");
+        setScenarioId(initial.scenario_id);
+      })
       .catch((error: unknown) => {
-        if ((error as Error).name !== "AbortError") {
-          setStatusError((error as Error).message);
+        if (!(error instanceof Error && error.name === "AbortError")) {
+          setStatusError(clientErrorMessage(error));
         }
       });
     return () => controller.abort();
   }, []);
 
   const record = result?.canonical_result.governance_record ?? null;
+  const selectedScenario = manifest?.scenarios.find(
+    (scenario) => scenario.scenario_id === scenarioId,
+  ) ?? null;
   const proposalText = useMemo(
     () =>
       result?.canonical_result.proposal
@@ -132,7 +162,13 @@ export function App() {
 
   async function handleSubmit() {
     const trimmed = command.trim();
-    if (!trimmed || pending || transcribing || transcriptConsumed) return;
+    if (
+      !trimmed ||
+      !selectedScenario?.model_input_enabled ||
+      pending ||
+      transcribing ||
+      transcriptConsumed
+    ) return;
     setPending(true);
     setRequestError(null);
     setSubmittedCommand(trimmed);
@@ -144,22 +180,20 @@ export function App() {
     try {
       const nextResult = isVoice
         ? await submitVoiceCommand({
+            scenario_id: selectedScenario.scenario_id,
             transcription_id: transcription.transcription_id,
             reviewed_transcript_text: trimmed,
             inference_mode: mode,
-            domain_id: domain,
-            requester_role: requesterRole,
           })
         : await submitTypedCommand({
+            scenario_id: selectedScenario.scenario_id,
             command: trimmed,
             inference_mode: mode,
-            domain_id: domain,
-            requester_role: requesterRole,
           });
       setResult(nextResult);
     } catch (error) {
       setResult(null);
-      setRequestError((error as Error).message);
+      setRequestError(clientErrorMessage(error));
     } finally {
       setPending(false);
     }
@@ -179,18 +213,6 @@ export function App() {
     try {
       const nextTranscription = await transcribeRecordedAudio(file);
       setTranscription(nextTranscription);
-      setStatus((current) =>
-        current
-          ? {
-              ...current,
-              speech_status:
-                nextTranscription.transcript_status === "READY" ||
-                nextTranscription.transcript_status === "EMPTY"
-                  ? "AVAILABLE"
-                  : "UNAVAILABLE",
-            }
-          : current,
-      );
       if (
         nextTranscription.transcript_status === "READY" &&
         nextTranscription.transcript_text
@@ -203,10 +225,7 @@ export function App() {
       }
     } catch (error) {
       setTranscription(null);
-      setTranscriptionError((error as Error).message);
-      setStatus((current) =>
-        current ? { ...current, speech_status: "UNAVAILABLE" } : current,
-      );
+      setTranscriptionError(clientErrorMessage(error));
     } finally {
       setTranscribing(false);
     }
@@ -302,44 +321,42 @@ export function App() {
       <main className="app-layout">
         <section className="command-workspace" aria-label="Command workspace">
           <div className="workspace-toolbar">
-            <Field label="Domain" size="small">
+            <Field label="Scenario" size="small">
               <Dropdown
-                aria-label="Domain"
-                value={
-                  domain === "MANUFACTURING"
-                    ? "Manufacturing"
-                    : "Healthcare (synthetic)"
-                }
-                selectedOptions={[domain]}
-                onOptionSelect={(_, data) => setDomain(data.optionValue as DomainId)}
+                aria-label="Scenario"
+                value={selectedScenario?.display_name ?? "Loading scenarios"}
+                selectedOptions={scenarioId ? [scenarioId] : []}
+                disabled={!manifest}
+                onOptionSelect={(_, data) => {
+                  const next = manifest?.scenarios.find(
+                    (scenario) => scenario.scenario_id === data.optionValue,
+                  );
+                  if (!next) return;
+                  setScenarioId(next.scenario_id);
+                  setResult(null);
+                  setRequestError(null);
+                  setSubmittedCommand(null);
+                  setCommand(next.model_input_enabled ? next.registered_command : "");
+                  const nextMode = next.allowed_inference_modes[0];
+                  if (nextMode && !next.allowed_inference_modes.includes(mode)) {
+                    setMode(nextMode);
+                  }
+                }}
               >
-                <Option value="MANUFACTURING">Manufacturing</Option>
-                <Option value="HEALTHCARE_SYNTHETIC" disabled>
-                  Healthcare (synthetic)
-                </Option>
-              </Dropdown>
-            </Field>
-            <Field label="Requester role" size="small">
-              <Dropdown
-                aria-label="Requester role"
-                value={requesterRole[0].toUpperCase() + requesterRole.slice(1)}
-                selectedOptions={[requesterRole]}
-                onOptionSelect={(_, data) =>
-                  setRequesterRole(
-                    data.optionValue as "operator" | "observer" | "supervisor",
-                  )
-                }
-              >
-                <Option value="operator">Operator</Option>
-                <Option value="observer">Observer</Option>
-                <Option value="supervisor">Supervisor</Option>
+                {manifest?.scenarios.map((scenario) => (
+                  <Option key={scenario.scenario_id} value={scenario.scenario_id}>
+                    {scenario.display_name}
+                  </Option>
+                ))}
               </Dropdown>
             </Field>
             <Field label="Inference" size="small">
               <RadioGroup
                 layout="horizontal"
                 value={mode}
-                onChange={(_, data) => setMode(data.value as InferenceMode)}
+                onChange={(_, data) => {
+                  setMode((current) => selectInferenceMode(current, data.value));
+                }}
                 aria-label="Inference mode"
               >
                 <Radio value="LOCAL" label="Local" />
@@ -449,7 +466,7 @@ export function App() {
                 onChange={(_, data) => setCommand(data.value)}
                 placeholder="Enter a bounded manufacturing command"
                 resize="vertical"
-                disabled={pending}
+                disabled={pending || !selectedScenario?.model_input_enabled}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
                     event.preventDefault();
@@ -492,6 +509,7 @@ export function App() {
                 icon={<Send24Regular />}
                 disabled={
                   !command.trim() ||
+                  !selectedScenario?.model_input_enabled ||
                   pending ||
                   transcribing ||
                   transcriptConsumed
@@ -524,52 +542,58 @@ export function App() {
                   appearance="filled"
                   color={record?.execution_eligible ? "success" : "subtle"}
                 >
-                  {record?.execution_eligible ? "Eligible" : "Not eligible"}
+                  {record
+                    ? record.execution_eligible
+                      ? "Eligible"
+                      : "Not eligible"
+                    : "Not evaluated"}
                 </Badge>
               </div>
             </div>
           </InspectorSection>
 
           <InspectorSection title="Routing">
-            <DefinitionRow label="Requested" value={record?.routing.requested_mode ?? mode} />
+            <DefinitionRow label="Requested" value={record?.routing.requested_mode ?? "NOT_EVALUATED"} />
             <DefinitionRow
               label="Selected"
-              value={record?.routing.selected_provider ?? "Not selected"}
+              value={record ? record.routing.selected_provider : "Not evaluated"}
             />
             <DefinitionRow
               label="Model"
-              value={record?.routing.selected_model ?? "Not selected"}
+              value={record ? record.routing.selected_model ?? "Not selected" : "Not evaluated"}
             />
             <DefinitionRow
               label="Fallback"
               value={
                 record?.routing.fallback_triggered
                   ? formatStatus(record.routing.fallback_reason)
-                  : "Not triggered"
+                  : record
+                    ? "Not triggered"
+                    : "Not evaluated"
               }
             />
             <DefinitionRow
               label="Local latency"
-              value={formatLatency(record?.routing.local_latency_ms)}
+              value={record ? formatLatency(record.routing.local_latency_ms) : "Not evaluated"}
             />
             <DefinitionRow
               label="Cloud latency"
-              value={formatLatency(record?.routing.cloud_latency_ms)}
+              value={record ? formatLatency(record.routing.cloud_latency_ms) : "Not evaluated"}
             />
             <DefinitionRow
               label="Circuit"
-              value={result?.local_health.circuit_state ?? "CLOSED"}
+              value={result?.local_health.circuit_state ?? "NOT_AVAILABLE"}
             />
           </InspectorSection>
 
           <InspectorSection title="Simulation">
             <DefinitionRow
               label="State"
-              value={formatStatus(record?.simulation_status ?? "NOT_REQUESTED")}
+              value={record ? formatStatus(record.simulation_status) : "Not evaluated"}
             />
             <DefinitionRow
               label="Permit"
-              value={record?.execution_permit_id ?? "Not issued"}
+              value={record ? record.execution_permit_id ?? "Not issued" : "Not evaluated"}
             />
             <Button
               appearance="secondary"
@@ -582,22 +606,22 @@ export function App() {
           </InspectorSection>
 
           <InspectorSection title="Audit">
-            <DefinitionRow label="Trace ID" value={record?.trace_id ?? "Not assigned"} mono />
+            <DefinitionRow label="Trace ID" value={record?.trace_id ?? "Not evaluated"} mono />
             <DefinitionRow
               label="Policy"
-              value={record?.policy_id ?? "Not evaluated"}
+              value={record?.policy_id ?? "NOT_EVALUATED"}
             />
             <DefinitionRow
               label="Schema"
-              value={record?.evidence_schema_version ?? "2.0.0"}
+              value={record?.evidence_schema_version ?? "NOT_EVALUATED"}
             />
             <DefinitionRow
               label="Provider"
-              value={formatLatency(record?.provider_latency_ms)}
+              value={record ? formatLatency(record.provider_latency_ms) : "Not evaluated"}
             />
             <DefinitionRow
               label="Validation"
-              value={formatLatency(record?.validation_latency_ms)}
+              value={record ? formatLatency(record.validation_latency_ms) : "Not evaluated"}
             />
             <DefinitionRow
               label="Total"

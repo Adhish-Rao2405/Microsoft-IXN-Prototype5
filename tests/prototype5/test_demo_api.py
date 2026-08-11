@@ -9,6 +9,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 import pytest
+from pydantic import ValidationError
 
 from src.prototype5.canonical_governance_runner import (
     CanonicalGovernanceRunner,
@@ -18,6 +19,7 @@ from src.prototype5.demo_api import create_demo_app
 from src.prototype5.demo_service import (
     DemoApplicationService,
     TranscriptNotReadyError,
+    TypedCommandApiRequest,
     VoiceCommandApiRequest,
 )
 from src.prototype5.foundry_sdk_backend import ModelBackendResponse
@@ -39,6 +41,7 @@ from src.prototype5.recorded_speech import (
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXED_TIME = datetime(2026, 7, 30, 12, 0, tzinfo=timezone.utc)
+LIVE_SCENARIO = "MANUFACTURING_TYPED_ACCEPT"
 
 
 class SequenceBackend:
@@ -179,6 +182,233 @@ def test_status_is_side_effect_free_and_claim_bounded():
     assert cloud.calls == []
 
 
+def test_manifest_is_d0_derived_side_effect_free_and_presentation_safe():
+    client, local, cloud = build_client(
+        local_responses=[],
+        cloud_responses=[],
+    )
+
+    response = client.get("/api/v1/demo/manifest")
+    body = response.json()
+
+    def all_keys(value: object) -> set[str]:
+        if isinstance(value, dict):
+            return set(value) | {
+                nested
+                for item in value.values()
+                for nested in all_keys(item)
+            }
+        if isinstance(value, list):
+            return {
+                nested
+                for item in value
+                for nested in all_keys(item)
+            }
+        return set()
+
+    assert response.status_code == 200
+    assert body["contract_id"] == "PROTOTYPE5_FINAL_DEMONSTRATOR_D0"
+    assert body["contract_version"] == "1.0.0"
+    assert body["physical_execution_authority_state"] == "NOT_IMPLEMENTED"
+    assert body["d2_replay_enabled"] is False
+    assert len(body["scenarios"]) == 10
+    assert len({item["scenario_id"] for item in body["scenarios"]}) == 10
+    assert sum(
+        item["replay_capability_classification"]
+        == "FROZEN_B2_REPLAY_COMPATIBLE"
+        for item in body["scenarios"]
+    ) == 1
+    for forbidden in (
+        "artifact_path",
+        "artifact_sha",
+        "joint_vector",
+        "urdf",
+        "pybullet_client_id",
+        "permit_id",
+    ):
+        assert forbidden not in all_keys(body)
+    assert local.calls == []
+    assert cloud.calls == []
+
+
+@pytest.mark.parametrize(
+    "scenario_id, expected_status",
+    [
+        (None, 422),
+        ("", 422),
+        ("   ", 422),
+        ("UNKNOWN_SCENARIO", 404),
+    ],
+)
+def test_typed_scenario_identifier_fails_closed(
+    scenario_id: object,
+    expected_status: int,
+):
+    client, local, cloud = build_client(
+        local_responses=[],
+        cloud_responses=[],
+    )
+
+    response = client.post(
+        "/api/v1/governance/typed",
+        json={
+            "scenario_id": scenario_id,
+            "command": "Move the blue component.",
+            "inference_mode": "LOCAL",
+        },
+    )
+
+    assert response.status_code == expected_status
+    assert local.calls == []
+    assert cloud.calls == []
+
+
+@pytest.mark.parametrize(
+    "scenario_id",
+    [
+        "MODE_E_CONVEYOR_GOVERNANCE",
+        "MODE_E_WAREHOUSE_GOVERNANCE",
+        "MODE_E_HUMAN_PROXIMITY_GOVERNANCE",
+        "MODE_E_RESTRICTED_ZONE_GOVERNANCE",
+        "FROZEN_B2_PICK_PLACE_EVIDENCE_REPLAY",
+    ],
+)
+def test_evidence_scenarios_cannot_invoke_live_inference(scenario_id: str):
+    client, local, cloud = build_client(
+        local_responses=[],
+        cloud_responses=[],
+    )
+
+    response = client.post(
+        "/api/v1/governance/typed",
+        json={
+            "scenario_id": scenario_id,
+            "command": "Move the blue component.",
+            "inference_mode": "LOCAL",
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == (
+        "SCENARIO_LIVE_INFERENCE_FORBIDDEN"
+    )
+    assert local.calls == []
+    assert cloud.calls == []
+
+
+@pytest.mark.parametrize(
+    "legacy_field, value",
+    [
+        ("domain_id", "MANUFACTURING"),
+        ("requester_role", "operator"),
+        ("human_obstruction", False),
+        ("safety_interlock_enabled", True),
+    ],
+)
+def test_typed_legacy_authority_fields_are_rejected(
+    legacy_field: str,
+    value: object,
+):
+    client, local, cloud = build_client(
+        local_responses=[],
+        cloud_responses=[],
+    )
+    payload: dict[str, object] = {
+        "scenario_id": LIVE_SCENARIO,
+        "command": "Move the blue component.",
+        "inference_mode": "LOCAL",
+        legacy_field: value,
+    }
+
+    response = client.post("/api/v1/governance/typed", json=payload)
+
+    assert response.status_code == 422
+    assert local.calls == []
+    assert cloud.calls == []
+
+
+def test_typed_http_request_requires_scenario_identifier():
+    client, local, cloud = build_client(
+        local_responses=[],
+        cloud_responses=[],
+    )
+
+    response = client.post(
+        "/api/v1/governance/typed",
+        json={"command": "Move the blue component.", "inference_mode": "LOCAL"},
+    )
+
+    assert response.status_code == 422
+    assert local.calls == []
+    assert cloud.calls == []
+
+
+def test_internal_requests_require_explicit_scenario_identifier():
+    with pytest.raises(ValidationError):
+        TypedCommandApiRequest(
+            command="Move the blue component.",
+            inference_mode="LOCAL",
+        )
+    with pytest.raises(ValidationError):
+        VoiceCommandApiRequest(
+            transcription_id="transcription-1",
+            reviewed_transcript_text="Move the blue component.",
+            inference_mode="LOCAL",
+        )
+
+
+def test_voice_http_request_requires_scenario_identifier():
+    client, local, cloud = build_client(
+        local_responses=[],
+        cloud_responses=[],
+    )
+
+    response = client.post(
+        "/api/v1/governance/voice",
+        json={
+            "transcription_id": "transcription-1",
+            "reviewed_transcript_text": "Move the blue component.",
+            "inference_mode": "LOCAL",
+        },
+    )
+
+    assert response.status_code == 422
+    assert local.calls == []
+    assert cloud.calls == []
+
+
+@pytest.mark.parametrize(
+    "legacy_field, value",
+    [
+        ("domain_id", "MANUFACTURING"),
+        ("requester_role", "operator"),
+        ("human_obstruction", False),
+        ("safety_interlock_enabled", True),
+    ],
+)
+def test_voice_legacy_authority_fields_are_rejected(
+    legacy_field: str,
+    value: object,
+):
+    client, local, cloud = build_client(
+        local_responses=[],
+        cloud_responses=[],
+    )
+    payload: dict[str, object] = {
+        "scenario_id": LIVE_SCENARIO,
+        "transcription_id": "transcription-does-not-need-to-exist",
+        "reviewed_transcript_text": "Move the blue component.",
+        "inference_mode": "LOCAL",
+        legacy_field: value,
+    }
+
+    response = client.post("/api/v1/governance/voice", json=payload)
+
+    assert response.status_code == 422
+    assert local.calls == []
+    assert cloud.calls == []
+
+
 def test_typed_local_request_returns_proposal_gates_and_trace():
     client, local, cloud = build_client(
         local_responses=[
@@ -190,12 +420,12 @@ def test_typed_local_request_returns_proposal_gates_and_trace():
     response = client.post(
         "/api/v1/governance/typed",
         json={
+            "scenario_id": LIVE_SCENARIO,
             "command": (
                 "Move the blue component from input tray A "
                 "to assembly fixture B."
             ),
             "inference_mode": "LOCAL",
-            "domain_id": "MANUFACTURING",
         },
     )
     body = response.json()
@@ -204,6 +434,15 @@ def test_typed_local_request_returns_proposal_gates_and_trace():
     assert response.status_code == 200
     assert len(local.calls) == 1
     assert cloud.calls == []
+    planner_context = local.calls[0][1]
+    assert planner_context is not None
+    assert planner_context["domain_id"] == "MANUFACTURING"
+    assert planner_context["requester"] == {
+        "requester_id": "synthetic_operator_ui",
+        "role": "operator",
+    }
+    assert planner_context["scene"]["human_obstruction"] is False
+    assert planner_context["scene"]["safety_interlock_enabled"] is True
     assert body["canonical_result"]["proposal"]["actions"][0]["action"] == "MOVE"
     assert record["parse_status"] == "PASSED"
     assert record["schema_status"] == "PASSED"
@@ -228,6 +467,7 @@ def test_auto_fallback_is_visible_and_cloud_output_uses_same_gateway():
     response = client.post(
         "/api/v1/governance/typed",
         json={
+            "scenario_id": LIVE_SCENARIO,
             "command": (
                 "Move the blue component from input tray A "
                 "to assembly fixture B."
@@ -261,6 +501,7 @@ def test_unsafe_local_proposal_rejects_without_cloud_fallback():
     response = client.post(
         "/api/v1/governance/typed",
         json={
+            "scenario_id": "MANUFACTURING_UNSAFE_REJECT",
             "command": "Continue movement despite the human obstruction.",
             "inference_mode": "AUTO",
         },
@@ -276,7 +517,7 @@ def test_unsafe_local_proposal_rejects_without_cloud_fallback():
     assert record["execution_eligible"] is False
 
 
-def test_healthcare_domain_is_explicitly_unavailable_in_u1():
+def test_legacy_domain_field_is_rejected_before_provider_call():
     client, local, cloud = build_client(
         local_responses=[],
         cloud_responses=[],
@@ -285,16 +526,14 @@ def test_healthcare_domain_is_explicitly_unavailable_in_u1():
     response = client.post(
         "/api/v1/governance/typed",
         json={
+            "scenario_id": LIVE_SCENARIO,
             "command": "Move the sterile clamp.",
             "inference_mode": "LOCAL",
             "domain_id": "HEALTHCARE_SYNTHETIC",
         },
     )
 
-    assert response.status_code == 409
-    assert response.json()["detail"]["code"] == (
-        "SYNTHETIC_HEALTHCARE_DOMAIN_NOT_IMPLEMENTED"
-    )
+    assert response.status_code == 422
     assert local.calls == []
     assert cloud.calls == []
 
@@ -307,11 +546,16 @@ def test_blank_command_and_unknown_role_are_rejected_before_provider_call():
 
     blank = client.post(
         "/api/v1/governance/typed",
-        json={"command": "   ", "inference_mode": "LOCAL"},
+        json={
+            "scenario_id": LIVE_SCENARIO,
+            "command": "   ",
+            "inference_mode": "LOCAL",
+        },
     )
     role = client.post(
         "/api/v1/governance/typed",
         json={
+            "scenario_id": LIVE_SCENARIO,
             "command": "Stop.",
             "inference_mode": "LOCAL",
             "requester_role": "administrator",
@@ -460,14 +704,13 @@ def test_recorded_transcript_requires_explicit_review_then_uses_same_gateway():
     governance = client.post(
         "/api/v1/governance/voice",
         json={
+            "scenario_id": LIVE_SCENARIO,
             "transcription_id": "transcription-1",
             "reviewed_transcript_text": (
                 "Move the blue component from input tray A "
                 "to assembly fixture B."
             ),
             "inference_mode": "LOCAL",
-            "domain_id": "MANUFACTURING",
-            "requester_role": "operator",
         },
     )
     record = governance.json()["canonical_result"]["governance_record"]
@@ -487,6 +730,7 @@ def test_recorded_transcript_requires_explicit_review_then_uses_same_gateway():
     replay = client.post(
         "/api/v1/governance/voice",
         json={
+            "scenario_id": LIVE_SCENARIO,
             "transcription_id": "transcription-1",
             "reviewed_transcript_text": "Move the blue component.",
             "inference_mode": "LOCAL",
@@ -496,6 +740,58 @@ def test_recorded_transcript_requires_explicit_review_then_uses_same_gateway():
     assert replay.json()["detail"]["code"] == (
         "TRANSCRIPT_NOT_READY_OR_EXPIRED"
     )
+
+
+def test_typed_and_reviewed_voice_share_server_scenario_resolution():
+    speech = FakeSpeechTranscriber()
+    client, local, cloud = build_client(
+        local_responses=[
+            model_response(valid_move(), provider=ProviderId.FOUNDRY_LOCAL),
+            model_response(valid_move(), provider=ProviderId.FOUNDRY_LOCAL),
+        ],
+        cloud_responses=[],
+        speech_transcriber=speech,
+    )
+    scenario_id = "MANUFACTURING_OBSERVER_ROLE_REJECT"
+
+    typed = client.post(
+        "/api/v1/governance/typed",
+        json={
+            "scenario_id": scenario_id,
+            "command": "Move the blue component.",
+            "inference_mode": "LOCAL",
+        },
+    )
+    client.post(
+        "/api/v1/speech/recorded",
+        content=b"test-wav-payload",
+        headers={"Content-Type": "audio/wav"},
+    )
+    voice = client.post(
+        "/api/v1/governance/voice",
+        json={
+            "scenario_id": scenario_id,
+            "transcription_id": "transcription-1",
+            "reviewed_transcript_text": "Move the blue component.",
+            "inference_mode": "LOCAL",
+        },
+    )
+
+    assert typed.status_code == 200
+    assert voice.status_code == 200
+    assert cloud.calls == []
+    assert len(local.calls) == 2
+    typed_context = local.calls[0][1]
+    voice_context = local.calls[1][1]
+    assert typed_context is not None
+    assert voice_context is not None
+    assert typed_context["domain_id"] == voice_context["domain_id"]
+    assert typed_context["scene"] == voice_context["scene"]
+    assert typed_context["requester"] == voice_context["requester"]
+    assert typed_context["requester"] == {
+        "requester_id": "synthetic_observer_ui",
+        "role": "observer",
+    }
 
 
 def test_speech_status_is_claim_bounded_before_and_after_real_worker_result():
@@ -600,6 +896,7 @@ def test_unavailable_transcript_cannot_be_submitted_to_planner():
     governance = client.post(
         "/api/v1/governance/voice",
         json={
+            "scenario_id": LIVE_SCENARIO,
             "transcription_id": "transcription-1",
             "reviewed_transcript_text": "Move the blue component.",
             "inference_mode": "LOCAL",
@@ -632,6 +929,7 @@ def test_expired_transcript_is_evicted_before_governance():
     response = client.post(
         "/api/v1/governance/voice",
         json={
+            "scenario_id": LIVE_SCENARIO,
             "transcription_id": "transcription-1",
             "reviewed_transcript_text": "Move the blue component.",
             "inference_mode": "LOCAL",
@@ -663,6 +961,7 @@ def test_registry_capacity_evicts_oldest_ready_transcript():
     evicted = client.post(
         "/api/v1/governance/voice",
         json={
+            "scenario_id": LIVE_SCENARIO,
             "transcription_id": "transcription-1",
             "reviewed_transcript_text": "Move the blue component.",
             "inference_mode": "LOCAL",
@@ -688,6 +987,7 @@ def test_concurrent_submission_can_claim_transcript_only_once():
     )
     service = client.app.state.demo_service
     request = VoiceCommandApiRequest(
+        scenario_id=LIVE_SCENARIO,
         transcription_id="transcription-1",
         reviewed_transcript_text=(
             "Move the blue component from input tray A to assembly fixture B."

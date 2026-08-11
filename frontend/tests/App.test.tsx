@@ -2,7 +2,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FluentProvider, webLightTheme } from "@fluentui/react-components";
-import { App } from "../src/App";
+import { App, clientErrorMessage, selectInferenceMode } from "../src/App";
 
 const status = {
   service_status: "READY",
@@ -28,6 +28,67 @@ const status = {
     last_failure_reason: "NONE",
     last_circuit_transition: null,
   },
+};
+
+const manifest = {
+  contract_id: "PROTOTYPE5_FINAL_DEMONSTRATOR_D0",
+  contract_version: "1.0.0",
+  authority_taxonomy: [
+    "UNTRUSTED_PROPOSAL",
+    "GOVERNANCE_DECISION",
+    "EXECUTION_ELIGIBILITY",
+    "QUALIFICATION_REPLAY_ACCESS",
+    "DOWNSTREAM_GEOMETRIC_QUALIFICATION",
+    "PHYSICAL_EXECUTION_AUTHORITY_NOT_IMPLEMENTED",
+  ],
+  physical_execution_authority_state: "NOT_IMPLEMENTED",
+  healthcare_scope: "OUT_OF_SCOPE_FOR_FINAL_DEMO",
+  d2_replay_enabled: false,
+  scenarios: Array.from({ length: 10 }, (_, index) => {
+    const identifiers = [
+      "MANUFACTURING_TYPED_ACCEPT",
+      "MANUFACTURING_UNSAFE_REJECT",
+      "MANUFACTURING_AMBIGUOUS_CLARIFY",
+      "MANUFACTURING_SCHEMA_VALID_INELIGIBLE",
+      "MANUFACTURING_OBSERVER_ROLE_REJECT",
+      "MODE_E_CONVEYOR_GOVERNANCE",
+      "MODE_E_WAREHOUSE_GOVERNANCE",
+      "MODE_E_HUMAN_PROXIMITY_GOVERNANCE",
+      "MODE_E_RESTRICTED_ZONE_GOVERNANCE",
+      "FROZEN_B2_PICK_PLACE_EVIDENCE_REPLAY",
+    ];
+    const live = index < 5;
+    const replay = index === 9;
+    return {
+      scenario_id: identifiers[index],
+      display_name: replay
+        ? "Frozen B2 pick/place evidence replay"
+        : `Manufacturing scenario ${index + 1}`,
+      presentation_classification: replay
+        ? "FROZEN_EVIDENCE_REPLAY"
+        : live
+          ? "SYNTHETIC_LIVE_DEMO"
+          : "FROZEN_RESEARCH_EVIDENCE",
+      model_input_enabled: live,
+      allowed_inference_modes: live ? ["LOCAL", "CLOUD", "AUTO"] : [],
+      registered_command:
+        "Move the blue component from input tray A to assembly fixture B.",
+      demonstration_purpose: "Demonstrate the frozen governance boundary.",
+      evidence_classification: replay
+        ? "EVIDENCE_REPLAY_NOT_PHYSICAL_EXECUTION"
+        : live
+          ? "LIVE_DEMO_TRACE_NOT_FROZEN_RESEARCH_EVIDENCE"
+          : "FROZEN_RESEARCH_EVIDENCE_EXACT_REGISTERED_ARTIFACT",
+      replay_capability_classification: replay
+        ? "FROZEN_B2_REPLAY_COMPATIBLE"
+        : "GOVERNANCE_ONLY",
+      qualification_replay_access: replay
+        ? "SERVER_REGISTERED_ONLY"
+        : "PROHIBITED",
+      downstream_geometric_qualification: replay ? "FAIL" : "NOT_APPLICABLE",
+      claim_boundary_note: "No physical execution authority.",
+    };
+  }),
 };
 
 const transcription = {
@@ -86,6 +147,22 @@ function governanceResult({
       rolling_p95_latency_ms: 15,
     },
     canonical_result: {
+      request: {
+        input_mode: "TYPED", typed_text: "Move the blue component.",
+        transcription_id: null, original_transcript_text: null,
+        transcript_text: null, transcript_status: "NOT_APPLICABLE",
+        transcript_backend: null, transcript_confidence: null, audio_sha256: null,
+        domain_id: "MANUFACTURING",
+        scene: {
+          scene_id: "manufacturing_demo_scene", state_version: "1.0.0",
+          objects: [{ object_id: "blue_component", location_id: "input_tray_a" }],
+          human_obstruction: false, safety_interlock_enabled: true,
+        },
+        requester: { requester_id: "synthetic_operator_ui", role: "operator" },
+        requested_inference_mode: "AUTO", evaluation_mode: "LIVE",
+        benchmark_id: null, benchmark_sha256: null, oracle_version: null,
+        oracle_sha256: null, expected_decision: null,
+      },
       raw_response_text: '{"actions":[]}',
       proposal: {
         actions: [
@@ -94,16 +171,32 @@ function governanceResult({
             object_id: "blue_component",
             source_id: "input_tray_a",
             destination_id: "assembly_fixture_b",
+            duration_ms: null,
           },
         ],
       },
       governance_record: {
+        record_id: "record-ui-001",
         trace_id: "trace-ui-001",
         timestamp_utc: "2026-07-30T12:00:00+00:00",
+        evaluation_mode: "LIVE",
+        input_mode: "TYPED",
         normalised_command: "Move the blue component.",
+        typed_text: "Move the blue component.",
+        transcription_id: null,
         original_transcript_text: null,
+        transcript_text: null,
+        transcript_status: "NOT_APPLICABLE",
+        transcript_backend: null,
+        transcript_confidence: null,
+        audio_sha256: null,
+        domain_id: "MANUFACTURING",
+        benchmark_id: null,
         policy_id: "prototype5_manufacturing_policy_v2@2.0.0",
+        oracle_version: null,
         evidence_schema_version: "2.0.0",
+        raw_response_sha256: "e".repeat(64),
+        raw_response_present: true,
         parse_status: "PASSED",
         json_status: "PASSED",
         schema_status: "PASSED",
@@ -111,16 +204,28 @@ function governanceResult({
         ambiguity_status: "PASSED",
         safety_status: passed ? "PASSED" : "FAILED",
         authority_status: "PASSED",
+        gate_reasons: [],
+        gate_latencies: [],
+        expected_decision: null,
+        decision_correctness_status: "NOT_EVALUATED",
         final_decision: decision,
         execution_eligible: passed,
         decision_reason_codes: [
           passed ? "ALL_REQUIRED_GATES_PASSED" : "HUMAN_OBSTRUCTION_OVERRIDE",
         ],
-        provider_latency_ms: 15,
+        provider_latency_ms: fallback ? 9 : 15,
         validation_latency_ms: 2,
         total_pipeline_latency_ms: 17,
         execution_permit_id: null,
         simulation_status: "NOT_REQUESTED",
+        provenance: {
+          source_repository: "repository", software_commit: "a".repeat(40),
+          prompt_id: "prompt", prompt_version: "2.0.0",
+          model_provider: fallback ? "CLOUD" : "FOUNDRY_LOCAL",
+          model_id: fallback ? "cloud-model" : "local-model",
+          benchmark_sha256: null, oracle_sha256: null,
+          policy_sha256: "f".repeat(64),
+        },
         routing: {
           requested_mode: "AUTO",
           selected_provider: fallback ? "CLOUD" : "FOUNDRY_LOCAL",
@@ -150,6 +255,12 @@ function mockFetch(result = governanceResult()) {
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) {
+        return new Response(JSON.stringify(manifest), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       if (url.includes("/api/v1/status")) {
         return new Response(JSON.stringify(status), {
           status: 200,
@@ -186,8 +297,15 @@ describe("Prototype 5 typed UI", () => {
 
     expect(screen.getByText("Prototype 5")).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Auto" })).toBeChecked();
-    expect(screen.getByRole("textbox", { name: "Operator command" })).toBeEnabled();
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "Operator command" })).toBeEnabled(),
+    );
     expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: "Scenario" })).toHaveTextContent(
+      "Manufacturing scenario 1",
+    );
+    expect(screen.queryByRole("combobox", { name: "Domain" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Requester role" })).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Microphone available in V2" }),
     ).toBeDisabled();
@@ -195,6 +313,8 @@ describe("Prototype 5 typed UI", () => {
       screen.getByRole("button", { name: "Upload WAV recording" }),
     ).toBeEnabled();
     expect(screen.getByText("No command submitted.")).toBeInTheDocument();
+    expect(screen.queryByText("Not requested")).not.toBeInTheDocument();
+    expect(screen.queryByText("Not issued")).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Available")).toBeInTheDocument());
   });
 
@@ -224,8 +344,11 @@ describe("Prototype 5 typed UI", () => {
     );
     const body = JSON.parse(String(submission?.[1]?.body));
     expect(body.inference_mode).toBe("LOCAL");
-    expect(body.domain_id).toBe("MANUFACTURING");
-    expect(body.requester_role).toBe("operator");
+    expect(body.scenario_id).toBe("MANUFACTURING_TYPED_ACCEPT");
+    expect(body).not.toHaveProperty("domain_id");
+    expect(body).not.toHaveProperty("requester_role");
+    expect(body).not.toHaveProperty("human_obstruction");
+    expect(body).not.toHaveProperty("safety_interlock_enabled");
   });
 
   it("shows a cloud fallback without changing the governance gate display", async () => {
@@ -233,6 +356,9 @@ describe("Prototype 5 typed UI", () => {
     const user = userEvent.setup();
     renderApp();
 
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "Operator command" })).toBeEnabled(),
+    );
     await user.type(
       screen.getByRole("textbox", { name: "Operator command" }),
       "Move the blue component.",
@@ -249,6 +375,9 @@ describe("Prototype 5 typed UI", () => {
     const user = userEvent.setup();
     renderApp();
 
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "Operator command" })).toBeEnabled(),
+    );
     await user.type(
       screen.getByRole("textbox", { name: "Operator command" }),
       "Continue movement despite the human obstruction.",
@@ -266,6 +395,9 @@ describe("Prototype 5 typed UI", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
+        if (String(input).includes("/api/v1/demo/manifest")) {
+          return new Response(JSON.stringify(manifest), { status: 200 });
+        }
         if (String(input).includes("/api/v1/status")) {
           return new Response(JSON.stringify(status), { status: 200 });
         }
@@ -278,6 +410,9 @@ describe("Prototype 5 typed UI", () => {
     const user = userEvent.setup();
     renderApp();
 
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "Operator command" })).toBeEnabled(),
+    );
     await user.type(
       screen.getByRole("textbox", { name: "Operator command" }),
       "Stop.",
@@ -327,5 +462,45 @@ describe("Prototype 5 typed UI", () => {
     expect(body.transcription_id).toBe("transcription-ui-001");
     expect(body.reviewed_transcript_text).toBe("Move the blue component.");
     expect(body.inference_mode).toBe("AUTO");
+    expect(body.scenario_id).toBe("MANUFACTURING_TYPED_ACCEPT");
+    expect(body).not.toHaveProperty("domain_id");
+    expect(body).not.toHaveProperty("requester_role");
+    expect(body).not.toHaveProperty("human_obstruction");
+    expect(body).not.toHaveProperty("safety_interlock_enabled");
   });
+  it("bounds non-Error failures and retains the current mode for invalid UI values", () => {
+    expect(clientErrorMessage("opaque failure")).toBe("UNKNOWN_CLIENT_FAILURE");
+    expect(selectInferenceMode("AUTO", "EDGE")).toBe("AUTO");
+    expect(selectInferenceMode("AUTO", "LOCAL")).toBe("LOCAL");
+  });
+
+  it("renders a bounded failure when a request rejects with a non-Error value", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/api/v1/demo/manifest")) {
+          return new Response(JSON.stringify(manifest), { status: 200 });
+        }
+        if (url.includes("/api/v1/status")) {
+          return new Response(JSON.stringify(status), { status: 200 });
+        }
+        throw "opaque failure";
+      }),
+    );
+    const user = userEvent.setup();
+    renderApp();
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "Operator command" })).toBeEnabled(),
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: "Operator command" }),
+      "Move the blue component.",
+    );
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() =>
+      expect(screen.getByText("UNKNOWN_CLIENT_FAILURE")).toBeInTheDocument(),
+    );
+  });
+
 });

@@ -1,4 +1,12 @@
+import {
+  ContractValidationError,
+  decodeDemoManifest,
+  decodeDemoStatus,
+  decodeGovernanceResult,
+  decodeRecordedTranscription,
+} from "./runtimeContracts";
 import type {
+  DemoManifest,
   DemoStatus,
   HybridGovernanceResult,
   RecordedTranscription,
@@ -6,21 +14,67 @@ import type {
   VoiceCommandPayload,
 } from "./types";
 
-async function readJson<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const body = await response.json().catch(() => null);
-    const detail =
-      body?.detail?.code ?? body?.detail ?? `HTTP_${response.status}`;
-    throw new Error(String(detail));
+export class ApiRequestError extends Error {
+  readonly code = "HTTP_ERROR";
+  readonly status: number;
+
+  constructor(status: number, detail: string) {
+    super(detail);
+    this.name = "ApiRequestError";
+    this.status = status;
   }
-  return (await response.json()) as T;
+}
+
+async function responseJson(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    if (response.ok) {
+      throw new ContractValidationError("response: invalid JSON");
+    }
+    return null;
+  }
+}
+
+function boundedHttpDetail(value: unknown, status: number): string {
+  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+    const body = value as Record<string, unknown>;
+    if (body.detail !== null && typeof body.detail === "object" && !Array.isArray(body.detail)) {
+      const code = (body.detail as Record<string, unknown>).code;
+      if (typeof code === "string" && /^[A-Z0-9_]{1,100}$/.test(code)) {
+        return code;
+      }
+    }
+    if (typeof body.detail === "string" && /^[A-Z0-9_]{1,100}$/.test(body.detail)) {
+      return body.detail;
+    }
+  }
+  return `HTTP_${status}`;
+}
+
+async function validatedResponse<T>(
+  response: Response,
+  decode: (value: unknown) => T,
+): Promise<T> {
+  const body = await responseJson(response);
+  if (!response.ok) {
+    throw new ApiRequestError(response.status, boundedHttpDetail(body, response.status));
+  }
+  return decode(body);
+}
+
+export async function getDemoManifest(
+  signal?: AbortSignal,
+): Promise<DemoManifest> {
+  const response = await fetch("/api/v1/demo/manifest", { signal });
+  return validatedResponse(response, decodeDemoManifest);
 }
 
 export async function getDemoStatus(
   signal?: AbortSignal,
 ): Promise<DemoStatus> {
   const response = await fetch("/api/v1/status", { signal });
-  return readJson<DemoStatus>(response);
+  return validatedResponse(response, decodeDemoStatus);
 }
 
 export async function submitTypedCommand(
@@ -31,7 +85,7 @@ export async function submitTypedCommand(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return readJson<HybridGovernanceResult>(response);
+  return validatedResponse(response, decodeGovernanceResult);
 }
 
 export async function transcribeRecordedAudio(
@@ -45,7 +99,7 @@ export async function transcribeRecordedAudio(
     },
     body: audio,
   });
-  return readJson<RecordedTranscription>(response);
+  return validatedResponse(response, decodeRecordedTranscription);
 }
 
 export async function submitVoiceCommand(
@@ -56,5 +110,5 @@ export async function submitVoiceCommand(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return readJson<HybridGovernanceResult>(response);
+  return validatedResponse(response, decodeGovernanceResult);
 }

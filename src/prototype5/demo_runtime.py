@@ -22,6 +22,8 @@ from .cloud_planner_backend import (
     CloudPlannerConfiguration,
 )
 from .demo_service import DemoApplicationService
+from .final_demo_contract import load_final_demo_contract
+from .final_demo_presentation import FinalDemoPresentationRegistry
 from .foundry_sdk_backend import FoundrySDKBackend
 from .foundry_sdk_client import FoundryLocalClient
 from .governance_contract_v2 import ProviderId
@@ -60,6 +62,11 @@ def build_demo_service(repo_root: Path | None = None) -> DemoApplicationService:
     )
     manufacturing_policy = load_manufacturing_policy(
         root / "configs" / "prototype5" / "manufacturing_policy_v2.json"
+    )
+    final_demo_presentation = FinalDemoPresentationRegistry.from_contract(
+        load_final_demo_contract(
+            root / "configs" / "prototype5" / "final_demo_scenarios_v1.json"
+        )
     )
     software_commit = _resolve_software_commit(root)
 
@@ -156,6 +163,7 @@ def build_demo_service(repo_root: Path | None = None) -> DemoApplicationService:
         software_commit=software_commit,
         cloud_configured=bool(cloud_api_key),
         speech_transcriber=speech_transcriber,
+        final_demo_presentation=final_demo_presentation,
     )
 
 

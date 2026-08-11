@@ -1,6 +1,6 @@
 export type AvailabilityStatus = "AVAILABLE" | "UNAVAILABLE" | "NOT_ASSESSED";
 export type InferenceMode = "LOCAL" | "CLOUD" | "AUTO";
-export type DomainId = "MANUFACTURING" | "HEALTHCARE_SYNTHETIC";
+export type DomainId = "MANUFACTURING";
 export type FinalDecision = "ACCEPT" | "REJECT" | "CLARIFY" | "ERROR";
 export type TranscriptStatus =
   | "READY"
@@ -17,7 +17,52 @@ export type GateDisplayStatus =
   | "ERROR"
   | "VALID"
   | "INVALID"
-  | string;
+  | "NOT_ASSESSABLE_NO_PROPOSAL"
+  | "NOT_ASSESSABLE_PARSE_FAILED"
+  | "NOT_ASSESSABLE_SCHEMA_INVALID"
+  | "NOT_ASSESSABLE_MISSING_ORACLE"
+  | "NOT_ASSESSABLE_MISSING_REQUIRED_CONTEXT";
+
+export type AuthorityState =
+  | "UNTRUSTED_PROPOSAL"
+  | "GOVERNANCE_DECISION"
+  | "EXECUTION_ELIGIBILITY"
+  | "QUALIFICATION_REPLAY_ACCESS"
+  | "DOWNSTREAM_GEOMETRIC_QUALIFICATION"
+  | "PHYSICAL_EXECUTION_AUTHORITY_NOT_IMPLEMENTED";
+
+export interface DemoScenario {
+  scenario_id: string;
+  display_name: string;
+  presentation_classification:
+    | "SYNTHETIC_LIVE_DEMO"
+    | "FROZEN_RESEARCH_EVIDENCE"
+    | "FROZEN_EVIDENCE_REPLAY";
+  model_input_enabled: boolean;
+  allowed_inference_modes: InferenceMode[];
+  registered_command: string;
+  demonstration_purpose: string;
+  evidence_classification:
+    | "LIVE_DEMO_TRACE_NOT_FROZEN_RESEARCH_EVIDENCE"
+    | "FROZEN_RESEARCH_EVIDENCE_EXACT_REGISTERED_ARTIFACT"
+    | "EVIDENCE_REPLAY_NOT_PHYSICAL_EXECUTION";
+  replay_capability_classification:
+    | "GOVERNANCE_ONLY"
+    | "FROZEN_B2_REPLAY_COMPATIBLE";
+  qualification_replay_access: "PROHIBITED" | "SERVER_REGISTERED_ONLY";
+  downstream_geometric_qualification: "FAIL" | "NOT_APPLICABLE";
+  claim_boundary_note: string;
+}
+
+export interface DemoManifest {
+  contract_id: "PROTOTYPE5_FINAL_DEMONSTRATOR_D0";
+  contract_version: "1.0.0";
+  authority_taxonomy: AuthorityState[];
+  physical_execution_authority_state: "NOT_IMPLEMENTED";
+  healthcare_scope: "OUT_OF_SCOPE_FOR_FINAL_DEMO";
+  d2_replay_enabled: false;
+  scenarios: DemoScenario[];
+}
 
 export interface LocalHealth {
   circuit_state: "CLOSED" | "OPEN" | "HALF_OPEN";
@@ -48,17 +93,17 @@ export interface DemoStatus {
 }
 
 export interface ActionStep {
-  action: string;
-  object_id?: string | null;
-  source_id?: string | null;
-  destination_id?: string | null;
-  duration_ms?: number | null;
+  action: "MOVE" | "PICK" | "PLACE" | "WAIT" | "STOP" | "INSPECT";
+  object_id: string | null;
+  source_id: string | null;
+  destination_id: string | null;
+  duration_ms: number | null;
 }
 
 export interface GovernanceRecord {
   trace_id: string;
   timestamp_utc: string;
-  normalised_command: string;
+  normalised_command: string | null;
   input_mode: "TYPED" | "VOICE";
   transcription_id: string | null;
   original_transcript_text: string | null;
@@ -68,7 +113,7 @@ export interface GovernanceRecord {
   transcript_confidence: number | null;
   audio_sha256: string | null;
   policy_id: string;
-  evidence_schema_version: string;
+  evidence_schema_version: "2.0.0";
   parse_status: GateDisplayStatus;
   json_status: GateDisplayStatus;
   schema_status: GateDisplayStatus;
@@ -83,7 +128,14 @@ export interface GovernanceRecord {
   validation_latency_ms: number;
   total_pipeline_latency_ms: number;
   execution_permit_id: string | null;
-  simulation_status: string;
+  simulation_status:
+    | "NOT_REQUESTED"
+    | "NOT_STARTED"
+    | "QUEUED"
+    | "RUNNING"
+    | "COMPLETED"
+    | "STOPPED_BY_OPERATOR"
+    | "FAILED";
   routing: {
     requested_mode: InferenceMode;
     selected_provider: "FOUNDRY_LOCAL" | "CLOUD" | "NONE";
@@ -110,18 +162,16 @@ export interface HybridGovernanceResult {
 }
 
 export interface TypedCommandPayload {
+  scenario_id: string;
   command: string;
   inference_mode: InferenceMode;
-  domain_id: DomainId;
-  requester_role: "operator" | "observer" | "supervisor";
 }
 
 export interface VoiceCommandPayload {
+  scenario_id: string;
   transcription_id: string;
   reviewed_transcript_text: string;
   inference_mode: InferenceMode;
-  domain_id: DomainId;
-  requester_role: "operator" | "observer" | "supervisor";
 }
 
 export interface RecordedAudioMetadata {
@@ -136,7 +186,7 @@ export interface RecordedAudioMetadata {
 }
 
 export interface RecordedTranscription {
-  result_schema_version: string;
+  result_schema_version: "1.0.0";
   transcription_id: string;
   timestamp_utc: string;
   transcript_status: TranscriptStatus;

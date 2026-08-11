@@ -5,11 +5,12 @@ from __future__ import annotations
 import threading
 from collections import OrderedDict
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from enum import StrEnum
-from typing import Protocol
+from typing import Annotated, Literal, Protocol
 
-from pydantic import Field, field_validator
+from pydantic import ConfigDict, StringConstraints, field_validator
 
 from .canonical_governance_runner import CanonicalGovernanceRequestV2
 from .execution_session import (
@@ -17,6 +18,12 @@ from .execution_session import (
     DEFAULT_SESSION_TTL_SECONDS,
     ExecutionSessionRegistry,
     ExecutionSessionStateV1,
+)
+from .final_demo_presentation import (
+    FinalDemoManifest,
+    FinalDemoPresentationRegistry,
+    ResolvedLiveScenario,
+    load_final_demo_presentation,
 )
 from .governance_contract_v2 import (
     ContractModel,
@@ -47,13 +54,34 @@ class AvailabilityStatus(StrEnum):
     NOT_ASSESSED = "NOT_ASSESSED"
 
 
+ScenarioId = Annotated[
+    str,
+    StringConstraints(
+        strict=True,
+        min_length=1,
+        max_length=128,
+        pattern=r"^[A-Z][A-Z0-9_]*$",
+    ),
+]
+CommandText = Annotated[
+    str,
+    StringConstraints(strict=True, min_length=1, max_length=1000),
+]
+TranscriptionId = Annotated[
+    str,
+    StringConstraints(strict=True, min_length=1, max_length=200),
+]
+InferenceModeValue = Literal["LOCAL", "CLOUD", "AUTO"]
+
+
 class TypedCommandApiRequest(ContractModel):
-    command: str = Field(min_length=1, max_length=1000)
-    inference_mode: InferenceMode
-    domain_id: DomainId = DomainId.MANUFACTURING
-    requester_role: str = "operator"
-    human_obstruction: bool = False
-    safety_interlock_enabled: bool = True
+    """Strict internal command object with explicit D0 scenario identity."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    scenario_id: ScenarioId
+    command: CommandText
+    inference_mode: InferenceModeValue
 
     @field_validator("command")
     @classmethod
@@ -63,22 +91,22 @@ class TypedCommandApiRequest(ContractModel):
             raise ValueError("command must not be blank")
         return stripped
 
-    @field_validator("requester_role")
-    @classmethod
-    def requester_role_is_supported(cls, value: str) -> str:
-        if value not in {"operator", "observer", "supervisor"}:
-            raise ValueError("unsupported requester role")
-        return value
+
+class TypedCommandHttpRequest(TypedCommandApiRequest):
+    """Strict browser boundary: scenario identity is mandatory."""
+
+    scenario_id: ScenarioId
 
 
 class VoiceCommandApiRequest(ContractModel):
-    transcription_id: str = Field(min_length=1, max_length=200)
-    reviewed_transcript_text: str = Field(min_length=1, max_length=1000)
-    inference_mode: InferenceMode
-    domain_id: DomainId = DomainId.MANUFACTURING
-    requester_role: str = "operator"
-    human_obstruction: bool = False
-    safety_interlock_enabled: bool = True
+    """Strict internal voice object with explicit D0 scenario identity."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    scenario_id: ScenarioId
+    transcription_id: TranscriptionId
+    reviewed_transcript_text: CommandText
+    inference_mode: InferenceModeValue
 
     @field_validator("reviewed_transcript_text")
     @classmethod
@@ -88,10 +116,11 @@ class VoiceCommandApiRequest(ContractModel):
             raise ValueError("reviewed transcript must not be blank")
         return stripped
 
-    @field_validator("requester_role")
-    @classmethod
-    def requester_role_is_supported(cls, value: str) -> str:
-        return TypedCommandApiRequest.requester_role_is_supported(value)
+
+class VoiceCommandHttpRequest(VoiceCommandApiRequest):
+    """Strict browser boundary: scenario identity is mandatory."""
+
+    scenario_id: ScenarioId
 
 
 class DemoStatusResponse(ContractModel):
@@ -107,10 +136,6 @@ class DemoStatusResponse(ContractModel):
     speech_status: AvailabilityStatus
     simulator_status: AvailabilityStatus
     local_health: LocalHealthSnapshotV1
-
-
-class DomainNotAvailableError(ValueError):
-    pass
 
 
 class SpeechBackendUnavailableError(RuntimeError):
@@ -137,6 +162,13 @@ class RecordedAudioTranscriber(Protocol):
     ) -> RecordedTranscriptionResultV1: ...
 
 
+@dataclass(frozen=True, slots=True)
+class _AuthoritativeGovernanceContext:
+    domain_id: DomainId
+    requester: RequesterContextV2
+    scene: ManufacturingSceneStateV2
+
+
 class DemoApplicationService:
     def __init__(
         self,
@@ -151,6 +183,7 @@ class DemoApplicationService:
         execution_registry: ExecutionSessionRegistry | None = None,
         execution_ttl_seconds: int = DEFAULT_SESSION_TTL_SECONDS,
         execution_registry_capacity: int = DEFAULT_SESSION_CAPACITY,
+        final_demo_presentation: FinalDemoPresentationRegistry | None = None,
     ) -> None:
         if not 1 <= transcript_ttl_seconds <= 3600:
             raise ValueError("transcript_ttl_seconds must be between 1 and 3600")
@@ -170,6 +203,9 @@ class DemoApplicationService:
             str, tuple[RecordedTranscriptionResultV1, datetime]
         ] = OrderedDict()
         self._last_speech_status = AvailabilityStatus.NOT_ASSESSED
+        self.final_demo_presentation = (
+            final_demo_presentation or load_final_demo_presentation()
+        )
         self.execution_registry = execution_registry or ExecutionSessionRegistry(
             ttl_seconds=execution_ttl_seconds,
             capacity=execution_registry_capacity,
@@ -208,23 +244,22 @@ class DemoApplicationService:
             local_health=health,
         )
 
+    def manifest(self) -> FinalDemoManifest:
+        """Return the immutable presentation-safe D0 projection."""
+
+        return self.final_demo_presentation.manifest
+
     def submit_typed(
         self, api_request: TypedCommandApiRequest
     ) -> HybridGovernanceResultV1:
-        if api_request.domain_id is not DomainId.MANUFACTURING:
-            raise DomainNotAvailableError(
-                "SYNTHETIC_HEALTHCARE_DOMAIN_NOT_IMPLEMENTED"
-            )
+        context = self._authoritative_context(api_request.scenario_id)
         canonical_request = CanonicalGovernanceRequestV2(
             input_mode="TYPED",
             typed_text=api_request.command,
-            domain_id=api_request.domain_id,
-            scene=self._scene(api_request),
-            requester=RequesterContextV2(
-                requester_id=f"synthetic_{api_request.requester_role}_ui",
-                role=api_request.requester_role,
-            ),
-            requested_inference_mode=api_request.inference_mode,
+            domain_id=context.domain_id,
+            scene=context.scene,
+            requester=context.requester,
+            requested_inference_mode=InferenceMode(api_request.inference_mode),
             evaluation_mode="LIVE",
         )
         return self._route_and_register(canonical_request)
@@ -267,10 +302,7 @@ class DemoApplicationService:
         self,
         api_request: VoiceCommandApiRequest,
     ) -> HybridGovernanceResultV1:
-        if api_request.domain_id is not DomainId.MANUFACTURING:
-            raise DomainNotAvailableError(
-                "SYNTHETIC_HEALTHCARE_DOMAIN_NOT_IMPLEMENTED"
-            )
+        context = self._authoritative_context(api_request.scenario_id)
         transcript = self._claim_transcript(api_request.transcription_id)
         canonical_request = CanonicalGovernanceRequestV2(
             input_mode="VOICE",
@@ -281,18 +313,10 @@ class DemoApplicationService:
             transcript_backend=transcript.transcript_backend,
             transcript_confidence=transcript.transcript_confidence,
             audio_sha256=transcript.audio.audio_sha256,
-            domain_id=api_request.domain_id,
-            scene=self._scene_values(
-                human_obstruction=api_request.human_obstruction,
-                safety_interlock_enabled=(
-                    api_request.safety_interlock_enabled
-                ),
-            ),
-            requester=RequesterContextV2(
-                requester_id=f"synthetic_{api_request.requester_role}_ui",
-                role=api_request.requester_role,
-            ),
-            requested_inference_mode=api_request.inference_mode,
+            domain_id=context.domain_id,
+            scene=context.scene,
+            requester=context.requester,
+            requested_inference_mode=InferenceMode(api_request.inference_mode),
             evaluation_mode="LIVE",
         )
         return self._route_and_register(canonical_request)
@@ -352,21 +376,10 @@ class DemoApplicationService:
             return self._last_speech_status
 
     @staticmethod
-    def _scene(api_request: TypedCommandApiRequest) -> ManufacturingSceneStateV2:
-        return DemoApplicationService._scene_values(
-            human_obstruction=api_request.human_obstruction,
-            safety_interlock_enabled=api_request.safety_interlock_enabled,
-        )
-
-    @staticmethod
-    def _scene_values(
-        *,
-        human_obstruction: bool,
-        safety_interlock_enabled: bool,
-    ) -> ManufacturingSceneStateV2:
+    def _scene(scenario: ResolvedLiveScenario) -> ManufacturingSceneStateV2:
         return ManufacturingSceneStateV2(
-            scene_id="manufacturing_demo_scene",
-            state_version="1.0.0",
+            scene_id=scenario.scene_id,
+            state_version=scenario.scene_state_version,
             objects=(
                 SceneObjectStateV2(
                     object_id="blue_component", location_id="input_tray_a"
@@ -382,6 +395,20 @@ class DemoApplicationService:
                     location_id="inspection_station",
                 ),
             ),
-            human_obstruction=human_obstruction,
-            safety_interlock_enabled=safety_interlock_enabled,
+            human_obstruction=scenario.human_obstruction,
+            safety_interlock_enabled=scenario.safety_interlock_enabled,
+        )
+
+    def _authoritative_context(
+        self,
+        scenario_id: str,
+    ) -> _AuthoritativeGovernanceContext:
+        scenario = self.final_demo_presentation.resolve_live_scenario(scenario_id)
+        return _AuthoritativeGovernanceContext(
+            domain_id=DomainId(scenario.domain_id),
+            requester=RequesterContextV2(
+                requester_id=f"synthetic_{scenario.requester_role}_ui",
+                role=scenario.requester_role,
+            ),
+            scene=self._scene(scenario),
         )
