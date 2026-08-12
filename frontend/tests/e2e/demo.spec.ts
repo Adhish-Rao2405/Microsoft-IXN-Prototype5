@@ -291,14 +291,40 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("typed command renders a complete governance trace", async ({ page }, testInfo) => {
+  const forbiddenCapabilityRequests: string[] = [];
+  page.on("request", (request) => {
+    if (/replay|simulation|pybullet/i.test(request.url())) {
+      forbiddenCapabilityRequests.push(request.url());
+    }
+  });
   const manifestResponsePromise = page.waitForResponse(
     (response) => response.url().includes("/api/v1/demo/manifest"),
   );
   await page.goto("/");
   const manifestResponse = await manifestResponsePromise;
   expect(manifestResponse.status()).toBe(200);
+  await expect(
+    page.getByRole("heading", { name: "Zero-Trust Governance Demonstrator" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("SYSTEM CAPABILITY / STATUS — NOT EXPERIMENTAL EVIDENCE"),
+  ).toBeVisible();
+  await expect(
+    page.getByText("LIVE DEMO TRACE — NOT FROZEN RESEARCH EVIDENCE"),
+  ).toHaveCount(2);
 
+  const authority = page.getByRole("list", {
+    name: "Six-layer authority progression",
+  });
+  await expect(authority.getByRole("listitem")).toHaveCount(6);
+
+  const scenarioSelector = page.getByRole("combobox", { name: "Scenario" });
   const command = page.getByRole("textbox", { name: "Operator command" });
+  await scenarioSelector.focus();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("radio", { name: "Auto" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(command).toBeFocused();
   await expect(command).toBeEnabled();
   await command.fill(
     "Move the blue component from input tray A to assembly fixture B.",
@@ -312,16 +338,61 @@ test("typed command renders a complete governance trace", async ({ page }, testI
   expect(typedBody).not.toHaveProperty("human_obstruction");
   expect(typedBody).not.toHaveProperty("safety_interlock_enabled");
 
-  await expect(page.getByText("Governance decision")).toBeVisible();
-  await expect(page.getByText("Structured proposal")).toBeVisible();
-  await expect(page.getByText("Execution eligibility")).toBeVisible();
+  await expect(page.getByText("Untrusted model proposal")).toBeVisible();
+  await expect(page.getByText("UNTRUSTED PROPOSAL — NO AUTHORITY")).toBeVisible();
+  await expect(page.getByText("Schema: PASSED")).toBeVisible();
+  await expect(
+    authority.locator('[data-authority-state="GOVERNANCE_DECISION"]'),
+  ).toContainText("ACCEPT");
+  await expect(
+    authority.locator('[data-authority-state="EXECUTION_ELIGIBILITY"]'),
+  ).toContainText("ELIGIBLE");
+  await expect(
+    authority.locator('[data-authority-state="QUALIFICATION_REPLAY_ACCESS"]'),
+  ).toContainText("NOT REQUESTED — NOT ENABLED IN D2");
+  await expect(
+    authority.locator(
+      '[data-authority-state="PHYSICAL_EXECUTION_AUTHORITY_NOT_IMPLEMENTED"]',
+    ),
+  ).toContainText("NOT_IMPLEMENTED");
   await expect(page.getByText("trace-e2e-001")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Stop simulation" })).toBeDisabled();
+  await expect(page.getByText("2026-07-30T12:00:00+00:00")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Download live demo trace" }),
+  ).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Stop simulation" })).toHaveCount(0);
 
   await page.screenshot({
     path: testInfo.outputPath("governance-trace.png"),
     fullPage: true,
   });
+
+  await scenarioSelector.click();
+  await page
+    .getByRole("option", { name: "Frozen B2 pick/place evidence replay" })
+    .click();
+  await expect(page.getByText("FROZEN EVIDENCE REPLAY")).toBeVisible();
+  await expect(
+    page.getByText("FROZEN RESEARCH EVIDENCE — EXACT REGISTERED ARTIFACT"),
+  ).toBeVisible();
+  await expect(
+    page.getByText("NOT APPLICABLE — FROZEN REGISTERED EVIDENCE"),
+  ).toBeVisible();
+  await expect(
+    authority.locator('[data-authority-state="QUALIFICATION_REPLAY_ACCESS"]'),
+  ).toContainText("Policy: SERVER_REGISTERED_ONLY");
+  await expect(
+    authority.locator('[data-authority-state="QUALIFICATION_REPLAY_ACCESS"]'),
+  ).not.toContainText("GRANTED");
+  await expect(
+    authority.locator('[data-authority-state="DOWNSTREAM_GEOMETRIC_QUALIFICATION"]'),
+  ).toContainText("FAIL");
+  await expect(
+    authority.locator('[data-authority-state="GOVERNANCE_DECISION"]'),
+  ).toContainText("NOT REQUESTED");
+  await expect(page.getByRole("radiogroup", { name: "Inference mode" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /replay/i })).toHaveCount(0);
+  expect(forbiddenCapabilityRequests).toEqual([]);
 });
 
 test("recorded transcript is reviewable before voice governance", async ({ page }, testInfo) => {
@@ -347,7 +418,11 @@ test("recorded transcript is reviewable before voice governance", async ({ page 
 
   await expect(page.getByText("Reviewed voice transcript")).toBeVisible();
   await expect(page.getByText("Submitted")).toBeVisible();
-  await expect(page.getByText("Governance decision")).toBeVisible();
+  await expect(
+    page
+      .getByRole("list", { name: "Six-layer authority progression" })
+      .locator('[data-authority-state="GOVERNANCE_DECISION"]'),
+  ).toContainText("ACCEPT");
   await page.screenshot({
     path: testInfo.outputPath("recorded-voice-governance.png"),
     fullPage: true,

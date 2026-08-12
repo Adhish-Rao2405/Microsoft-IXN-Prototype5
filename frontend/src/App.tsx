@@ -29,7 +29,6 @@ import {
   Mic24Regular,
   Send24Regular,
   ShieldCheckmark24Regular,
-  Stop24Regular,
 } from "@fluentui/react-icons";
 import {
   ApiRequestError,
@@ -47,6 +46,15 @@ import {
   type GovernanceContext,
 } from "./demoState";
 import { ContractValidationError } from "./runtimeContracts";
+import {
+  deriveAuthorityProgression,
+  evidenceClassificationLabel,
+  gateStatusLabel,
+  presentationClassificationLabel,
+  providerLabel,
+  secondaryEvidenceClassificationLabel,
+  SYSTEM_STATUS_EVIDENCE_LABEL,
+} from "./authorityPresentation";
 import type {
   AvailabilityStatus,
   InferenceMode,
@@ -69,10 +77,10 @@ function availabilityLabel(status: AvailabilityStatus | undefined): string {
 }
 
 function statusTone(status: string): "success" | "danger" | "warning" | "informative" | "subtle" {
-  if (status === "PASSED" || status === "VALID" || status === "ACCEPT" || status === "AVAILABLE") {
+  if (status === "PASSED" || status === "VALID" || status === "ACCEPT" || status === "AVAILABLE" || status === "ELIGIBLE") {
     return "success";
   }
-  if (status === "FAILED" || status === "INVALID" || status === "REJECT" || status === "ERROR" || status === "UNAVAILABLE") {
+  if (status === "FAILED" || status === "FAIL" || status === "INVALID" || status === "REJECT" || status === "ERROR" || status === "UNAVAILABLE") {
     return "danger";
   }
   if (status === "CLARIFY" || status === "HALF_OPEN") return "warning";
@@ -299,6 +307,21 @@ export function App() {
   const selectedScenario = manifest?.scenarios.find(
     (scenario) => scenario.scenario_id === scenarioId,
   ) ?? null;
+  const authorityRows = useMemo(
+    () =>
+      manifest && selectedScenario
+        ? deriveAuthorityProgression({
+            taxonomy: manifest.authority_taxonomy,
+            scenario: selectedScenario,
+            record,
+            proposalPresent: result?.canonical_result.proposal != null,
+            physicalExecutionAuthorityState:
+              manifest.physical_execution_authority_state,
+            d2ReplayEnabled: manifest.d2_replay_enabled,
+          })
+        : [],
+    [manifest, record, result, selectedScenario],
+  );
   const proposalText = useMemo(
     () =>
       result?.canonical_result.proposal
@@ -495,8 +518,8 @@ export function App() {
         <div className="brand-block">
           <ShieldCheckmark24Regular aria-hidden="true" />
           <div>
-            <div className="product-name">Prototype 5</div>
-            <div className="product-subtitle">Zero-Trust Robotics</div>
+            <h1 className="product-name">Zero-Trust Governance Demonstrator</h1>
+            <div className="product-subtitle">Prototype 5 · Zero-Trust Robotics</div>
           </div>
         </div>
         <div className="baseline">
@@ -517,6 +540,9 @@ export function App() {
       </header>
 
       <section className="status-strip" aria-label="Runtime status">
+        <strong className="status-classification">
+          {SYSTEM_STATUS_EVIDENCE_LABEL}
+        </strong>
         <RuntimeStatus
           icon={<Desktop24Regular aria-hidden="true" />}
           label="Local"
@@ -580,22 +606,57 @@ export function App() {
               </Dropdown>
             </Field>
             <Field label="Inference" size="small">
-              <RadioGroup
-                layout="horizontal"
-                value={mode}
-                onChange={(_, data) => {
-                  const nextMode = selectInferenceMode(mode, data.value);
-                  if (nextMode === mode) return;
-                  cancelOwner(governanceOwnerRef);
-                  dispatch({ type: "MODE_SELECTED", inferenceMode: nextMode });
-                }}
-                aria-label="Inference mode"
-              >
-                <Radio value="LOCAL" label="Local" />
-                <Radio value="CLOUD" label="Cloud" />
-                <Radio value="AUTO" label="Auto" />
-              </RadioGroup>
+              {!selectedScenario ? (
+                <div className="inference-not-applicable" role="status">
+                  NOT AVAILABLE — SCENARIO MANIFEST NOT LOADED
+                </div>
+              ) : selectedScenario.model_input_enabled ? (
+                <RadioGroup
+                  layout="horizontal"
+                  value={mode}
+                  onChange={(_, data) => {
+                    const nextMode = selectInferenceMode(mode, data.value);
+                    if (nextMode === mode) return;
+                    cancelOwner(governanceOwnerRef);
+                    dispatch({ type: "MODE_SELECTED", inferenceMode: nextMode });
+                  }}
+                  aria-label="Inference mode"
+                >
+                  <Radio value="LOCAL" label="Local" />
+                  <Radio value="CLOUD" label="Cloud" />
+                  <Radio value="AUTO" label="Auto" />
+                </RadioGroup>
+              ) : (
+                <div className="inference-not-applicable" role="status">
+                  NOT APPLICABLE — FROZEN REGISTERED EVIDENCE
+                </div>
+              )}
             </Field>
+            {selectedScenario && (
+              <section
+                className="scenario-context"
+                aria-labelledby="scenario-context-heading"
+              >
+                <div className="scenario-context-heading-row">
+                  <h2 id="scenario-context-heading">Scenario context</h2>
+                  <Badge appearance="outline">
+                    {presentationClassificationLabel(selectedScenario)}
+                  </Badge>
+                </div>
+                <strong className="evidence-classification">
+                  {evidenceClassificationLabel(selectedScenario)}
+                </strong>
+                {secondaryEvidenceClassificationLabel(selectedScenario) && (
+                  <span className="secondary-classification">
+                    {secondaryEvidenceClassificationLabel(selectedScenario)}
+                  </span>
+                )}
+                <p>{selectedScenario.demonstration_purpose}</p>
+                <p className="claim-boundary-note">
+                  {selectedScenario.claim_boundary_note}
+                </p>
+              </section>
+            )}
           </div>
 
           <div className="conversation" aria-live="polite">
@@ -649,11 +710,20 @@ export function App() {
             {result && (
               <section className="proposal-output" aria-labelledby="proposal-heading">
                 <div className="section-heading-row">
-                  <h2 id="proposal-heading">Structured proposal</h2>
-                  <Badge appearance="outline">
-                    {record?.schema_status === "PASSED"
-                      ? "Schema valid"
-                      : "Unavailable"}
+                  <div>
+                    <h2 id="proposal-heading">Untrusted model proposal</h2>
+                    <strong className="proposal-authority-classification">
+                      UNTRUSTED PROPOSAL — NO AUTHORITY
+                    </strong>
+                  </div>
+                  <Badge
+                    appearance="outline"
+                    color={statusTone(record?.schema_status ?? "NOT_EVALUATED")}
+                  >
+                    Schema:{" "}
+                    {record
+                      ? gateStatusLabel(record.schema_status)
+                      : "NOT EVALUATED"}
                   </Badge>
                 </div>
                 <pre>{proposalText}</pre>
@@ -761,7 +831,38 @@ export function App() {
         </section>
 
         <aside className="inspector" aria-label="Governance inspector">
-          <InspectorSection title="Governance gates">
+          <InspectorSection title="Authority progression" dominant>
+            <ol
+              className="authority-progression"
+              aria-label="Six-layer authority progression"
+            >
+              {authorityRows.map((row, index) => (
+                <li
+                  className="authority-row"
+                  data-authority-state={row.taxonomyState}
+                  key={row.taxonomyState}
+                >
+                  <span className="authority-index">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <div className="authority-content">
+                    <span className="authority-label">{row.label}</span>
+                    <strong className="authority-state">{row.state}</strong>
+                    {row.detail.map((detail) => (
+                      <span className="authority-detail" key={detail}>
+                        {detail}
+                      </span>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <p className="authority-boundary-statement">
+              Passing layer N does not establish layer N+1.
+            </p>
+          </InspectorSection>
+
+          <InspectorSection title="Governance gate diagnostics">
             <div className="gate-list">
               {gateDefinitions.map(([label, field]) => {
                 const gateStatus = record?.[field] ?? "NOT_EVALUATED";
@@ -769,32 +870,20 @@ export function App() {
                   <div className="gate-row" key={field}>
                     <span>{label}</span>
                     <Badge appearance="tint" color={statusTone(gateStatus)}>
-                      {formatStatus(gateStatus)}
+                      {record ? gateStatusLabel(record[field]) : "NOT EVALUATED"}
                     </Badge>
                   </div>
                 );
               })}
-              <div className="gate-row execution-row">
-                <span>Execution eligibility</span>
-                <Badge
-                  appearance="filled"
-                  color={record?.execution_eligible ? "success" : "subtle"}
-                >
-                  {record
-                    ? record.execution_eligible
-                      ? "Eligible"
-                      : "Not eligible"
-                    : "Not evaluated"}
-                </Badge>
-              </div>
             </div>
           </InspectorSection>
 
+          {selectedScenario?.model_input_enabled && (
           <InspectorSection title="Routing">
             <DefinitionRow label="Requested" value={record?.routing.requested_mode ?? "NOT_EVALUATED"} />
             <DefinitionRow
               label="Selected"
-              value={record ? record.routing.selected_provider : "Not evaluated"}
+              value={record ? providerLabel(record.routing.selected_provider) : "Not evaluated"}
             />
             <DefinitionRow
               label="Model"
@@ -823,28 +912,32 @@ export function App() {
               value={result?.local_health.circuit_state ?? "NOT_AVAILABLE"}
             />
           </InspectorSection>
+          )}
 
-          <InspectorSection title="Simulation">
-            <DefinitionRow
-              label="State"
-              value={record ? formatStatus(record.simulation_status) : "Not evaluated"}
-            />
-            <DefinitionRow
-              label="Permit"
-              value={record ? record.execution_permit_id ?? "Not issued" : "Not evaluated"}
-            />
-            <Button
-              appearance="secondary"
-              icon={<Stop24Regular />}
-              disabled
-              className="stop-button"
-            >
-              Stop simulation
-            </Button>
-          </InspectorSection>
-
-          <InspectorSection title="Audit">
+          {selectedScenario?.model_input_enabled && (
+          <InspectorSection title="Live trace provenance">
+            <strong className="trace-classification">
+              LIVE DEMO TRACE — NOT FROZEN RESEARCH EVIDENCE
+            </strong>
             <DefinitionRow label="Trace ID" value={record?.trace_id ?? "Not evaluated"} mono />
+            <DefinitionRow label="Timestamp UTC" value={record?.timestamp_utc ?? "Not evaluated"} mono />
+            <DefinitionRow
+              label="Requested routing mode"
+              value={record?.routing.requested_mode ?? "Not evaluated"}
+            />
+            <DefinitionRow
+              label="Selected provider"
+              value={record ? providerLabel(record.routing.selected_provider) : "Not evaluated"}
+            />
+            <DefinitionRow
+              label="Resolved model"
+              value={record?.routing.selected_model ?? "Not evaluated"}
+            />
+            <DefinitionRow
+              label="Software commit"
+              value={status?.software_commit ?? "Not available"}
+              mono
+            />
             <DefinitionRow
               label="Policy"
               value={record?.policy_id ?? "NOT_EVALUATED"}
@@ -854,7 +947,7 @@ export function App() {
               value={record?.evidence_schema_version ?? "NOT_EVALUATED"}
             />
             <DefinitionRow
-              label="Provider"
+              label="Provider latency"
               value={record ? formatLatency(record.provider_latency_ms) : "Not evaluated"}
             />
             <DefinitionRow
@@ -871,9 +964,10 @@ export function App() {
               onClick={downloadTrace}
               disabled={!result}
             >
-              Download trace
+              Download live demo trace
             </Button>
           </InspectorSection>
+          )}
         </aside>
       </main>
     </div>
@@ -903,12 +997,16 @@ function RuntimeStatus({
 function InspectorSection({
   title,
   children,
+  dominant = false,
 }: {
   title: string;
   children: ReactNode;
+  dominant?: boolean;
 }) {
   return (
-    <section className="inspector-section">
+    <section
+      className={dominant ? "inspector-section authority-section" : "inspector-section"}
+    >
       <h2>{title}</h2>
       {children}
     </section>

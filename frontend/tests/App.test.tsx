@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import {
   act,
   cleanup,
@@ -5,6 +7,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -164,6 +167,14 @@ const transcription = {
   error_detail: null,
 };
 
+const RAW_MOVE_RESPONSE =
+  '{"actions":[{"action":"MOVE","object_id":"blue_component",' +
+  '"source_id":"input_tray_a","destination_id":"assembly_fixture_b",' +
+  '"duration_ms":null}]}';
+
+const RAW_MOVE_RESPONSE_SHA256 =
+  "7cfabaee94153f7cbc5176cc888666da70968290fe7f240cc5ff5b1597df501a";
+
 function governanceResult({
   decision = "ACCEPT",
   fallback = false,
@@ -200,7 +211,7 @@ function governanceResult({
         benchmark_id: null, benchmark_sha256: null, oracle_version: null,
         oracle_sha256: null, expected_decision: null,
       },
-      raw_response_text: '{"actions":[]}',
+      raw_response_text: RAW_MOVE_RESPONSE,
       proposal: {
         actions: [
           {
@@ -232,7 +243,7 @@ function governanceResult({
         policy_id: "prototype5_manufacturing_policy_v2@2.0.0",
         oracle_version: null,
         evidence_schema_version: "2.0.0",
-        raw_response_sha256: "e".repeat(64),
+        raw_response_sha256: RAW_MOVE_RESPONSE_SHA256,
         raw_response_present: true,
         parse_status: "PASSED",
         json_status: "PASSED",
@@ -356,6 +367,12 @@ function renderApp() {
   );
 }
 
+function authorityListItems(): HTMLElement[] {
+  return within(
+    screen.getByRole("list", { name: "Six-layer authority progression" }),
+  ).getAllByRole("listitem");
+}
+
 function mockFetch(result = governanceResult()) {
   vi.stubGlobal(
     "fetch",
@@ -399,14 +416,29 @@ describe("Prototype 5 typed UI", () => {
     vi.restoreAllMocks();
   });
 
+  it("keeps raw provider evidence, parsed proposal, and digest coherent", () => {
+    const value = governanceResult();
+
+    expect(value.canonical_result.raw_response_text).toBe(RAW_MOVE_RESPONSE);
+    expect(JSON.parse(RAW_MOVE_RESPONSE)).toEqual(
+      value.canonical_result.proposal,
+    );
+    expect(createHash("sha256").update(RAW_MOVE_RESPONSE).digest("hex")).toBe(
+      RAW_MOVE_RESPONSE_SHA256,
+    );
+    expect(
+      value.canonical_result.governance_record.raw_response_sha256,
+    ).toBe(RAW_MOVE_RESPONSE_SHA256);
+  });
+
   it("renders the operational controls and bounded initial states", async () => {
     renderApp();
 
-    expect(screen.getByText("Prototype 5")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Zero-Trust Governance Demonstrator" }),
+    ).toBeInTheDocument();
+    await waitUntilReady();
     expect(screen.getByRole("radio", { name: "Auto" })).toBeChecked();
-    await waitFor(() =>
-      expect(screen.getByRole("textbox", { name: "Operator command" })).toBeEnabled(),
-    );
     expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
     expect(screen.getByRole("combobox", { name: "Scenario" })).toHaveTextContent(
       "Manufacturing scenario 1",
@@ -420,8 +452,35 @@ describe("Prototype 5 typed UI", () => {
       screen.getByRole("button", { name: "Upload WAV recording" }),
     ).toBeEnabled();
     expect(screen.getByText("No command submitted.")).toBeInTheDocument();
-    expect(screen.queryByText("Not requested")).not.toBeInTheDocument();
     expect(screen.queryByText("Not issued")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "SYSTEM CAPABILITY / STATUS — NOT EXPERIMENTAL EVIDENCE",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText("LIVE DEMO TRACE — NOT FROZEN RESEARCH EVIDENCE"),
+    ).toHaveLength(2);
+
+    const rows = authorityListItems();
+    expect(rows).toHaveLength(6);
+    expect(rows.map((row) => row.querySelector(".authority-label")?.textContent)).toEqual([
+      "Untrusted proposal",
+      "Governance decision",
+      "Execution eligibility",
+      "Qualification replay access",
+      "Downstream geometric qualification",
+      "Physical execution authority",
+    ]);
+    expect(rows[0]).toHaveTextContent("NOT REQUESTED");
+    expect(rows[1]).toHaveTextContent("NOT REQUESTED");
+    expect(rows[2]).toHaveTextContent("NOT REQUESTED");
+    expect(rows[3]).toHaveTextContent("NOT REQUESTED — NOT ENABLED IN D2");
+    expect(rows[3]).toHaveTextContent("Policy: PROHIBITED");
+    expect(rows[5]).toHaveTextContent("NOT_IMPLEMENTED");
+    expect(
+      screen.getByText("Passing layer N does not establish layer N+1."),
+    ).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Available")).toBeInTheDocument());
   });
 
@@ -482,21 +541,36 @@ describe("Prototype 5 typed UI", () => {
     const user = userEvent.setup();
     renderApp();
 
+    await waitUntilReady();
     await user.click(screen.getByRole("radio", { name: "Local" }));
-    await user.type(
-      screen.getByRole("textbox", { name: "Operator command" }),
-      "Move the blue component from input tray A to assembly fixture B.",
-    );
+    fireEvent.change(screen.getByRole("textbox", { name: "Operator command" }), {
+      target: {
+        value:
+          "Move the blue component from input tray A to assembly fixture B.",
+      },
+    });
     await user.click(screen.getByRole("button", { name: "Submit" }));
 
-    await waitFor(() =>
-      expect(screen.getByText("Governance decision")).toBeInTheDocument(),
-    );
-    expect(screen.getByText("Structured proposal")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("trace-ui-001")).toBeInTheDocument());
+    expect(screen.getByText("Untrusted model proposal")).toBeInTheDocument();
+    expect(screen.getByText("UNTRUSTED PROPOSAL — NO AUTHORITY")).toBeInTheDocument();
+    expect(screen.getByText("Schema: PASSED")).toBeInTheDocument();
     expect(screen.getByText("Plan semantics")).toBeInTheDocument();
-    expect(screen.getByText("Execution eligibility")).toBeInTheDocument();
-    expect(screen.getByText("trace-ui-001")).toBeInTheDocument();
     expect(screen.getByText(/blue_component/)).toBeInTheDocument();
+
+    const rows = authorityListItems();
+    expect(rows[0]).toHaveTextContent("PRESENT — NO AUTHORITY");
+    expect(rows[1]).toHaveTextContent("ACCEPT");
+    expect(rows[2]).toHaveTextContent("ELIGIBLE");
+    expect(rows[3]).toHaveTextContent("NOT REQUESTED — NOT ENABLED IN D2");
+    expect(rows[3]).not.toHaveTextContent("GRANTED");
+    expect(rows[5]).toHaveTextContent("NOT_IMPLEMENTED");
+    expect(screen.getByText("2026-07-30T12:00:00+00:00")).toBeInTheDocument();
+    expect(screen.getAllByText("Foundry Local")).toHaveLength(2);
+    expect(screen.getAllByText("local-model")).toHaveLength(2);
+    expect(
+      screen.getByRole("button", { name: "Download live demo trace" }),
+    ).toBeEnabled();
 
     const calls = vi.mocked(fetch).mock.calls;
     const submission = calls.find(([url]) =>
@@ -525,12 +599,13 @@ describe("Prototype 5 typed UI", () => {
     );
     await user.click(screen.getByRole("button", { name: "Submit" }));
 
-    await waitFor(() => expect(screen.getByText("CLOUD")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("trace-ui-001")).toBeInTheDocument());
+    expect(screen.getAllByText("Cloud").length).toBeGreaterThan(0);
     expect(screen.getByText("Local schema failure")).toBeInTheDocument();
-    expect(screen.getByText("Execution eligibility")).toBeInTheDocument();
+    expect(authorityListItems()[2]).toHaveTextContent("ELIGIBLE");
   });
 
-  it("shows rejected governance and no simulation permit", async () => {
+  it("shows rejected governance without implying replay or physical authority", async () => {
     mockFetch(governanceResult({ decision: "REJECT" }));
     const user = userEvent.setup();
     renderApp();
@@ -546,9 +621,66 @@ describe("Prototype 5 typed UI", () => {
 
     await waitFor(() => expect(screen.getByText("Reject")).toBeInTheDocument());
     expect(screen.getByText("Human obstruction override")).toBeInTheDocument();
-    expect(screen.getByText("Not eligible")).toBeInTheDocument();
-    expect(screen.getByText("Not issued")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Stop simulation" })).toBeDisabled();
+    const rows = authorityListItems();
+    expect(rows[1]).toHaveTextContent("REJECT");
+    expect(rows[2]).toHaveTextContent("NOT ELIGIBLE");
+    expect(rows[3]).not.toHaveTextContent("GRANTED");
+    expect(rows[5]).toHaveTextContent("NOT_IMPLEMENTED");
+    expect(screen.queryByText("Not issued")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Stop simulation" })).not.toBeInTheDocument();
+  });
+
+  it("keeps schema validity separate from execution eligibility", async () => {
+    mockFetch(governanceResult({ decision: "REJECT" }));
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await user.type(
+      screen.getByRole("textbox", { name: "Operator command" }),
+      "Move the blue component.",
+    );
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+
+    await waitFor(() => expect(screen.getByText("Schema: PASSED")).toBeInTheDocument());
+    expect(authorityListItems()[2]).toHaveTextContent("NOT ELIGIBLE");
+  });
+
+  it("shows frozen research evidence without active inference semantics", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await chooseScenario(user, "Manufacturing scenario 6");
+
+    expect(
+      screen.getByText("FROZEN RESEARCH EVIDENCE — EXACT REGISTERED ARTIFACT"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("NOT APPLICABLE — FROZEN REGISTERED EVIDENCE"),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("radiogroup", { name: "Inference mode" })).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Operator command" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+  });
+
+  it("presents registered frozen replay policy without granting replay", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
+
+    expect(screen.getByText("FROZEN EVIDENCE REPLAY")).toBeInTheDocument();
+    expect(screen.getByText("EVIDENCE REPLAY — NOT PHYSICAL EXECUTION")).toBeInTheDocument();
+    const rows = authorityListItems();
+    expect(rows[1]).toHaveTextContent("NOT REQUESTED");
+    expect(rows[3]).toHaveTextContent("NOT REQUESTED — NOT ENABLED IN D2");
+    expect(rows[3]).toHaveTextContent("Policy: SERVER_REGISTERED_ONLY");
+    expect(rows[3]).toHaveTextContent("Capability class: FROZEN_B2_REPLAY_COMPATIBLE");
+    expect(rows[3]).not.toHaveTextContent("GRANTED");
+    expect(rows[4]).toHaveTextContent("FAIL");
+    expect(rows[4]).toHaveTextContent("Independent of the governance decision");
+    expect(rows[5]).toHaveTextContent("NOT_IMPLEMENTED");
+    expect(screen.queryByRole("button", { name: /replay/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /simulation/i })).not.toBeInTheDocument();
   });
 
   it("reports API failures without fabricating a proposal", async () => {
@@ -582,7 +714,7 @@ describe("Prototype 5 typed UI", () => {
 
     await waitFor(() => expect(screen.getByText("Request failed")).toBeInTheDocument());
     expect(screen.getByText("LOCAL_BACKEND_UNAVAILABLE")).toBeInTheDocument();
-    expect(screen.queryByText("Structured proposal")).not.toBeInTheDocument();
+    expect(screen.queryByText("Untrusted model proposal")).not.toBeInTheDocument();
     expect(clearTimeoutSpy).toHaveBeenCalled();
   });
 
