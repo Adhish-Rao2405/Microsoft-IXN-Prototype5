@@ -484,6 +484,34 @@ describe("Prototype 5 typed UI", () => {
     await waitFor(() => expect(screen.getByText("Available")).toBeInTheDocument());
   });
 
+  it("announces bounded runtime status updates without focusing the hidden file input", async () => {
+    renderApp();
+
+    const statusUpdate = screen.getByRole("status", {
+      name: "Runtime status update",
+    });
+    expect(statusUpdate).toHaveAttribute("aria-live", "polite");
+    expect(statusUpdate).toHaveAttribute("aria-atomic", "true");
+
+    await waitUntilReady();
+    expect(statusUpdate).toHaveTextContent("Local Not assessed");
+    expect(statusUpdate).toHaveTextContent("Cloud Available");
+    const runtimeStatusRegion = screen.getByRole("region", {
+      name: "Runtime status",
+    });
+    expect(
+      runtimeStatusRegion.querySelectorAll('[role="status"]'),
+    ).toHaveLength(1);
+
+    expect(screen.getByLabelText("Recorded WAV file")).toHaveAttribute(
+      "tabindex",
+      "-1",
+    );
+    expect(
+      screen.getByRole("button", { name: "Upload WAV recording" }),
+    ).toBeEnabled();
+  });
+
   it("disables and rejects recorded speech before bootstrap completes", async () => {
     const manifestRequest = deferred<Response>();
     const statusRequest = deferred<Response>();
@@ -1086,9 +1114,22 @@ describe("Prototype 5 typed UI", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(BOOTSTRAP_CLIENT_DEADLINE_MS);
     });
+    const runtimeStatusRegion = screen.getByRole("region", {
+      name: "Runtime status",
+    });
+    const statusUpdate = screen.getByRole("status", {
+      name: "Runtime status update",
+    });
+    expect(statusUpdate).toHaveTextContent("Runtime status unavailable:");
+    const visibleStatusError = screen.getByText(
+      "Status unavailable: CLIENT_TIMEOUT",
+    );
+    expect(visibleStatusError).toBeInTheDocument();
+    expect(visibleStatusError).toHaveClass("status-error");
+    expect(visibleStatusError).not.toHaveAttribute("role", "status");
     expect(
-      screen.getByText("Status unavailable: CLIENT_TIMEOUT"),
-    ).toBeInTheDocument();
+      runtimeStatusRegion.querySelectorAll('[role="status"]'),
+    ).toHaveLength(1);
     expect(fetchMock.mock.calls).toHaveLength(2);
     expect(
       fetchMock.mock.calls.every((call) => call[1]?.signal?.aborted),

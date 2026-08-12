@@ -540,6 +540,24 @@ export function App() {
       </header>
 
       <section className="status-strip" aria-label="Runtime status">
+        <div
+          className="visually-hidden"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          aria-label="Runtime status update"
+        >
+          {statusError ? (
+            `Runtime status unavailable: ${statusError}`
+          ) : (
+            <>
+              Runtime status: Local {availabilityLabel(status?.local_status)}; Cloud{" "}
+              {availabilityLabel(status?.cloud_status)}; Speech{" "}
+              {availabilityLabel(status?.speech_status)}; Simulator{" "}
+              {availabilityLabel(status?.simulator_status)}.
+            </>
+          )}
+        </div>
         <strong className="status-classification">
           {SYSTEM_STATUS_EVIDENCE_LABEL}
         </strong>
@@ -564,7 +582,7 @@ export function App() {
           status={status?.simulator_status}
         />
         {statusError && (
-          <div className="status-error" role="status">
+          <div className="status-error">
             Status unavailable: {statusError}
           </div>
         )}
@@ -786,6 +804,7 @@ export function App() {
                 className="visually-hidden"
                 type="file"
                 accept=".wav,audio/wav,audio/x-wav"
+                tabIndex={-1}
                 onChange={(event) => void handleAudioSelection(event)}
                 aria-label="Recorded WAV file"
               />

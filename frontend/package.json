@@ -13,7 +13,8 @@
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "pwsh -NoProfile -File ./tests/run-playwright.ps1 -Suite Mocked",
+    "test:e2e:real": "pwsh -NoProfile -File ./tests/run-playwright.ps1 -Suite Real"
   },
   "dependencies": {
     "@fluentui/react-components": "9.74.4",
@@ -22,6 +23,7 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@playwright/test": "1.62.1",
     "@testing-library/jest-dom": "7.0.0",
     "@testing-library/react": "16.3.2",

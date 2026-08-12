@@ -169,6 +169,7 @@ jobs:
           npm test
           npm run build
           npm run test:e2e
+          npm run test:e2e:real
 
       - name: Run Prototype 5 tests
         run: python -m pytest tests/prototype5 -q
