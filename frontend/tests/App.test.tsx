@@ -1,8 +1,45 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FluentProvider, webLightTheme } from "@fluentui/react-components";
-import { App, clientErrorMessage, selectInferenceMode } from "../src/App";
+import {
+  App,
+  BOOTSTRAP_CLIENT_DEADLINE_MS,
+  GOVERNANCE_CLIENT_DEADLINE_MS,
+  SPEECH_CLIENT_DEADLINE_MS,
+  clientErrorMessage,
+  selectInferenceMode,
+} from "../src/App";
+
+interface Deferred<T> {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (reason?: unknown) => void;
+}
+
+function deferred<T>(): Deferred<T> {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((nextResolve, nextReject) => {
+    resolve = nextResolve;
+    reject = nextReject;
+  });
+  return { promise, resolve, reject };
+}
+
+function jsonResponse(value: unknown, statusCode = 200): Response {
+  return new Response(JSON.stringify(value), {
+    status: statusCode,
+    headers: { "Content-Type": "application/json" },
+  });
+}
 
 const status = {
   service_status: "READY",
@@ -242,6 +279,75 @@ function governanceResult({
   };
 }
 
+function governanceWithTrace(traceId: string) {
+  const value = governanceResult();
+  value.canonical_result.governance_record.trace_id = traceId;
+  value.canonical_result.governance_record.record_id = `record-${traceId}`;
+  return value;
+}
+
+function transcriptionWith(
+  transcriptionId: string,
+  transcriptText: string,
+  filename: string,
+) {
+  return {
+    ...transcription,
+    transcription_id: transcriptionId,
+    transcript_text: transcriptText,
+    audio: {
+      ...transcription.audio,
+      original_filename: filename,
+    },
+  };
+}
+
+function deferredFetch({
+  governance = [],
+  speech = [],
+}: {
+  governance?: Deferred<Response>[];
+  speech?: Deferred<Response>[];
+}) {
+  const fetchMock = vi.fn(
+    (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) {
+        return Promise.resolve(jsonResponse(manifest));
+      }
+      if (url.includes("/api/v1/status")) {
+        return Promise.resolve(jsonResponse(status));
+      }
+      if (url.includes("/api/v1/speech/recorded")) {
+        const request = speech.shift();
+        if (!request) throw new Error("UNEXPECTED_SPEECH_REQUEST");
+        expect(init?.signal).toBeInstanceOf(AbortSignal);
+        return request.promise;
+      }
+      const request = governance.shift();
+      if (!request) throw new Error("UNEXPECTED_GOVERNANCE_REQUEST");
+      expect(init?.signal).toBeInstanceOf(AbortSignal);
+      return request.promise;
+    },
+  );
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+async function waitUntilReady(): Promise<void> {
+  await waitFor(() =>
+    expect(screen.getByRole("textbox", { name: "Operator command" })).toBeEnabled(),
+  );
+}
+
+async function chooseScenario(
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+): Promise<void> {
+  await user.click(screen.getByRole("combobox", { name: "Scenario" }));
+  await user.click(await screen.findByRole("option", { name }));
+}
+
 function renderApp() {
   return render(
     <FluentProvider theme={webLightTheme}>
@@ -288,6 +394,7 @@ describe("Prototype 5 typed UI", () => {
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -316,6 +423,59 @@ describe("Prototype 5 typed UI", () => {
     expect(screen.queryByText("Not requested")).not.toBeInTheDocument();
     expect(screen.queryByText("Not issued")).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Available")).toBeInTheDocument());
+  });
+
+  it("disables and rejects recorded speech before bootstrap completes", async () => {
+    const manifestRequest = deferred<Response>();
+    const statusRequest = deferred<Response>();
+    const fetchMock = vi.fn((input: RequestInfo | URL) =>
+      String(input).includes("/api/v1/demo/manifest")
+        ? manifestRequest.promise
+        : statusRequest.promise,
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    renderApp();
+
+    expect(
+      screen.getByRole("button", { name: "Upload WAV recording" }),
+    ).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Recorded WAV file"), {
+      target: {
+        files: [
+          new File([new Uint8Array([1])], "pre-bootstrap.wav", {
+            type: "audio/wav",
+          }),
+        ],
+      },
+    });
+    expect(
+      fetchMock.mock.calls.filter(([url]) =>
+        String(url).includes("/api/v1/speech/recorded"),
+      ),
+    ).toHaveLength(0);
+  });
+
+  it("disables and rejects recorded speech for a non-model-input scenario", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await chooseScenario(user, "Manufacturing scenario 6");
+
+    expect(
+      screen.getByRole("button", { name: "Upload WAV recording" }),
+    ).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Recorded WAV file"), {
+      target: {
+        files: [
+          new File([new Uint8Array([1])], "frozen.wav", { type: "audio/wav" }),
+        ],
+      },
+    });
+    expect(
+      vi.mocked(fetch).mock.calls.filter(([url]) =>
+        String(url).includes("/api/v1/speech/recorded"),
+      ),
+    ).toHaveLength(0);
   });
 
   it("submits the selected mode and displays proposal plus every gate", async () => {
@@ -413,6 +573,7 @@ describe("Prototype 5 typed UI", () => {
     await waitFor(() =>
       expect(screen.getByRole("textbox", { name: "Operator command" })).toBeEnabled(),
     );
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
     await user.type(
       screen.getByRole("textbox", { name: "Operator command" }),
       "Stop.",
@@ -422,6 +583,7 @@ describe("Prototype 5 typed UI", () => {
     await waitFor(() => expect(screen.getByText("Request failed")).toBeInTheDocument());
     expect(screen.getByText("LOCAL_BACKEND_UNAVAILABLE")).toBeInTheDocument();
     expect(screen.queryByText("Structured proposal")).not.toBeInTheDocument();
+    expect(clearTimeoutSpy).toHaveBeenCalled();
   });
 
   it("reviews a real recorded transcript before using the voice endpoint", async () => {
@@ -450,6 +612,7 @@ describe("Prototype 5 typed UI", () => {
       expect(screen.getByText("Reviewed voice transcript")).toBeInTheDocument(),
     );
     expect(screen.getByText("Submitted")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
     const calls = vi.mocked(fetch).mock.calls;
     const transcriptionCall = calls.find(([url]) =>
       String(url).includes("/api/v1/speech/recorded"),
@@ -474,7 +637,7 @@ describe("Prototype 5 typed UI", () => {
     expect(selectInferenceMode("AUTO", "LOCAL")).toBe("LOCAL");
   });
 
-  it("renders a bounded failure when a request rejects with a non-Error value", async () => {
+  it("classifies a fetch rejection as NETWORK_FAILURE", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
@@ -499,7 +662,563 @@ describe("Prototype 5 typed UI", () => {
     );
     await user.click(screen.getByRole("button", { name: "Submit" }));
     await waitFor(() =>
-      expect(screen.getByText("UNKNOWN_CLIENT_FAILURE")).toBeInTheDocument(),
+      expect(screen.getByText("NETWORK_FAILURE")).toBeInTheDocument(),
+    );
+  });
+
+  it("uses validated server transcription failure codes without exposing detail", async () => {
+    const serverFailure = {
+      ...transcription,
+      transcript_status: "FAILED",
+      transcript_text: null,
+      resolved_model_id: null,
+      model_loaded_before: null,
+      model_loaded_for_request: false,
+      segment_count: 0,
+      transcription_latency_ms: null,
+      error_code: "TRANSCRIPTION_FAILED",
+      error_detail: "sensitive server diagnostic",
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/api/v1/demo/manifest")) return jsonResponse(manifest);
+        if (url.includes("/api/v1/status")) return jsonResponse(status);
+        if (url.includes("/api/v1/speech/recorded")) {
+          return jsonResponse(serverFailure);
+        }
+        throw new Error("UNEXPECTED_REQUEST");
+      }),
+    );
+    renderApp();
+    await waitUntilReady();
+    await userEvent.upload(
+      screen.getByLabelText("Recorded WAV file"),
+      new File([new Uint8Array([1])], "failed.wav", { type: "audio/wav" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("TRANSCRIPTION_FAILED")).toBeInTheDocument(),
+    );
+    expect(screen.queryByText("sensitive server diagnostic")).not.toBeInTheDocument();
+  });
+
+  it("keeps the newer governance owner when requests settle out of order", async () => {
+    const requestA = deferred<Response>();
+    const requestB = deferred<Response>();
+    deferredFetch({ governance: [requestA, requestB] });
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+
+    await user.type(
+      screen.getByRole("textbox", { name: "Operator command" }),
+      "Move the blue component.",
+    );
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    await user.click(screen.getByRole("radio", { name: "Local" }));
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+
+    await act(async () => {
+      requestA.resolve(jsonResponse(governanceWithTrace("trace-a")));
+      await requestA.promise;
+    });
+    expect(screen.getByText("Evaluating proposal")).toBeInTheDocument();
+    expect(screen.queryByText("trace-a")).not.toBeInTheDocument();
+
+    await act(async () => {
+      requestB.resolve(jsonResponse(governanceWithTrace("trace-b")));
+      await requestB.promise;
+    });
+    await waitFor(() => expect(screen.getByText("trace-b")).toBeInTheDocument());
+    expect(screen.queryByText("trace-a")).not.toBeInTheDocument();
+  });
+
+  it("silently invalidates governance when its scenario changes", async () => {
+    const request = deferred<Response>();
+    const fetchMock = deferredFetch({ governance: [request] });
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+
+    await user.type(
+      screen.getByRole("textbox", { name: "Operator command" }),
+      "Move the blue component.",
+    );
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    const governanceCall = fetchMock.mock.calls.find(([url]) =>
+      String(url).includes("/api/v1/governance/typed"),
+    );
+    await chooseScenario(user, "Manufacturing scenario 2");
+
+    expect(governanceCall?.[1]?.signal?.aborted).toBe(true);
+    expect(screen.queryByText("Evaluating proposal")).not.toBeInTheDocument();
+    expect(screen.queryByText("Request failed")).not.toBeInTheDocument();
+    await act(async () => {
+      request.resolve(jsonResponse(governanceWithTrace("stale-scenario-trace")));
+      await request.promise;
+    });
+    expect(screen.queryByText("stale-scenario-trace")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "Scenario" }),
+    ).toHaveTextContent("Manufacturing scenario 2");
+  });
+
+  it("keeps AbortError silent when governance is intentionally superseded", async () => {
+    const fetchMock = vi.fn(
+      (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+        const url = String(input);
+        if (url.includes("/api/v1/demo/manifest")) {
+          return Promise.resolve(jsonResponse(manifest));
+        }
+        if (url.includes("/api/v1/status")) {
+          return Promise.resolve(jsonResponse(status));
+        }
+        return new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          );
+        });
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await user.type(
+      screen.getByRole("textbox", { name: "Operator command" }),
+      "Move.",
+    );
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    const call = fetchMock.mock.calls.find(([url]) =>
+      String(url).includes("/api/v1/governance/typed"),
+    );
+
+    await user.click(screen.getByRole("radio", { name: "Local" }));
+    expect(call?.[1]?.signal?.aborted).toBe(true);
+    await waitFor(() =>
+      expect(screen.queryByText("Evaluating proposal")).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByText("Request failed")).not.toBeInTheDocument();
+    expect(screen.queryByText("NETWORK_FAILURE")).not.toBeInTheDocument();
+  });
+
+  it("clears and aborts bootstrap ownership on unmount", async () => {
+    const manifestRequest = deferred<Response>();
+    const statusRequest = deferred<Response>();
+    const bootstrapFetch = vi.fn((input: RequestInfo | URL, _init?: RequestInit) =>
+      String(input).includes("/api/v1/demo/manifest")
+        ? manifestRequest.promise
+        : statusRequest.promise,
+    );
+    vi.stubGlobal("fetch", bootstrapFetch);
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+    const view = renderApp();
+    await waitFor(() => expect(bootstrapFetch).toHaveBeenCalledTimes(2));
+    const signals = bootstrapFetch.mock.calls.map((call) => call[1]?.signal);
+    const clearsBeforeUnmount = clearTimeoutSpy.mock.calls.length;
+
+    view.unmount();
+    expect(clearTimeoutSpy.mock.calls.length).toBeGreaterThan(clearsBeforeUnmount);
+    expect(signals).toHaveLength(2);
+    expect(signals.every((signal) => signal?.aborted)).toBe(true);
+    await act(async () => {
+      manifestRequest.resolve(jsonResponse(manifest));
+      statusRequest.resolve(jsonResponse(status));
+      await Promise.all([manifestRequest.promise, statusRequest.promise]);
+      await Promise.resolve();
+    });
+    expect(view.container).toBeEmptyDOMElement();
+  });
+
+  it("clears and aborts governance ownership on unmount", async () => {
+    const request = deferred<Response>();
+    const fetchMock = deferredFetch({ governance: [request] });
+    const user = userEvent.setup();
+    const view = renderApp();
+    await waitUntilReady();
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+    await user.type(
+      screen.getByRole("textbox", { name: "Operator command" }),
+      "Move.",
+    );
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    const call = fetchMock.mock.calls.find(([url]) =>
+      String(url).includes("/api/v1/governance/typed"),
+    );
+    const clearsBeforeUnmount = clearTimeoutSpy.mock.calls.length;
+
+    view.unmount();
+    expect(clearTimeoutSpy.mock.calls.length).toBeGreaterThan(clearsBeforeUnmount);
+    expect(call?.[1]?.signal?.aborted).toBe(true);
+    await act(async () => {
+      request.resolve(jsonResponse(governanceWithTrace("late-unmounted-trace")));
+      await request.promise;
+      await Promise.resolve();
+    });
+    expect(view.container).toBeEmptyDOMElement();
+  });
+
+  it("clears and aborts transcription ownership on unmount", async () => {
+    const request = deferred<Response>();
+    const fetchMock = deferredFetch({ speech: [request] });
+    const view = renderApp();
+    await waitUntilReady();
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+    await userEvent.upload(
+      screen.getByLabelText("Recorded WAV file"),
+      new File([new Uint8Array([1])], "owned.wav", { type: "audio/wav" }),
+    );
+    const call = fetchMock.mock.calls.find(([url]) =>
+      String(url).includes("/api/v1/speech/recorded"),
+    );
+    const clearsBeforeUnmount = clearTimeoutSpy.mock.calls.length;
+
+    view.unmount();
+    expect(clearTimeoutSpy.mock.calls.length).toBeGreaterThan(clearsBeforeUnmount);
+    expect(call?.[1]?.signal?.aborted).toBe(true);
+    await act(async () => {
+      request.resolve(
+        jsonResponse(transcriptionWith("late-unmounted", "Late text", "owned.wav")),
+      );
+      await request.promise;
+      await Promise.resolve();
+    });
+    expect(view.container).toBeEmptyDOMElement();
+  });
+
+  it("classifies governance client timeout without accepting late completion", async () => {
+    renderApp();
+    await waitUntilReady();
+    const request = deferred<Response>();
+    const fetchMock = deferredFetch({ governance: [request] });
+    vi.useFakeTimers();
+    fireEvent.change(screen.getByRole("textbox", { name: "Operator command" }), {
+      target: { value: "Move." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+    const call = fetchMock.mock.calls.find(([url]) =>
+      String(url).includes("/api/v1/governance/typed"),
+    );
+    const signal = call?.[1]?.signal;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(GOVERNANCE_CLIENT_DEADLINE_MS);
+    });
+    expect(screen.getByText("CLIENT_TIMEOUT")).toBeInTheDocument();
+    expect(signal?.aborted).toBe(true);
+
+    await act(async () => {
+      request.resolve(jsonResponse(governanceWithTrace("late-timeout-trace")));
+      await request.promise;
+    });
+    expect(screen.queryByText("late-timeout-trace")).not.toBeInTheDocument();
+  });
+
+  it("classifies speech client timeout without implying server cancellation", async () => {
+    renderApp();
+    await waitUntilReady();
+    const request = deferred<Response>();
+    const fetchMock = deferredFetch({ speech: [request] });
+    vi.useFakeTimers();
+    fireEvent.change(screen.getByLabelText("Recorded WAV file"), {
+      target: {
+        files: [
+          new File([new Uint8Array([1])], "timeout.wav", { type: "audio/wav" }),
+        ],
+      },
+    });
+    const call = fetchMock.mock.calls.find(([url]) =>
+      String(url).includes("/api/v1/speech/recorded"),
+    );
+    const signal = call?.[1]?.signal;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SPEECH_CLIENT_DEADLINE_MS);
+    });
+    expect(screen.getByText("CLIENT_TIMEOUT")).toBeInTheDocument();
+    expect(signal?.aborted).toBe(true);
+    expect(screen.queryByText("PROVIDER_TIMEOUT")).not.toBeInTheDocument();
+  });
+
+  it("bounds bootstrap wait time and aborts both bootstrap fetches", async () => {
+    vi.useFakeTimers();
+    const request = deferred<Response>();
+    const fetchMock = vi.fn(
+      (_input: RequestInfo | URL, _init?: RequestInit) => request.promise,
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    renderApp();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(BOOTSTRAP_CLIENT_DEADLINE_MS);
+    });
+    expect(
+      screen.getByText("Status unavailable: CLIENT_TIMEOUT"),
+    ).toBeInTheDocument();
+    expect(fetchMock.mock.calls).toHaveLength(2);
+    expect(
+      fetchMock.mock.calls.every((call) => call[1]?.signal?.aborted),
+    ).toBe(true);
+  });
+
+  it("prevents a late transcription from overwriting a newer operator edit", async () => {
+    const request = deferred<Response>();
+    const fetchMock = deferredFetch({ speech: [request] });
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await user.upload(
+      screen.getByLabelText("Recorded WAV file"),
+      new File([new Uint8Array([1])], "late.wav", { type: "audio/wav" }),
+    );
+    const speechCall = fetchMock.mock.calls.find(([url]) =>
+      String(url).includes("/api/v1/speech/recorded"),
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: "Operator command" }),
+      "New operator text",
+    );
+    expect(speechCall?.[1]?.signal?.aborted).toBe(true);
+
+    await act(async () => {
+      request.resolve(
+        jsonResponse(transcriptionWith("late-transcript", "Stale text", "late.wav")),
+      );
+      await request.promise;
+    });
+    expect(
+      screen.getByRole("textbox", { name: "Operator command" }),
+    ).toHaveValue("New operator text");
+    expect(screen.queryByText("Nemotron transcript")).not.toBeInTheDocument();
+    expect(screen.queryByText("Transcription failed")).not.toBeInTheDocument();
+  });
+
+  it("keeps transcription B when A settles late with an error", async () => {
+    const requestA = deferred<Response>();
+    const requestB = deferred<Response>();
+    const fetchMock = deferredFetch({ speech: [requestA, requestB] });
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    const input = screen.getByLabelText("Recorded WAV file");
+    await user.upload(
+      input,
+      new File([new Uint8Array([1])], "a.wav", { type: "audio/wav" }),
+    );
+    await user.upload(
+      input,
+      new File([new Uint8Array([2])], "b.wav", { type: "audio/wav" }),
+    );
+    const speechCalls = fetchMock.mock.calls.filter(([url]) =>
+      String(url).includes("/api/v1/speech/recorded"),
+    );
+    expect(speechCalls[0]?.[1]?.signal?.aborted).toBe(true);
+    expect(speechCalls[1]?.[1]?.signal?.aborted).toBe(false);
+
+    await act(async () => {
+      requestB.resolve(
+        jsonResponse(transcriptionWith("transcript-b", "Transcript B", "b.wav")),
+      );
+      await requestB.promise;
+    });
+    await waitFor(() => expect(screen.getByText("b.wav · 860.0 ms")).toBeInTheDocument());
+    await act(async () => {
+      requestA.reject(new TypeError("stale network failure"));
+      try {
+        await requestA.promise;
+      } catch {
+        // The stale rejection is expected and must not own UI state.
+      }
+    });
+    expect(
+      screen.getByRole("textbox", { name: "Operator command" }),
+    ).toHaveValue("Transcript B");
+    expect(screen.queryByText("Transcription failed")).not.toBeInTheDocument();
+  });
+
+  it("clears a READY transcript when the scenario changes", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await user.upload(
+      screen.getByLabelText("Recorded WAV file"),
+      new File([new Uint8Array([1])], "scenario.wav", { type: "audio/wav" }),
+    );
+    await screen.findByText("Nemotron transcript");
+    await chooseScenario(user, "Manufacturing scenario 2");
+
+    expect(screen.queryByText("Nemotron transcript")).not.toBeInTheDocument();
+    expect(screen.getByText("No command submitted.")).toBeInTheDocument();
+  });
+
+  it("discarding a submitted voice identity suppresses its late result", async () => {
+    const speechRequest = deferred<Response>();
+    const governanceRequest = deferred<Response>();
+    const fetchMock = deferredFetch({
+      speech: [speechRequest],
+      governance: [governanceRequest],
+    });
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await user.upload(
+      screen.getByLabelText("Recorded WAV file"),
+      new File([new Uint8Array([1])], "voice.wav", { type: "audio/wav" }),
+    );
+    await act(async () => {
+      speechRequest.resolve(jsonResponse(transcription));
+      await speechRequest.promise;
+    });
+    await screen.findByText("Nemotron transcript");
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    expect(screen.getByText("Submitted")).toBeInTheDocument();
+    const voiceCall = fetchMock.mock.calls.find(([url]) =>
+      String(url).includes("/api/v1/governance/voice"),
+    );
+    await user.click(screen.getByRole("button", { name: "Discard transcript" }));
+    expect(voiceCall?.[1]?.signal?.aborted).toBe(true);
+
+    await act(async () => {
+      governanceRequest.resolve(
+        jsonResponse(governanceWithTrace("discarded-voice-trace")),
+      );
+      await governanceRequest.promise;
+    });
+    expect(screen.queryByText("discarded-voice-trace")).not.toBeInTheDocument();
+    expect(screen.queryByText("Request failed")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+  });
+
+  it("prevents older typed and voice operations from cross-committing", async () => {
+    const typedRequest = deferred<Response>();
+    const speechRequest = deferred<Response>();
+    const voiceRequest = deferred<Response>();
+    deferredFetch({
+      governance: [typedRequest, voiceRequest],
+      speech: [speechRequest],
+    });
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await user.type(
+      screen.getByRole("textbox", { name: "Operator command" }),
+      "Typed request",
+    );
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    await user.click(screen.getByRole("radio", { name: "Local" }));
+    await user.upload(
+      screen.getByLabelText("Recorded WAV file"),
+      new File([new Uint8Array([1])], "newer.wav", { type: "audio/wav" }),
+    );
+    await act(async () => {
+      speechRequest.resolve(
+        jsonResponse(transcriptionWith("newer-voice", "Newer voice", "newer.wav")),
+      );
+      await speechRequest.promise;
+    });
+    await screen.findByText("Nemotron transcript");
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+
+    await act(async () => {
+      voiceRequest.resolve(jsonResponse(governanceWithTrace("voice-wins")));
+      await voiceRequest.promise;
+      typedRequest.resolve(jsonResponse(governanceWithTrace("typed-stale")));
+      await typedRequest.promise;
+    });
+    await waitFor(() => expect(screen.getByText("voice-wins")).toBeInTheDocument());
+    expect(screen.queryByText("typed-stale")).not.toBeInTheDocument();
+    expect(screen.getByText("Reviewed voice transcript")).toBeInTheDocument();
+  });
+
+  it("prevents an older voice operation from replacing a newer typed result", async () => {
+    const speechRequest = deferred<Response>();
+    const voiceRequest = deferred<Response>();
+    const typedRequest = deferred<Response>();
+    deferredFetch({
+      governance: [voiceRequest, typedRequest],
+      speech: [speechRequest],
+    });
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await user.upload(
+      screen.getByLabelText("Recorded WAV file"),
+      new File([new Uint8Array([1])], "older.wav", { type: "audio/wav" }),
+    );
+    await act(async () => {
+      speechRequest.resolve(
+        jsonResponse(transcriptionWith("older-voice", "Older voice", "older.wav")),
+      );
+      await speechRequest.promise;
+    });
+    await screen.findByText("Nemotron transcript");
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    await user.click(screen.getByRole("button", { name: "Discard transcript" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Operator command" }),
+      "New typed request",
+    );
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+
+    await act(async () => {
+      typedRequest.resolve(jsonResponse(governanceWithTrace("typed-wins")));
+      await typedRequest.promise;
+      voiceRequest.resolve(jsonResponse(governanceWithTrace("voice-stale")));
+      await voiceRequest.promise;
+    });
+    await waitFor(() => expect(screen.getByText("typed-wins")).toBeInTheDocument());
+    expect(screen.queryByText("voice-stale")).not.toBeInTheDocument();
+    expect(screen.getByText("Operator")).toBeInTheDocument();
+  });
+
+  it("clears owned deadlines on success, failure, and supersession", async () => {
+    const requestA = deferred<Response>();
+    const requestB = deferred<Response>();
+    const fetchMock = deferredFetch({ governance: [requestA, requestB] });
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+    await user.type(
+      screen.getByRole("textbox", { name: "Operator command" }),
+      "Move.",
+    );
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    const firstCall = fetchMock.mock.calls.find(([url]) =>
+      String(url).includes("/api/v1/governance/typed"),
+    );
+    await user.click(screen.getByRole("radio", { name: "Local" }));
+    expect(firstCall?.[1]?.signal?.aborted).toBe(true);
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    await act(async () => {
+      requestB.resolve(jsonResponse(governanceWithTrace("timer-cleared")));
+      await requestB.promise;
+    });
+    await waitFor(() => expect(screen.getByText("timer-cleared")).toBeInTheDocument());
+    const callsAfterSuccess = clearTimeoutSpy.mock.calls.length;
+    expect(callsAfterSuccess).toBeGreaterThan(1);
+
+    await act(async () => {
+      requestA.reject(new TypeError("stale"));
+      try {
+        await requestA.promise;
+      } catch {
+        // The superseded request cannot finalise the current state.
+      }
+    });
+    expect(clearTimeoutSpy.mock.calls.length).toBe(callsAfterSuccess);
+  });
+
+  it("never exposes arbitrary native Error messages", () => {
+    expect(clientErrorMessage(new Error("sensitive browser detail"))).toBe(
+      "UNKNOWN_CLIENT_FAILURE",
+    );
+    expect(clientErrorMessage(new TypeError("not necessarily transport"))).toBe(
+      "UNKNOWN_CLIENT_FAILURE",
     );
   });
 

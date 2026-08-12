@@ -25,6 +25,27 @@ export class ApiRequestError extends Error {
   }
 }
 
+export class ApiTransportError extends Error {
+  readonly code = "NETWORK_FAILURE";
+
+  constructor() {
+    super("NETWORK_FAILURE");
+    this.name = "ApiTransportError";
+  }
+}
+
+async function request(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === "AbortError") throw error;
+    throw new ApiTransportError();
+  }
+}
+
 async function responseJson(response: Response): Promise<unknown> {
   try {
     return await response.json();
@@ -66,49 +87,55 @@ async function validatedResponse<T>(
 export async function getDemoManifest(
   signal?: AbortSignal,
 ): Promise<DemoManifest> {
-  const response = await fetch("/api/v1/demo/manifest", { signal });
+  const response = await request("/api/v1/demo/manifest", { signal });
   return validatedResponse(response, decodeDemoManifest);
 }
 
 export async function getDemoStatus(
   signal?: AbortSignal,
 ): Promise<DemoStatus> {
-  const response = await fetch("/api/v1/status", { signal });
+  const response = await request("/api/v1/status", { signal });
   return validatedResponse(response, decodeDemoStatus);
 }
 
 export async function submitTypedCommand(
   payload: TypedCommandPayload,
+  signal?: AbortSignal,
 ): Promise<HybridGovernanceResult> {
-  const response = await fetch("/api/v1/governance/typed", {
+  const response = await request("/api/v1/governance/typed", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+    signal,
   });
   return validatedResponse(response, decodeGovernanceResult);
 }
 
 export async function transcribeRecordedAudio(
   audio: File,
+  signal?: AbortSignal,
 ): Promise<RecordedTranscription> {
-  const response = await fetch("/api/v1/speech/recorded", {
+  const response = await request("/api/v1/speech/recorded", {
     method: "POST",
     headers: {
       "Content-Type": audio.type || "application/octet-stream",
       "X-Audio-Filename": audio.name,
     },
     body: audio,
+    signal,
   });
   return validatedResponse(response, decodeRecordedTranscription);
 }
 
 export async function submitVoiceCommand(
   payload: VoiceCommandPayload,
+  signal?: AbortSignal,
 ): Promise<HybridGovernanceResult> {
-  const response = await fetch("/api/v1/governance/voice", {
+  const response = await request("/api/v1/governance/voice", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+    signal,
   });
   return validatedResponse(response, decodeGovernanceResult);
 }

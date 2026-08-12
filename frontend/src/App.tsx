@@ -1,9 +1,10 @@
 import {
   useEffect,
   useMemo,
+  useReducer,
   useRef,
-  useState,
   type ChangeEvent,
+  type MutableRefObject,
   type ReactNode,
 } from "react";
 import {
@@ -31,19 +32,24 @@ import {
   Stop24Regular,
 } from "@fluentui/react-icons";
 import {
+  ApiRequestError,
+  ApiTransportError,
   getDemoManifest,
   getDemoStatus,
   submitTypedCommand,
   submitVoiceCommand,
   transcribeRecordedAudio,
 } from "./api";
+import {
+  demoReducer,
+  initialDemoState,
+  type ClientFailure,
+  type GovernanceContext,
+} from "./demoState";
+import { ContractValidationError } from "./runtimeContracts";
 import type {
   AvailabilityStatus,
-  DemoManifest,
-  DemoStatus,
-  HybridGovernanceResult,
   InferenceMode,
-  RecordedTranscription,
 } from "./types";
 
 const gateDefinitions = [
@@ -84,11 +90,92 @@ function formatLatency(value: number | null | undefined): string {
   return value == null ? "Not recorded" : `${value.toFixed(1)} ms`;
 }
 
-export function clientErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message) {
-    return error.message.slice(0, 200);
+export const BOOTSTRAP_CLIENT_DEADLINE_MS = 30_000;
+export const GOVERNANCE_CLIENT_DEADLINE_MS = 60_000;
+export const SPEECH_CLIENT_DEADLINE_MS = 130_000;
+
+interface OperationOwner {
+  readonly operationId: number;
+  readonly controller: AbortController;
+  deadlineHandle: ReturnType<typeof setTimeout> | null;
+}
+
+type OperationOwnerRef = MutableRefObject<OperationOwner | null>;
+
+function failureMessage(failure: ClientFailure): string {
+  return failure.detail ?? failure.code;
+}
+
+function classifyClientFailure(error: unknown): ClientFailure {
+  if (error instanceof ApiRequestError) {
+    return { code: "HTTP_ERROR", detail: error.message };
   }
-  return "UNKNOWN_CLIENT_FAILURE";
+  if (error instanceof ContractValidationError) {
+    return { code: "CONTRACT_FAILURE", detail: null };
+  }
+  if (error instanceof ApiTransportError) {
+    return { code: "NETWORK_FAILURE", detail: null };
+  }
+  return { code: "UNKNOWN_CLIENT_FAILURE", detail: null };
+}
+
+export function clientErrorMessage(error: unknown): string {
+  return failureMessage(classifyClientFailure(error));
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
+}
+
+function nextOperationId(counter: MutableRefObject<number>): number {
+  const next = counter.current + 1;
+  if (!Number.isSafeInteger(next)) {
+    throw new Error("CLIENT_OPERATION_ID_EXHAUSTED");
+  }
+  counter.current = next;
+  return next;
+}
+
+function cancelOwner(ownerRef: OperationOwnerRef): void {
+  const owner = ownerRef.current;
+  if (owner === null) return;
+  ownerRef.current = null;
+  if (owner.deadlineHandle !== null) clearTimeout(owner.deadlineHandle);
+  owner.controller.abort();
+}
+
+function releaseOwner(
+  ownerRef: OperationOwnerRef,
+  operationId: number,
+): boolean {
+  const owner = ownerRef.current;
+  if (owner?.operationId !== operationId) return false;
+  ownerRef.current = null;
+  if (owner.deadlineHandle !== null) clearTimeout(owner.deadlineHandle);
+  return true;
+}
+
+function startOwner(
+  ownerRef: OperationOwnerRef,
+  operationId: number,
+  clientDeadlineMs: number,
+  onTimeout: () => void,
+): OperationOwner {
+  cancelOwner(ownerRef);
+  const owner: OperationOwner = {
+    operationId,
+    controller: new AbortController(),
+    deadlineHandle: null,
+  };
+  ownerRef.current = owner;
+  owner.deadlineHandle = setTimeout(() => {
+    if (ownerRef.current !== owner) return;
+    ownerRef.current = null;
+    if (owner.deadlineHandle !== null) clearTimeout(owner.deadlineHandle);
+    owner.controller.abort();
+    onTimeout();
+  }, clientDeadlineMs);
+  return owner;
 }
 
 export function isInferenceMode(value: unknown): value is InferenceMode {
@@ -103,51 +190,111 @@ export function selectInferenceMode(
 }
 
 export function App() {
-  const [status, setStatus] = useState<DemoStatus | null>(null);
-  const [manifest, setManifest] = useState<DemoManifest | null>(null);
-  const [statusError, setStatusError] = useState<string | null>(null);
-  const [command, setCommand] = useState("");
-  const [mode, setMode] = useState<InferenceMode>("AUTO");
-  const [scenarioId, setScenarioId] = useState("");
-  const [result, setResult] = useState<HybridGovernanceResult | null>(null);
-  const [submittedCommand, setSubmittedCommand] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-  const [requestError, setRequestError] = useState<string | null>(null);
-  const [transcription, setTranscription] =
-    useState<RecordedTranscription | null>(null);
-  const [transcribing, setTranscribing] = useState(false);
-  const [transcriptConsumed, setTranscriptConsumed] = useState(false);
-  const [transcriptionError, setTranscriptionError] = useState<string | null>(
-    null,
-  );
-  const [submittedInputMode, setSubmittedInputMode] = useState<"TYPED" | "VOICE">(
-    "TYPED",
-  );
+  const [state, dispatch] = useReducer(demoReducer, initialDemoState);
   const audioInputRef = useRef<HTMLInputElement>(null);
+  const mountedRef = useRef(false);
+  const nextOperationIdRef = useRef(0);
+  const bootstrapOwnerRef = useRef<OperationOwner | null>(null);
+  const governanceOwnerRef = useRef<OperationOwner | null>(null);
+  const transcriptionOwnerRef = useRef<OperationOwner | null>(null);
 
   useEffect(() => {
-    const controller = new AbortController();
+    mountedRef.current = true;
+    const operationId = nextOperationId(nextOperationIdRef);
+    dispatch({ type: "BOOTSTRAP_STARTED", operationId });
+    const owner = startOwner(
+      bootstrapOwnerRef,
+      operationId,
+      BOOTSTRAP_CLIENT_DEADLINE_MS,
+      () => {
+        if (!mountedRef.current) return;
+        dispatch({
+          type: "BOOTSTRAP_FAILED",
+          operationId,
+          failure: { code: "CLIENT_TIMEOUT", detail: null },
+        });
+      },
+    );
+    // Browser wait deadlines do not prove server or provider cancellation.
     Promise.all([
-      getDemoManifest(controller.signal),
-      getDemoStatus(controller.signal),
+      getDemoManifest(owner.controller.signal),
+      getDemoStatus(owner.controller.signal),
     ])
       .then(([nextManifest, nextStatus]) => {
-        setManifest(nextManifest);
-        setStatus(nextStatus);
+        if (!mountedRef.current || bootstrapOwnerRef.current !== owner) return;
         const initial = nextManifest.scenarios.find(
           (scenario) => scenario.model_input_enabled,
         );
-        if (!initial) throw new Error("CONTRACT_FAILURE");
-        setScenarioId(initial.scenario_id);
+        const initialMode = initial?.allowed_inference_modes.includes("AUTO")
+          ? "AUTO"
+          : initial?.allowed_inference_modes[0];
+        if (!initial || !initialMode) {
+          throw new ContractValidationError(
+            "manifest: no live scenario with an inference mode",
+          );
+        }
+        if (!releaseOwner(bootstrapOwnerRef, operationId)) return;
+        dispatch({
+          type: "BOOTSTRAP_SUCCEEDED",
+          operationId,
+          manifest: nextManifest,
+          status: nextStatus,
+          initialScenarioId: initial.scenario_id,
+          initialMode,
+        });
       })
       .catch((error: unknown) => {
-        if (!(error instanceof Error && error.name === "AbortError")) {
-          setStatusError(clientErrorMessage(error));
-        }
+        if (!mountedRef.current || bootstrapOwnerRef.current !== owner) return;
+        if (!releaseOwner(bootstrapOwnerRef, operationId)) return;
+        // Promise.all has a sibling request; stop it after this operation loses
+        // ownership, without claiming any server-side cancellation.
+        owner.controller.abort();
+        if (isAbortError(error)) return;
+        dispatch({
+          type: "BOOTSTRAP_FAILED",
+          operationId,
+          failure: classifyClientFailure(error),
+        });
       });
-    return () => controller.abort();
+    return () => {
+      mountedRef.current = false;
+      cancelOwner(bootstrapOwnerRef);
+      cancelOwner(governanceOwnerRef);
+      cancelOwner(transcriptionOwnerRef);
+    };
   }, []);
 
+  const manifest = state.bootstrap.kind === "READY"
+    ? state.bootstrap.manifest
+    : null;
+  const status = state.bootstrap.kind === "READY" ? state.bootstrap.status : null;
+  const statusError = state.bootstrap.kind === "FAILED"
+    ? failureMessage(state.bootstrap.failure)
+    : null;
+  const { command, scenarioId } = state.controls;
+  const mode = state.controls.inferenceMode;
+  const pending = state.governance.kind === "SUBMITTING";
+  const transcribing = state.transcription.kind === "TRANSCRIBING";
+  const result = state.governance.kind === "SUCCEEDED"
+    ? state.governance.result
+    : null;
+  const governanceContext = state.governance.kind === "IDLE"
+    ? null
+    : state.governance.context;
+  const submittedCommand = governanceContext?.command ?? null;
+  const submittedInputMode = governanceContext?.inputMode ?? "TYPED";
+  const requestError = state.governance.kind === "FAILED"
+    ? failureMessage(state.governance.failure)
+    : null;
+  const transcription = state.transcription.kind === "READY"
+    ? state.transcription.transcription
+    : null;
+  const transcriptConsumed = state.transcription.kind === "READY"
+    ? state.transcription.consumed
+    : false;
+  const transcriptionError = state.transcription.kind === "FAILED"
+    ? failureMessage(state.transcription.failure)
+    : null;
   const record = result?.canonical_result.governance_record ?? null;
   const selectedScenario = manifest?.scenarios.find(
     (scenario) => scenario.scenario_id === scenarioId,
@@ -169,33 +316,69 @@ export function App() {
       transcribing ||
       transcriptConsumed
     ) return;
-    setPending(true);
-    setRequestError(null);
-    setSubmittedCommand(trimmed);
-    const isVoice = transcription?.transcript_status === "READY";
-    setSubmittedInputMode(isVoice ? "VOICE" : "TYPED");
-    // The server claims a transcript before provider invocation. Treat any
-    // voice submission attempt as consumed so the UI cannot suggest replay.
-    if (isVoice) setTranscriptConsumed(true);
+    const readyTranscription = state.transcription.kind === "READY"
+      ? state.transcription
+      : null;
+    const isVoice =
+      readyTranscription !== null &&
+      !readyTranscription.consumed &&
+      readyTranscription.context.scenarioId === selectedScenario.scenario_id;
+    const operationId = nextOperationId(nextOperationIdRef);
+    const context: GovernanceContext = {
+      operationId,
+      scenarioId: selectedScenario.scenario_id,
+      inferenceMode: mode,
+      inputMode: isVoice ? "VOICE" : "TYPED",
+      command: trimmed,
+      transcriptionId: isVoice
+        ? readyTranscription.transcription.transcription_id
+        : null,
+    };
+    dispatch({ type: "GOVERNANCE_STARTED", context });
+    const owner = startOwner(
+      governanceOwnerRef,
+      operationId,
+      GOVERNANCE_CLIENT_DEADLINE_MS,
+      () => {
+        if (!mountedRef.current) return;
+        dispatch({
+          type: "GOVERNANCE_FAILED",
+          operationId,
+          failure: { code: "CLIENT_TIMEOUT", detail: null },
+        });
+      },
+    );
+    // A voice identity is consumed at start. Client abort/timeout cannot prove
+    // that the server rolled back transcript claiming or provider work.
     try {
       const nextResult = isVoice
         ? await submitVoiceCommand({
             scenario_id: selectedScenario.scenario_id,
-            transcription_id: transcription.transcription_id,
+            transcription_id: readyTranscription.transcription.transcription_id,
             reviewed_transcript_text: trimmed,
             inference_mode: mode,
-          })
+          }, owner.controller.signal)
         : await submitTypedCommand({
             scenario_id: selectedScenario.scenario_id,
             command: trimmed,
             inference_mode: mode,
-          });
-      setResult(nextResult);
-    } catch (error) {
-      setResult(null);
-      setRequestError(clientErrorMessage(error));
-    } finally {
-      setPending(false);
+          }, owner.controller.signal);
+      if (
+        !mountedRef.current ||
+        !releaseOwner(governanceOwnerRef, operationId)
+      ) return;
+      dispatch({ type: "GOVERNANCE_SUCCEEDED", operationId, result: nextResult });
+    } catch (error: unknown) {
+      if (
+        !mountedRef.current ||
+        !releaseOwner(governanceOwnerRef, operationId) ||
+        isAbortError(error)
+      ) return;
+      dispatch({
+        type: "GOVERNANCE_FAILED",
+        operationId,
+        failure: classifyClientFailure(error),
+      });
     }
   }
 
@@ -204,38 +387,81 @@ export function App() {
   ) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file || transcribing || pending) return;
-    setTranscribing(true);
-    setTranscriptionError(null);
-    setRequestError(null);
-    setResult(null);
-    setTranscriptConsumed(false);
+    if (
+      !file ||
+      pending ||
+      state.bootstrap.kind !== "READY" ||
+      !selectedScenario?.model_input_enabled
+    ) return;
+    const operationId = nextOperationId(nextOperationIdRef);
+    const context = {
+      operationId,
+      scenarioId: selectedScenario.scenario_id,
+      commandRevision: state.controls.commandRevision,
+    };
+    dispatch({ type: "TRANSCRIPTION_STARTED", context });
+    const owner = startOwner(
+      transcriptionOwnerRef,
+      operationId,
+      SPEECH_CLIENT_DEADLINE_MS,
+      () => {
+        if (!mountedRef.current) return;
+        dispatch({
+          type: "TRANSCRIPTION_FAILED",
+          operationId,
+          failure: { code: "CLIENT_TIMEOUT", detail: null },
+        });
+      },
+    );
     try {
-      const nextTranscription = await transcribeRecordedAudio(file);
-      setTranscription(nextTranscription);
+      const nextTranscription = await transcribeRecordedAudio(
+        file,
+        owner.controller.signal,
+      );
+      if (
+        !mountedRef.current ||
+        !releaseOwner(transcriptionOwnerRef, operationId)
+      ) return;
       if (
         nextTranscription.transcript_status === "READY" &&
         nextTranscription.transcript_text
       ) {
-        setCommand(nextTranscription.transcript_text);
+        dispatch({
+          type: "TRANSCRIPTION_SUCCEEDED",
+          operationId,
+          transcription: nextTranscription,
+        });
       } else {
-        setTranscriptionError(
-          nextTranscription.error_code ?? nextTranscription.transcript_status,
-        );
+        dispatch({
+          type: "TRANSCRIPTION_FAILED",
+          operationId,
+          failure: {
+            code: "TRANSCRIPTION_FAILURE",
+            detail:
+              nextTranscription.error_code ?? nextTranscription.transcript_status,
+          },
+        });
       }
-    } catch (error) {
-      setTranscription(null);
-      setTranscriptionError(clientErrorMessage(error));
-    } finally {
-      setTranscribing(false);
+    } catch (error: unknown) {
+      if (
+        !mountedRef.current ||
+        !releaseOwner(transcriptionOwnerRef, operationId) ||
+        isAbortError(error)
+      ) return;
+      dispatch({
+        type: "TRANSCRIPTION_FAILED",
+        operationId,
+        failure: classifyClientFailure(error),
+      });
     }
   }
 
   function discardTranscript() {
-    setTranscription(null);
-    setTranscriptionError(null);
-    setTranscriptConsumed(false);
-    setCommand("");
+    cancelOwner(transcriptionOwnerRef);
+    if (governanceContext?.inputMode === "VOICE") {
+      cancelOwner(governanceOwnerRef);
+    }
+    dispatch({ type: "DISCARD_TRANSCRIPT" });
   }
 
   function downloadTrace() {
@@ -313,7 +539,7 @@ export function App() {
         />
         {statusError && (
           <div className="status-error" role="status">
-            Status unavailable
+            Status unavailable: {statusError}
           </div>
         )}
       </section>
@@ -331,16 +557,19 @@ export function App() {
                   const next = manifest?.scenarios.find(
                     (scenario) => scenario.scenario_id === data.optionValue,
                   );
-                  if (!next) return;
-                  setScenarioId(next.scenario_id);
-                  setResult(null);
-                  setRequestError(null);
-                  setSubmittedCommand(null);
-                  setCommand(next.model_input_enabled ? next.registered_command : "");
+                  if (!next || next.scenario_id === scenarioId) return;
+                  cancelOwner(governanceOwnerRef);
+                  cancelOwner(transcriptionOwnerRef);
                   const nextMode = next.allowed_inference_modes[0];
-                  if (nextMode && !next.allowed_inference_modes.includes(mode)) {
-                    setMode(nextMode);
-                  }
+                  dispatch({
+                    type: "SCENARIO_SELECTED",
+                    scenarioId: next.scenario_id,
+                    command: next.model_input_enabled ? next.registered_command : "",
+                    inferenceMode:
+                      nextMode && !next.allowed_inference_modes.includes(mode)
+                        ? nextMode
+                        : mode,
+                  });
                 }}
               >
                 {manifest?.scenarios.map((scenario) => (
@@ -355,7 +584,10 @@ export function App() {
                 layout="horizontal"
                 value={mode}
                 onChange={(_, data) => {
-                  setMode((current) => selectInferenceMode(current, data.value));
+                  const nextMode = selectInferenceMode(mode, data.value);
+                  if (nextMode === mode) return;
+                  cancelOwner(governanceOwnerRef);
+                  dispatch({ type: "MODE_SELECTED", inferenceMode: nextMode });
                 }}
                 aria-label="Inference mode"
               >
@@ -463,7 +695,10 @@ export function App() {
             <Field label="Operator command">
               <Textarea
                 value={command}
-                onChange={(_, data) => setCommand(data.value)}
+                onChange={(_, data) => {
+                  if (transcribing) cancelOwner(transcriptionOwnerRef);
+                  dispatch({ type: "COMMAND_EDITED", command: data.value });
+                }}
                 placeholder="Enter a bounded manufacturing command"
                 resize="vertical"
                 disabled={pending || !selectedScenario?.model_input_enabled}
@@ -489,7 +724,10 @@ export function App() {
                   appearance="subtle"
                   icon={<ArrowUpload24Regular />}
                   aria-label="Upload WAV recording"
-                  disabled={pending || transcribing}
+                  disabled={
+                    pending ||
+                    !selectedScenario?.model_input_enabled
+                  }
                   onClick={() => audioInputRef.current?.click()}
                 />
               </Tooltip>
