@@ -10,6 +10,7 @@ import hashlib
 import json
 import math
 from dataclasses import dataclass
+from fractions import Fraction
 from pathlib import Path, PurePosixPath
 from typing import Final, Mapping, Sequence, cast
 
@@ -41,6 +42,10 @@ EXPECTED_B2_ROUTE_STATES: Final[tuple[str, ...]] = (
 )
 EXPECTED_B3_2_RESULT: Final[str] = "B3_2_FAIL_DISCRETE_ROUTE_QUALIFICATION"
 EXPECTED_FAILURE_CODE: Final[str] = "B3_2_FAIL_SUPPORT_MATERIAL_PENETRATION"
+EXPECTED_FRAME_COUNT: Final[int] = 469
+EXPECTED_ROUTE_CONFIGURATION_COUNT: Final[int] = 467
+EXPECTED_SEGMENT_INTERVAL_COUNTS: Final[tuple[int, ...]] = (78, 40, 38, 154, 40, 38, 78)
+EXPECTED_OBSERVATION_COUNT: Final[int] = 83
 EXPECTED_ARTIFACT_PATHS: Final[tuple[str, ...]] = (
     "results/prototype5/scene_calibration/phase_b2_kinematic_plan.json",
     "results/prototype5/scene_calibration/phase_b3_1_collision_qualification.json",
@@ -184,6 +189,62 @@ EXPECTED_REPLAY_POINTS: Final[tuple[_ExpectedReplayPoint, ...]] = (
 )
 
 
+def _expected_frame_identities() -> tuple[
+    tuple[int, int, int, int, int, float, str, str, str], ...
+]:
+    identities: list[tuple[int, int, int, int, int, float, str, str, str]] = []
+    semantic_index = 0
+    route_configuration_index = 0
+    for segment_index, interval_count in enumerate(EXPECTED_SEGMENT_INTERVAL_COUNTS):
+        first_sample = 0 if segment_index == 0 else 1
+        for sample_index in range(first_sample, interval_count + 1):
+            alpha = float(Fraction(sample_index, interval_count))
+            route_state = (
+                EXPECTED_B2_ROUTE_STATES[segment_index]
+                if sample_index == 0
+                else EXPECTED_B2_ROUTE_STATES[segment_index + 1]
+                if sample_index == interval_count
+                else "INTERPOLATED"
+            )
+            if segment_index == 1 and sample_index == interval_count:
+                phase = "ATTACHMENT_BOUNDARY"
+                boundaries = ("PRE", "POST")
+            elif segment_index == 4 and sample_index == interval_count:
+                phase = "RELEASE_BOUNDARY"
+                boundaries = ("PRE", "POST")
+            elif segment_index <= 1:
+                phase = "SOURCE_SUPPORTED"
+                boundaries = ("NONE",)
+            elif segment_index <= 4:
+                phase = "CARRIED"
+                boundaries = ("NONE",)
+            else:
+                phase = "DESTINATION_SUPPORTED"
+                boundaries = ("NONE",)
+            for boundary in boundaries:
+                identities.append(
+                    (
+                        semantic_index,
+                        route_configuration_index,
+                        segment_index,
+                        interval_count,
+                        sample_index,
+                        alpha,
+                        route_state,
+                        phase,
+                        boundary,
+                    )
+                )
+                semantic_index += 1
+            route_configuration_index += 1
+    if (
+        semantic_index != EXPECTED_FRAME_COUNT
+        or route_configuration_index != EXPECTED_ROUTE_CONFIGURATION_COUNT
+    ):
+        raise AssertionError("internal frozen replay schedule is inconsistent")
+    return tuple(identities)
+
+
 @dataclass(frozen=True, slots=True)
 class ArtifactAttestation:
     logical_path: str
@@ -262,6 +323,76 @@ class FrozenReplaySnapshot:
 
 
 @dataclass(frozen=True, slots=True)
+class FrozenReplayFrame:
+    """One exact semantic state read from the attested B3.2 fine-pass artifact."""
+
+    semantic_snapshot_index: int
+    route_configuration_index: int
+    segment_index: int
+    segment_interval_count: int
+    segment_sample_index: int
+    alpha: float
+    route_state: str
+    phase: str
+    boundary_snapshot: str
+    joint_positions: tuple[float, ...]
+    component_position_m: tuple[float, float, float]
+    component_quaternion_xyzw: tuple[float, float, float, float]
+
+    def __post_init__(self) -> None:
+        integer_fields = (
+            "semantic_snapshot_index",
+            "route_configuration_index",
+            "segment_index",
+            "segment_interval_count",
+            "segment_sample_index",
+        )
+        for field_name in integer_fields:
+            value = getattr(self, field_name)
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise ReplayDomainError(f"{field_name} must be a non-negative integer")
+        if self.semantic_snapshot_index >= EXPECTED_FRAME_COUNT:
+            raise ReplayDomainError("semantic_snapshot_index outside frozen domain")
+        if self.route_configuration_index >= EXPECTED_ROUTE_CONFIGURATION_COUNT:
+            raise ReplayDomainError("route_configuration_index outside frozen domain")
+        if self.segment_index >= len(EXPECTED_SEGMENT_INTERVAL_COUNTS):
+            raise ReplayDomainError("segment_index outside frozen domain")
+        if self.segment_interval_count != EXPECTED_SEGMENT_INTERVAL_COUNTS[self.segment_index]:
+            raise ReplayDomainError("segment_interval_count differs from frozen schedule")
+        if self.segment_sample_index > self.segment_interval_count:
+            raise ReplayDomainError("segment_sample_index outside frozen segment")
+        if (
+            isinstance(self.alpha, bool)
+            or not isinstance(self.alpha, float)
+            or not math.isfinite(self.alpha)
+            or not 0.0 <= self.alpha <= 1.0
+        ):
+            raise ReplayDomainError("alpha must be a finite frozen-domain float")
+        if self.route_state not in {*EXPECTED_B2_ROUTE_STATES, "INTERPOLATED"}:
+            raise ReplayDomainError(f"unknown frozen route state: {self.route_state}")
+        if self.phase not in {
+            "SOURCE_SUPPORTED",
+            "ATTACHMENT_BOUNDARY",
+            "CARRIED",
+            "RELEASE_BOUNDARY",
+            "DESTINATION_SUPPORTED",
+        }:
+            raise ReplayDomainError(f"unknown frozen component phase: {self.phase}")
+        if self.boundary_snapshot not in {"NONE", "PRE", "POST"}:
+            raise ReplayDomainError("unknown frozen boundary snapshot")
+        _validate_float_tuple(self.joint_positions, 7, "joint_positions")
+        _validate_float_tuple(self.component_position_m, 3, "component_position_m")
+        _validate_float_tuple(
+            self.component_quaternion_xyzw,
+            4,
+            "component_quaternion_xyzw",
+        )
+        norm = math.sqrt(sum(value * value for value in self.component_quaternion_xyzw))
+        if not math.isclose(norm, 1.0, rel_tol=0.0, abs_tol=1.0e-9):
+            raise ReplayDomainError("component quaternion must be normalized")
+
+
+@dataclass(frozen=True, slots=True)
 class FrozenQualificationMetadata:
     overall_result: str
     scientific_failure_count: int
@@ -303,6 +434,7 @@ class FrozenEvidenceReplayPlan:
     runtime_provenance: RuntimeProvenance
     claim_boundary: FrozenReplayClaimBoundary
     artifacts: tuple[ArtifactAttestation, ...]
+    frames: tuple[FrozenReplayFrame, ...]
     snapshots: tuple[FrozenReplaySnapshot, ...]
     qualification: FrozenQualificationMetadata
 
@@ -321,6 +453,23 @@ class FrozenEvidenceReplayPlan:
             EXPECTED_ARTIFACT_PATHS
         ):
             raise ReplayDomainError("frozen artifact attestation order changed")
+        expected_frames = _expected_frame_identities()
+        if len(self.frames) != EXPECTED_FRAME_COUNT:
+            raise ReplayDomainError("frozen replay frame count changed")
+        for frame, expected in zip(self.frames, expected_frames, strict=True):
+            actual = (
+                frame.semantic_snapshot_index,
+                frame.route_configuration_index,
+                frame.segment_index,
+                frame.segment_interval_count,
+                frame.segment_sample_index,
+                frame.alpha,
+                frame.route_state,
+                frame.phase,
+                frame.boundary_snapshot,
+            )
+            if actual != expected:
+                raise ReplayDomainError("frozen replay frame sequence changed")
         if len(self.snapshots) != len(EXPECTED_REPLAY_POINTS):
             raise ReplayDomainError("frozen replay point count changed")
         for index, (snapshot, expected) in enumerate(
@@ -346,6 +495,32 @@ class FrozenEvidenceReplayPlan:
             )
             if actual != required:
                 raise ReplayDomainError("frozen replay sequence changed")
+            frame = self.frames[snapshot.semantic_snapshot_index]
+            if (
+                snapshot.route_configuration_index,
+                snapshot.route_state,
+                snapshot.phase,
+                snapshot.boundary_snapshot,
+                snapshot.joint_positions,
+                snapshot.component_position_m,
+                snapshot.component_quaternion_xyzw,
+            ) != (
+                frame.route_configuration_index,
+                frame.route_state,
+                frame.phase,
+                frame.boundary_snapshot,
+                frame.joint_positions,
+                frame.component_position_m,
+                frame.component_quaternion_xyzw,
+            ):
+                raise ReplayDomainError("key snapshot is not an exact frame projection")
+
+    def frame_at(self, frame_index: int) -> FrozenReplayFrame:
+        if isinstance(frame_index, bool) or not isinstance(frame_index, int):
+            raise ReplayDomainError("frame index must be an integer")
+        if not 0 <= frame_index < len(self.frames):
+            raise ReplayDomainError("frame index outside frozen domain")
+        return self.frames[frame_index]
 
     def snapshot_at(self, replay_index: int) -> FrozenReplaySnapshot:
         if isinstance(replay_index, bool) or not isinstance(replay_index, int):
@@ -513,6 +688,14 @@ def _finite_float(value: object, field: str) -> float:
     return result
 
 
+def _strict_finite_float(value: object, field: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, float):
+        raise ReplayArtifactFormatError(f"{field} must be a JSON float")
+    if not math.isfinite(value):
+        raise ReplayArtifactFormatError(f"{field} must be finite")
+    return value
+
+
 def _float_tuple(value: object, length: int, field: str) -> tuple[float, ...]:
     items = _sequence(value, field)
     if len(items) != length:
@@ -587,54 +770,238 @@ def _parse_b3_1(payload: Mapping[str, object]) -> None:
         raise ReplayArtifactFormatError("B3.1 schema identity changed")
 
 
-def _parse_snapshot(
-    raw_snapshot: object,
+_FRAME_FIELDS: Final[frozenset[str]] = frozenset(
+    {
+        "semantic_snapshot_index",
+        "route_configuration_index",
+        "segment_index",
+        "segment_interval_count",
+        "segment_sample_index",
+        "alpha",
+        "route_state",
+        "phase",
+        "boundary_snapshot",
+        "joint_vector",
+        "component_pose",
+        "observations",
+    }
+)
+_COMPONENT_POSE_FIELDS: Final[frozenset[str]] = frozenset(
+    {"position_m", "quaternion_xyzw"}
+)
+_OBSERVATION_FIELDS: Final[frozenset[str]] = frozenset(
+    {
+        "pair_index",
+        "pair_id",
+        "found",
+        "signed_distance_m",
+        "separation_lower_bound_m",
+        "classification",
+        "permission",
+        "decision",
+    }
+)
+_OBSERVATION_CLASSIFICATIONS: Final[frozenset[str]] = frozenset(
+    {
+        "SEPARATED_BEYOND_QUERY_HORIZON",
+        "SEPARATED",
+        "NUMERICAL_CONTACT_BAND",
+        "MATERIAL_PENETRATION",
+    }
+)
+_OBSERVATION_PERMISSIONS: Final[frozenset[str]] = frozenset(
+    {"FORBIDDEN", "REQUIRED_SUPPORT", "PERMITTED_SUPPORT"}
+)
+_OBSERVATION_DECISIONS: Final[frozenset[str]] = frozenset(
+    {"PASS", EXPECTED_FAILURE_CODE}
+)
+
+
+def _validate_observations(
+    value: object,
+    frame_index: int,
+    expected_pair_ids: tuple[str, ...] | None,
+) -> tuple[str, ...]:
+    observations = _sequence(value, f"B3.2 frame {frame_index} observations")
+    if len(observations) != EXPECTED_OBSERVATION_COUNT:
+        raise ReplayArtifactFormatError("B3.2 observation cardinality changed")
+    pair_ids: list[str] = []
+    for pair_index, raw_observation in enumerate(observations):
+        field = f"B3.2 frame {frame_index} observation {pair_index}"
+        observation = _mapping(raw_observation, field)
+        if set(observation) != _OBSERVATION_FIELDS:
+            raise ReplayArtifactFormatError(f"{field} fields changed")
+        actual_pair_index = _strict_integer(
+            observation.get("pair_index"), f"{field}.pair_index"
+        )
+        if actual_pair_index != pair_index:
+            raise ReplayArtifactFormatError("B3.2 observation order changed")
+        pair_id = observation.get("pair_id")
+        if not isinstance(pair_id, str) or not pair_id:
+            raise ReplayArtifactFormatError(f"{field}.pair_id must be non-empty")
+        pair_ids.append(pair_id)
+        found = observation.get("found")
+        if not isinstance(found, bool):
+            raise ReplayArtifactFormatError(f"{field}.found must be a boolean")
+        signed_distance = observation.get("signed_distance_m")
+        separation_lower_bound = observation.get("separation_lower_bound_m")
+        if found:
+            _strict_finite_float(signed_distance, f"{field}.signed_distance_m")
+            if separation_lower_bound is not None:
+                raise ReplayArtifactFormatError(
+                    f"{field}.separation_lower_bound_m must be null when found"
+                )
+        else:
+            if signed_distance is not None:
+                raise ReplayArtifactFormatError(
+                    f"{field}.signed_distance_m must be null when censored"
+                )
+            lower_bound = _strict_finite_float(
+                separation_lower_bound,
+                f"{field}.separation_lower_bound_m",
+            )
+            if lower_bound != 0.05:
+                raise ReplayArtifactFormatError("B3.2 query horizon changed")
+        classification = observation.get("classification")
+        permission = observation.get("permission")
+        decision = observation.get("decision")
+        if classification not in _OBSERVATION_CLASSIFICATIONS:
+            raise ReplayArtifactFormatError(f"{field}.classification changed")
+        if permission not in _OBSERVATION_PERMISSIONS:
+            raise ReplayArtifactFormatError(f"{field}.permission changed")
+        if decision not in _OBSERVATION_DECISIONS:
+            raise ReplayArtifactFormatError(f"{field}.decision changed")
+        if (not found) != (classification == "SEPARATED_BEYOND_QUERY_HORIZON"):
+            raise ReplayArtifactFormatError("B3.2 censored observation semantics changed")
+    identities = tuple(pair_ids)
+    if len(set(identities)) != EXPECTED_OBSERVATION_COUNT:
+        raise ReplayArtifactFormatError("B3.2 observation identities are not unique")
+    if expected_pair_ids is not None and identities != expected_pair_ids:
+        raise ReplayArtifactFormatError("B3.2 observation identity order changed")
+    return identities
+
+
+def _parse_frame(
+    raw_frame: object,
+    expected: tuple[int, int, int, int, int, float, str, str, str],
+    b2_vectors: tuple[tuple[float, ...], ...],
+    expected_pair_ids: tuple[str, ...] | None,
+) -> tuple[FrozenReplayFrame, tuple[str, ...]]:
+    (
+        semantic_index,
+        route_index,
+        segment_index,
+        intervals,
+        sample,
+        alpha,
+        route,
+        phase,
+        boundary,
+    ) = expected
+    field = f"B3.2 frame {semantic_index}"
+    frame = _mapping(raw_frame, field)
+    if set(frame) != _FRAME_FIELDS:
+        raise ReplayArtifactFormatError(f"{field} fields changed")
+    exact_fields: dict[str, int | str] = {
+        "semantic_snapshot_index": semantic_index,
+        "route_configuration_index": route_index,
+        "segment_index": segment_index,
+        "segment_interval_count": intervals,
+        "segment_sample_index": sample,
+        "route_state": route,
+        "phase": phase,
+        "boundary_snapshot": boundary,
+    }
+    for name, required in exact_fields.items():
+        _require_exact_typed_value(frame.get(name), required, f"{field}.{name}")
+    if _strict_finite_float(frame.get("alpha"), f"{field}.alpha") != alpha:
+        raise ReplayArtifactFormatError("B3.2 interpolation alpha changed")
+    raw_joints = _sequence(frame.get("joint_vector"), f"{field}.joint_vector")
+    if len(raw_joints) != 7:
+        raise ReplayArtifactFormatError(f"{field}.joint_vector must contain 7 values")
+    joints = tuple(
+        _strict_finite_float(item, f"{field}.joint_vector[{index}]")
+        for index, item in enumerate(raw_joints)
+    )
+    left = b2_vectors[segment_index]
+    right = b2_vectors[segment_index + 1]
+    if sample == 0:
+        expected_joints = left
+    elif sample == intervals:
+        expected_joints = right
+    else:
+        expected_joints = tuple(
+            left_value + alpha * (right_value - left_value)
+            for left_value, right_value in zip(left, right, strict=True)
+        )
+    if joints != expected_joints:
+        raise ReplayArtifactFormatError("B3.2 joints differ from frozen B2 interpolation")
+    pose = _mapping(frame.get("component_pose"), f"{field}.component_pose")
+    if set(pose) != _COMPONENT_POSE_FIELDS:
+        raise ReplayArtifactFormatError("B3.2 component pose fields changed")
+    position_values = _sequence(
+        pose.get("position_m"), f"{field}.component_pose.position_m"
+    )
+    orientation_values = _sequence(
+        pose.get("quaternion_xyzw"), f"{field}.component_pose.quaternion_xyzw"
+    )
+    if len(position_values) != 3 or len(orientation_values) != 4:
+        raise ReplayArtifactFormatError("B3.2 component pose cardinality changed")
+    position = cast(
+        tuple[float, float, float],
+        tuple(
+            _strict_finite_float(item, f"{field}.position_m[{index}]")
+            for index, item in enumerate(position_values)
+        ),
+    )
+    orientation = cast(
+        tuple[float, float, float, float],
+        tuple(
+            _strict_finite_float(item, f"{field}.quaternion_xyzw[{index}]")
+            for index, item in enumerate(orientation_values)
+        ),
+    )
+    norm = math.sqrt(sum(value * value for value in orientation))
+    if not math.isclose(norm, 1.0, rel_tol=0.0, abs_tol=1.0e-9):
+        raise ReplayArtifactFormatError("B3.2 component quaternion is not normalized")
+    pair_ids = _validate_observations(
+        frame.get("observations"), semantic_index, expected_pair_ids
+    )
+    return (
+        FrozenReplayFrame(
+            semantic_snapshot_index=semantic_index,
+            route_configuration_index=route_index,
+            segment_index=segment_index,
+            segment_interval_count=intervals,
+            segment_sample_index=sample,
+            alpha=alpha,
+            route_state=route,
+            phase=phase,
+            boundary_snapshot=boundary,
+            joint_positions=joints,
+            component_position_m=position,
+            component_quaternion_xyzw=orientation,
+        ),
+        pair_ids,
+    )
+
+
+def _snapshot_from_frame(
+    frame: FrozenReplayFrame,
     expected: _ExpectedReplayPoint,
     replay_index: int,
-    b2_joint_positions: tuple[float, ...],
 ) -> FrozenReplaySnapshot:
-    snapshot = _mapping(raw_snapshot, f"B3.2 snapshot {expected.semantic_snapshot_index}")
-    exact_fields: dict[str, int | str] = {
-        "semantic_snapshot_index": expected.semantic_snapshot_index,
-        "route_configuration_index": expected.route_configuration_index,
-        "route_state": expected.route_state,
-        "phase": expected.phase,
-        "boundary_snapshot": expected.boundary_snapshot,
-    }
-    for field, value in exact_fields.items():
-        _require_exact_typed_value(
-            snapshot.get(field),
-            value,
-            f"B3.2 replay snapshot {field}",
-        )
-    joints = _float_tuple(snapshot.get("joint_vector"), 7, "B3.2 joint vector")
-    if joints != b2_joint_positions:
-        raise ReplayArtifactFormatError("B3.2 endpoint joints differ from frozen B2")
-    pose = _mapping(snapshot.get("component_pose"), "B3.2 component pose")
-    observations = _sequence(snapshot.get("observations"), "B3.2 observations")
-    if len(observations) != 83:
-        raise ReplayArtifactFormatError("B3.2 observation cardinality changed")
     return FrozenReplaySnapshot(
         replay_index=replay_index,
-        semantic_snapshot_index=expected.semantic_snapshot_index,
-        route_configuration_index=expected.route_configuration_index,
+        semantic_snapshot_index=frame.semantic_snapshot_index,
+        route_configuration_index=frame.route_configuration_index,
         b2_route_index=expected.b2_route_index,
-        route_state=expected.route_state,
-        phase=expected.phase,
-        boundary_snapshot=expected.boundary_snapshot,
-        joint_positions=joints,
-        component_position_m=cast(
-            tuple[float, float, float],
-            _float_tuple(pose.get("position_m"), 3, "B3.2 component position"),
-        ),
-        component_quaternion_xyzw=cast(
-            tuple[float, float, float, float],
-            _float_tuple(
-                pose.get("quaternion_xyzw"),
-                4,
-                "B3.2 component orientation",
-            ),
-        ),
+        route_state=frame.route_state,
+        phase=frame.phase,
+        boundary_snapshot=frame.boundary_snapshot,
+        joint_positions=frame.joint_positions,
+        component_position_m=frame.component_position_m,
+        component_quaternion_xyzw=frame.component_quaternion_xyzw,
     )
 
 
@@ -642,7 +1009,11 @@ def _parse_b3_2(
     payload: Mapping[str, object],
     b2_vectors: tuple[tuple[float, ...], ...],
     contract: FinalDemoContract,
-) -> tuple[tuple[FrozenReplaySnapshot, ...], FrozenQualificationMetadata]:
+) -> tuple[
+    tuple[FrozenReplayFrame, ...],
+    tuple[FrozenReplaySnapshot, ...],
+    FrozenQualificationMetadata,
+]:
     if (
         payload.get("schema_identifier")
         != "prototype5.scene_collision_route_qualification.b3_2"
@@ -711,14 +1082,30 @@ def _parse_b3_2(
                 "B3.2 authoritative pass identity changed"
             ) from exc
     raw_snapshots = _sequence(fine.get("semantic_snapshots"), "semantic snapshots")
-    if len(raw_snapshots) != 469:
+    if len(raw_snapshots) != EXPECTED_FRAME_COUNT:
         raise ReplayArtifactFormatError("B3.2 semantic snapshot count changed")
+    frames: list[FrozenReplayFrame] = []
+    pair_ids: tuple[str, ...] | None = None
+    for raw_frame, expected in zip(
+        raw_snapshots,
+        _expected_frame_identities(),
+        strict=True,
+    ):
+        frame, observed_pair_ids = _parse_frame(
+            raw_frame,
+            expected,
+            b2_vectors,
+            pair_ids,
+        )
+        frames.append(frame)
+        if pair_ids is None:
+            pair_ids = observed_pair_ids
+    frozen_frames = tuple(frames)
     snapshots = tuple(
-        _parse_snapshot(
-            raw_snapshots[expected.semantic_snapshot_index],
+        _snapshot_from_frame(
+            frozen_frames[expected.semantic_snapshot_index],
             expected,
             replay_index,
-            b2_vectors[expected.b2_route_index],
         )
         for replay_index, expected in enumerate(EXPECTED_REPLAY_POINTS)
     )
@@ -762,7 +1149,7 @@ def _parse_b3_2(
         ),
         recorded_failure=recorded,
     )
-    return snapshots, qualification
+    return frozen_frames, snapshots, qualification
 
 
 def _registered_replay_scenario(contract: FinalDemoContract) -> Scenario:
@@ -816,7 +1203,7 @@ def _load_registered_frozen_evidence_replay_from_root(
     b32 = _strict_json_bytes(b32_bytes, bindings.b3_2.path)
     b2_vectors = _parse_b2(b2, bindings.scene_identity)
     _parse_b3_1(b31)
-    snapshots, qualification = _parse_b3_2(b32, b2_vectors, contract)
+    frames, snapshots, qualification = _parse_b3_2(b32, b2_vectors, contract)
     return FrozenEvidenceReplayPlan(
         scenario_id=scenario.scenario_id,
         binding_id=bindings.binding_id,
@@ -831,6 +1218,7 @@ def _load_registered_frozen_evidence_replay_from_root(
             b32_attestation,
             specification_attestation,
         ),
+        frames=frames,
         snapshots=snapshots,
         qualification=qualification,
     )
@@ -850,10 +1238,12 @@ __all__ = (
     "CONTROLLED_JOINT_INDICES",
     "EXPECTED_B2_ROUTE_STATES",
     "EXPECTED_B3_2_RESULT",
+    "EXPECTED_FRAME_COUNT",
     "FrozenEvidenceReplayError",
     "FrozenEvidenceReplayPlan",
     "FrozenQualificationMetadata",
     "FrozenReplayClaimBoundary",
+    "FrozenReplayFrame",
     "FrozenReplaySnapshot",
     "ReplayArtifactAccessError",
     "ReplayArtifactFormatError",

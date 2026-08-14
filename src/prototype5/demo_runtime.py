@@ -13,6 +13,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pybullet as pb
+
 from .canonical_governance_runner import (
     CanonicalGovernanceRunner,
     CanonicalRunnerConfigurationV2,
@@ -38,6 +40,8 @@ from .recorded_speech import (
     NemotronRecordedAudioClient,
     RecordedSpeechClientConfiguration,
 )
+from .pybullet_evidence_replay import PyBulletEvidenceReplaySession
+from .replay_coordinator import ReplayCoordinator
 
 
 DEFAULT_LOCAL_MODEL = "qwen2.5-coder-0.5b-instruct-generic-cpu:4"
@@ -164,6 +168,31 @@ def build_demo_service(repo_root: Path | None = None) -> DemoApplicationService:
         cloud_configured=bool(cloud_api_key),
         speech_transcriber=speech_transcriber,
         final_demo_presentation=final_demo_presentation,
+    )
+
+
+def build_replay_coordinator(repo_root: Path | None = None) -> ReplayCoordinator:
+    """Compose replay ownership without loading evidence or connecting PyBullet."""
+
+    root = repo_root or Path(__file__).resolve().parents[2]
+    mode_name = os.getenv("PROTOTYPE5_REPLAY_MODE", "GUI")
+    modes = {"GUI": pb.GUI, "DIRECT": pb.DIRECT}
+    if mode_name not in modes:
+        raise ValueError("PROTOTYPE5_REPLAY_MODE must be GUI or DIRECT")
+    contract = load_final_demo_contract(
+        root / "configs" / "prototype5" / "final_demo_scenarios_v1.json"
+    )
+    known_scenario_ids = frozenset(
+        scenario.scenario_id for scenario in contract.scenario_contract.scenarios
+    )
+    connection_mode = modes[mode_name]
+
+    def session_factory() -> PyBulletEvidenceReplaySession:
+        return PyBulletEvidenceReplaySession(connection_mode=connection_mode)
+
+    return ReplayCoordinator(
+        session_factory,
+        known_scenario_ids=known_scenario_ids,
     )
 
 

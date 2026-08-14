@@ -4,6 +4,7 @@ import copy
 import hashlib
 import json
 import math
+import threading
 from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
 
@@ -92,6 +93,84 @@ def test_canonical_registered_replay_is_exact(
         )
         for point in replay.EXPECTED_REPLAY_POINTS
     )
+
+
+def test_all_469_frames_are_exact_and_key_snapshots_are_projections(
+    plan: replay.FrozenEvidenceReplayPlan,
+) -> None:
+    assert len(plan.frames) == 469
+    assert tuple(frame.semantic_snapshot_index for frame in plan.frames) == tuple(
+        range(469)
+    )
+    route_indices = tuple(frame.route_configuration_index for frame in plan.frames)
+    assert set(route_indices) == set(range(467))
+    assert tuple(index for index in range(467) if route_indices.count(index) == 2) == (
+        118,
+        350,
+    )
+    for snapshot in plan.snapshots:
+        frame = plan.frame_at(snapshot.semantic_snapshot_index)
+        assert frame.joint_positions == snapshot.joint_positions
+        assert frame.component_position_m == snapshot.component_position_m
+        assert frame.component_quaternion_xyzw == snapshot.component_quaternion_xyzw
+
+
+@pytest.mark.parametrize("invalid_index", [None, True, -1, 469, 1.0, "1"])
+def test_frame_lookup_fails_closed(
+    plan: replay.FrozenEvidenceReplayPlan,
+    invalid_index: object,
+) -> None:
+    with pytest.raises(replay.ReplayDomainError):
+        plan.frame_at(invalid_index)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("path", "invalid"),
+    [
+        ((0, "semantic_snapshot_index"), False),
+        ((0, "segment_index"), True),
+        ((1, "alpha"), 1),
+        ((1, "alpha"), float("nan")),
+        ((1, "joint_vector", 0), 0),
+        ((1, "component_pose", "position_m", 0), float("inf")),
+        ((1, "observations", 0, "found"), 1),
+        ((1, "observations", 0, "pair_index"), False),
+    ],
+)
+def test_full_frame_domain_rejects_type_and_nonfinite_mutations(
+    path: tuple[object, ...],
+    invalid: object,
+) -> None:
+    contract = load_final_demo_contract()
+    b2 = _json(contract.frozen_evidence_bindings.b2.path)
+    vectors = replay._parse_b2(b2, contract.frozen_evidence_bindings.scene_identity)
+    payload = copy.deepcopy(_json(contract.frozen_evidence_bindings.b3_2.path))
+    target: object = payload["authoritative_fine_route"]["semantic_snapshots"]
+    for key in path[:-1]:
+        target = target[key]  # type: ignore[index]
+    target[path[-1]] = invalid  # type: ignore[index]
+    with pytest.raises(replay.ReplayArtifactFormatError):
+        replay._parse_b3_2(payload, vectors, contract)
+
+
+@pytest.mark.parametrize("mutation", ["duplicate-frame", "reorder-frame", "reorder-observation"])
+def test_full_frame_sequence_rejects_duplicate_and_reordered_evidence(
+    mutation: str,
+) -> None:
+    contract = load_final_demo_contract()
+    b2 = _json(contract.frozen_evidence_bindings.b2.path)
+    vectors = replay._parse_b2(b2, contract.frozen_evidence_bindings.scene_identity)
+    payload = copy.deepcopy(_json(contract.frozen_evidence_bindings.b3_2.path))
+    frames = payload["authoritative_fine_route"]["semantic_snapshots"]
+    if mutation == "duplicate-frame":
+        frames[2] = copy.deepcopy(frames[1])
+    elif mutation == "reorder-frame":
+        frames[1], frames[2] = frames[2], frames[1]
+    else:
+        observations = frames[1]["observations"]
+        observations[0], observations[1] = observations[1], observations[0]
+    with pytest.raises(replay.ReplayArtifactFormatError):
+        replay._parse_b3_2(payload, vectors, contract)
 
 
 def test_artifact_attestations_match_registered_bytes(
@@ -631,6 +710,65 @@ def test_snapshot_application_is_deterministic(
         assert second.joint_positions == first.joint_positions
         assert second.component_position_m == first.component_position_m
         assert second.component_quaternion_xyzw == first.component_quaternion_xyzw
+
+
+def test_all_469_frames_apply_and_read_back_in_direct_mode(
+    plan: replay.FrozenEvidenceReplayPlan,
+) -> None:
+    with _session(plan) as session:
+        for frame_index in range(469):
+            readback = session.apply_frame(frame_index)
+            assert readback.frame is plan.frames[frame_index]
+            assert readback.joint_positions == plan.frames[frame_index].joint_positions
+        assert session.current_frame.semantic_snapshot_index == 468
+
+
+def test_snapshot_and_frame_index_spaces_remain_distinct(
+    plan: replay.FrozenEvidenceReplayPlan,
+) -> None:
+    with _session(plan) as session:
+        historical = session.apply_snapshot(3)
+        assert historical.snapshot.replay_index == 3
+        assert historical.snapshot.semantic_snapshot_index == 119
+        assert session.current_frame.semantic_snapshot_index == 119
+        assert session.next_snapshot().snapshot.replay_index == 4
+        assert session.current_frame.semantic_snapshot_index == 157
+
+
+def test_direct_reset_view_is_a_graphics_noop(
+    plan: replay.FrozenEvidenceReplayPlan,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[None] = []
+    monkeypatch.setattr(
+        visual.pb,
+        "resetDebugVisualizerCamera",
+        lambda **_kwargs: calls.append(None),
+    )
+    with _session(plan) as session:
+        session.apply_frame(0)
+        session.reset_view()
+    assert calls == []
+
+
+def test_session_rejects_cross_thread_pybullet_access(
+    plan: replay.FrozenEvidenceReplayPlan,
+) -> None:
+    with _session(plan) as session:
+        errors: list[BaseException] = []
+
+        def access() -> None:
+            try:
+                session.probe_connection()
+            except BaseException as exc:
+                errors.append(exc)
+
+        worker = threading.Thread(target=access)
+        worker.start()
+        worker.join(timeout=2)
+        assert not worker.is_alive()
+        assert len(errors) == 1
+        assert isinstance(errors[0], visual.ReplaySessionStateError)
 
 
 def test_identical_quaternion_representation_is_accepted(

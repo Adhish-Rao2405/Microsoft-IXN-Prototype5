@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import importlib.metadata
 import math
+import threading
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -17,6 +18,7 @@ from src.prototype5 import scene_collision_qualification_b3_1 as b31
 from src.prototype5.frozen_evidence_replay import (
     CONTROLLED_JOINT_INDICES,
     FrozenEvidenceReplayPlan,
+    FrozenReplayFrame,
     FrozenReplaySnapshot,
     ReplayDomainError,
     load_registered_frozen_evidence_replay,
@@ -63,6 +65,14 @@ class ReplaySnapshotReadback:
     component_quaternion_xyzw: tuple[float, float, float, float]
 
 
+@dataclass(frozen=True, slots=True)
+class ReplayFrameReadback:
+    frame: FrozenReplayFrame
+    joint_positions: tuple[float, ...]
+    component_position_m: tuple[float, float, float]
+    component_quaternion_xyzw: tuple[float, float, float, float]
+
+
 _VISUAL_COLOURS: Final[tuple[tuple[str, tuple[float, float, float, float]], ...]] = (
     ("source_platform", (0.25, 0.45, 0.75, 1.0)),
     ("destination_floor", (0.35, 0.65, 0.35, 1.0)),
@@ -73,6 +83,10 @@ _VISUAL_COLOURS: Final[tuple[tuple[str, tuple[float, float, float, float]], ...]
     ("blue_component", (0.05, 0.25, 0.95, 1.0)),
 )
 POSE_ABS_TOLERANCE: Final[float] = 1.0e-15
+REPLAY_CAMERA_DISTANCE: Final[float] = 1.6
+REPLAY_CAMERA_YAW: Final[float] = 45.0
+REPLAY_CAMERA_PITCH: Final[float] = -30.0
+REPLAY_CAMERA_TARGET: Final[tuple[float, float, float]] = (0.25, 0.0, 0.35)
 
 
 def _position_matches(
@@ -232,7 +246,13 @@ class PyBulletEvidenceReplaySession:
         self._component_body: int | None = None
         self._environment_bodies: tuple[tuple[str, int], ...] = ()
         self._current_replay_index: int | None = None
+        self._current_frame_index: int | None = None
+        self._owner_thread_id = threading.get_ident()
         self._state = _ReplaySessionState.NEW
+
+    def _require_owner_thread(self) -> None:
+        if threading.get_ident() != self._owner_thread_id:
+            raise ReplaySessionStateError("PyBullet replay access is owner-thread only")
 
     @property
     def plan(self) -> FrozenEvidenceReplayPlan:
@@ -240,6 +260,7 @@ class PyBulletEvidenceReplaySession:
 
     @property
     def is_open(self) -> bool:
+        self._require_owner_thread()
         return (
             self._state is _ReplaySessionState.OPEN
             and self._client_id is not None
@@ -248,10 +269,12 @@ class PyBulletEvidenceReplaySession:
 
     @property
     def lifecycle_state(self) -> str:
+        self._require_owner_thread()
         return self._state.value
 
     @property
     def cleanup_pending(self) -> bool:
+        self._require_owner_thread()
         return self._state is _ReplaySessionState.CLEANUP_PENDING
 
     @property
@@ -272,7 +295,15 @@ class PyBulletEvidenceReplaySession:
             raise ReplaySessionStateError("no replay snapshot has been applied")
         return self._plan.snapshot_at(self._current_replay_index)
 
+    @property
+    def current_frame(self) -> FrozenReplayFrame:
+        self._require_open_client()
+        if self._current_frame_index is None:
+            raise ReplaySessionStateError("no replay frame has been applied")
+        return self._plan.frame_at(self._current_frame_index)
+
     def _require_open_client(self) -> int:
+        self._require_owner_thread()
         if self._state is _ReplaySessionState.CLEANUP_PENDING:
             raise ReplaySessionStateError("replay session cleanup is pending")
         if self._state is not _ReplaySessionState.OPEN or self._client_id is None:
@@ -288,6 +319,7 @@ class PyBulletEvidenceReplaySession:
         self._component_body = None
         self._environment_bodies = ()
         self._current_replay_index = None
+        self._current_frame_index = None
         self._state = _ReplaySessionState.CLOSED
 
     def _disconnect_owned_client(self, client_id: int) -> None:
@@ -326,6 +358,7 @@ class PyBulletEvidenceReplaySession:
             ) from None
 
     def open(self) -> PyBulletEvidenceReplaySession:
+        self._require_owner_thread()
         if self._state is _ReplaySessionState.CLOSED:
             raise ReplaySessionStateError("closed replay session cannot be reopened")
         if self._state is _ReplaySessionState.CLEANUP_PENDING:
@@ -381,16 +414,22 @@ class PyBulletEvidenceReplaySession:
                 raise
             raise ReplaySceneError("failed to construct frozen replay scene") from exc
 
-    def apply_snapshot(self, replay_index: int) -> ReplaySnapshotReadback:
+    def _apply_frozen_state(
+        self,
+        frame: FrozenReplayFrame,
+    ) -> tuple[
+        tuple[float, ...],
+        tuple[float, float, float],
+        tuple[float, float, float, float],
+    ]:
         client_id = self._require_open_client()
-        snapshot = self._plan.snapshot_at(replay_index)
         robot = self.robot_body
         if self._component_body is None:
             raise ReplaySessionStateError("replay component is unavailable")
         try:
             for joint_index, position in zip(
                 CONTROLLED_JOINT_INDICES,
-                snapshot.joint_positions,
+                frame.joint_positions,
                 strict=True,
             ):
                 pb.resetJointState(
@@ -401,8 +440,8 @@ class PyBulletEvidenceReplaySession:
                 )
             pb.resetBasePositionAndOrientation(
                 self._component_body,
-                snapshot.component_position_m,
-                snapshot.component_quaternion_xyzw,
+                frame.component_position_m,
+                frame.component_quaternion_xyzw,
                 physicsClientId=client_id,
             )
             joints = tuple(
@@ -426,18 +465,18 @@ class PyBulletEvidenceReplaySession:
             )
             if any(not math.isfinite(value) for value in (*joints, *position, *orientation)):
                 raise ReplaySceneError("PyBullet replay readback is non-finite")
-            if joints != snapshot.joint_positions:
-                raise ReplaySceneError("PyBullet joint readback differs from frozen snapshot")
-            if not _position_matches(position, snapshot.component_position_m):
+            if joints != frame.joint_positions:
+                raise ReplaySceneError("PyBullet joint readback differs from frozen frame")
+            if not _position_matches(position, frame.component_position_m):
                 raise ReplaySceneError(
-                    "PyBullet component position differs from frozen snapshot"
+                    "PyBullet component position differs from frozen frame"
                 )
             if not _quaternion_matches_rotation(
                 orientation,
-                snapshot.component_quaternion_xyzw,
+                frame.component_quaternion_xyzw,
             ):
                 raise ReplaySceneError(
-                    "PyBullet component orientation differs from frozen snapshot"
+                    "PyBullet component orientation differs from frozen frame"
                 )
         except BaseException as exc:
             self._disconnect_after_failure(client_id, exc)
@@ -445,8 +484,22 @@ class PyBulletEvidenceReplaySession:
                 raise
             if isinstance(exc, PyBulletEvidenceReplayError):
                 raise
-            raise ReplaySceneError("failed to apply frozen replay snapshot") from exc
+            raise ReplaySceneError("failed to apply frozen replay frame") from exc
+        return joints, position, orientation
+
+    def apply_frame(self, frame_index: int) -> ReplayFrameReadback:
+        frame = self._plan.frame_at(frame_index)
+        joints, position, orientation = self._apply_frozen_state(frame)
+        self._current_frame_index = frame_index
+        self._current_replay_index = None
+        return ReplayFrameReadback(frame, joints, position, orientation)
+
+    def apply_snapshot(self, replay_index: int) -> ReplaySnapshotReadback:
+        snapshot = self._plan.snapshot_at(replay_index)
+        frame = self._plan.frame_at(snapshot.semantic_snapshot_index)
+        joints, position, orientation = self._apply_frozen_state(frame)
         self._current_replay_index = replay_index
+        self._current_frame_index = snapshot.semantic_snapshot_index
         return ReplaySnapshotReadback(snapshot, joints, position, orientation)
 
     def next_snapshot(self) -> ReplaySnapshotReadback:
@@ -460,7 +513,37 @@ class PyBulletEvidenceReplaySession:
             raise ReplaySessionStateError("no current snapshot for previous navigation")
         return self.apply_snapshot(self._current_replay_index - 1)
 
+    def probe_connection(self) -> bool:
+        """Probe the exact owned client; callable only by the owner thread."""
+
+        self._require_owner_thread()
+        if self._state is not _ReplaySessionState.OPEN or self._client_id is None:
+            raise ReplaySessionStateError("replay session is not open")
+        if pb.isConnected(physicsClientId=self._client_id):
+            return True
+        self._mark_closed()
+        return False
+
+    def reset_view(self) -> None:
+        client_id = self._require_open_client()
+        if self._connection_mode == pb.DIRECT:
+            return
+        try:
+            pb.resetDebugVisualizerCamera(
+                cameraDistance=REPLAY_CAMERA_DISTANCE,
+                cameraYaw=REPLAY_CAMERA_YAW,
+                cameraPitch=REPLAY_CAMERA_PITCH,
+                cameraTargetPosition=REPLAY_CAMERA_TARGET,
+                physicsClientId=client_id,
+            )
+        except BaseException as exc:
+            self._disconnect_after_failure(client_id, exc)
+            if not isinstance(exc, Exception):
+                raise
+            raise ReplaySceneError("failed to reset replay presentation view") from exc
+
     def close(self) -> None:
+        self._require_owner_thread()
         if self._state is _ReplaySessionState.CLOSED:
             return
         if self._state is _ReplaySessionState.NEW:
@@ -501,6 +584,7 @@ class PyBulletEvidenceReplaySession:
 __all__ = (
     "PyBulletEvidenceReplayError",
     "PyBulletEvidenceReplaySession",
+    "ReplayFrameReadback",
     "ReplayRuntimeAttestation",
     "ReplayRuntimeIntegrityError",
     "ReplaySceneError",

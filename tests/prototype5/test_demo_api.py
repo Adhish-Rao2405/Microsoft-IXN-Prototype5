@@ -15,6 +15,7 @@ from src.prototype5.canonical_governance_runner import (
     CanonicalGovernanceRunner,
     CanonicalRunnerConfigurationV2,
 )
+from src.prototype5 import demo_api as demo_api_module
 from src.prototype5.demo_api import create_demo_app
 from src.prototype5.demo_service import (
     DemoApplicationService,
@@ -36,6 +37,15 @@ from src.prototype5.recorded_speech import (
     NEMOTRON_SPEECH_MODEL_ID,
     RecordedAudioMetadataV1,
     RecordedTranscriptionResultV1,
+)
+from src.prototype5.frozen_evidence_replay import (
+    REPLAY_SCENARIO_ID,
+    load_registered_frozen_evidence_replay,
+)
+from src.prototype5.replay_coordinator import (
+    ReplayCoordinator,
+    ReplayErrorCode,
+    ReplayTimings,
 )
 
 
@@ -103,6 +113,7 @@ def build_client(
     transcript_ttl_seconds: int = 600,
     transcript_registry_capacity: int = 20,
     utc_clock=None,
+    replay_coordinator: ReplayCoordinator | None = None,
 ):
     sequence = count(1)
     local = SequenceBackend(local_responses)
@@ -154,12 +165,69 @@ def build_client(
         transcript_registry_capacity=transcript_registry_capacity,
         utc_clock=utc_clock or (lambda: FIXED_TIME),
     )
-    app = create_demo_app(service, frontend_dist=frontend_dist)
+    app = create_demo_app(
+        service,
+        frontend_dist=frontend_dist,
+        replay_coordinator=replay_coordinator,
+    )
     app.state.demo_service = service
     return (
         TestClient(app),
         local,
         cloud,
+    )
+
+
+class _ApiReplaySession:
+    def __init__(self) -> None:
+        self.plan = load_registered_frozen_evidence_replay()
+        self.owner_thread = threading.get_ident()
+        self.frame_index: int | None = None
+        self.closed = False
+
+    def _owned(self) -> None:
+        assert threading.get_ident() == self.owner_thread
+
+    def open(self):
+        self._owned()
+        return self
+
+    def apply_frame(self, frame_index: int):
+        self._owned()
+        self.frame_index = frame_index
+        return type("Readback", (), {"frame": self.plan.frame_at(frame_index)})()
+
+    @property
+    def current_frame(self):
+        self._owned()
+        assert self.frame_index is not None
+        return self.plan.frame_at(self.frame_index)
+
+    def probe_connection(self) -> bool:
+        self._owned()
+        return True
+
+    def reset_view(self) -> None:
+        self._owned()
+
+    def close(self) -> None:
+        self._owned()
+        self.closed = True
+
+
+def _api_replay_coordinator() -> ReplayCoordinator:
+    return ReplayCoordinator(
+        _ApiReplaySession,
+        known_scenario_ids=frozenset({REPLAY_SCENARIO_ID, LIVE_SCENARIO}),
+        timings=ReplayTimings(
+            startup_seconds=1.0,
+            control_seconds=1.0,
+            idle_seconds=100.0,
+            shutdown_seconds=1.0,
+            liveness_seconds=100.0,
+            cadence_seconds=100.0,
+            tombstone_seconds=10.0,
+        ),
     )
 
 
@@ -1024,3 +1092,225 @@ def test_registry_configuration_is_bounded():
             cloud_responses=[],
             transcript_registry_capacity=0,
         )
+
+
+def test_replay_lifespan_and_canonical_idle_dto_are_exact() -> None:
+    coordinator = _api_replay_coordinator()
+    client, _, _ = build_client(
+        local_responses=[],
+        cloud_responses=[],
+        replay_coordinator=coordinator,
+    )
+    with client:
+        response = client.get("/api/v1/replay/state")
+        assert response.status_code == 200
+        body = response.json()
+        assert body["contract_id"] == "PROTOTYPE5_D3_REPLAY_STATE_V1"
+        assert body["session_id"] is None
+        assert body["control_version"] == body["projection_version"] == 0
+        assert body["lifecycle_state"] == "IDLE"
+        assert body["current_frame"] is None
+        assert body["available_controls"] == ["START"]
+        assert body["frame_count"] == 469
+        assert body["physical_execution_authority"] == "NOT_IMPLEMENTED"
+        assert "joint_positions" not in json.dumps(body)
+        assert coordinator._thread is not None and coordinator._thread.is_alive()
+    assert coordinator._thread is not None and not coordinator._thread.is_alive()
+
+
+def test_replay_start_control_get_and_stop_use_exact_envelopes() -> None:
+    coordinator = _api_replay_coordinator()
+    client, _, _ = build_client(
+        local_responses=[], cloud_responses=[], replay_coordinator=coordinator
+    )
+    with client:
+        started = client.post(
+            "/api/v1/replay/start",
+            json={"scenario_id": REPLAY_SCENARIO_ID},
+        )
+        assert started.status_code == 200
+        state = started.json()
+        assert state["lifecycle_state"] == "PAUSED"
+        assert state["current_frame"]["frame_index"] == 0
+        assert state["command_in_flight"] is False
+        updated = state["updated_at_utc"]
+
+        read = client.get("/api/v1/replay/state")
+        assert read.status_code == 200
+        assert read.json()["updated_at_utc"] == updated
+        assert read.json()["projection_version"] == state["projection_version"]
+
+        advanced = client.post(
+            "/api/v1/replay/control",
+            json={
+                "scenario_id": REPLAY_SCENARIO_ID,
+                "session_id": state["session_id"],
+                "expected_control_version": state["control_version"],
+                "control": "NEXT_SNAPSHOT",
+            },
+        )
+        assert advanced.status_code == 200
+        state = advanced.json()
+        assert state["current_frame"]["frame_index"] == 1
+
+        stopped = client.post(
+            "/api/v1/replay/control",
+            json={
+                "scenario_id": REPLAY_SCENARIO_ID,
+                "session_id": state["session_id"],
+                "expected_control_version": state["control_version"],
+                "control": "STOP",
+            },
+        )
+        assert stopped.status_code == 200
+        assert stopped.json()["lifecycle_state"] == "IDLE"
+
+
+@pytest.mark.parametrize(
+    ("content", "headers"),
+    [
+        (b"", {"content-type": "application/json"}),
+        (b"[]", {"content-type": "application/json"}),
+        (b'{"scenario_id":"x","scenario_id":"y"}', {"content-type": "application/json"}),
+        (b'{"scenario_id":NaN}', {"content-type": "application/json"}),
+        (b"\xef\xbb\xbf{}", {"content-type": "application/json"}),
+        (b"{}", {"content-type": "text/plain"}),
+        (b"{}", {"content-type": "application/json; charset=latin-1"}),
+        (b"{}", {"content-type": "application/json", "content-encoding": "gzip"}),
+        (b"{\xff}", {"content-type": "application/json"}),
+        (b"x" * 4097, {"content-type": "application/json"}),
+    ],
+)
+def test_replay_route_local_parser_fails_closed(
+    content: bytes,
+    headers: dict[str, str],
+) -> None:
+    coordinator = _api_replay_coordinator()
+    client, _, _ = build_client(
+        local_responses=[], cloud_responses=[], replay_coordinator=coordinator
+    )
+    with client:
+        response = client.post(
+            "/api/v1/replay/start",
+            content=content,
+            headers=headers,
+        )
+        assert response.status_code == 422
+        assert response.json() == {"code": "REPLAY_REQUEST_INVALID"}
+
+
+def test_replay_strict_control_validation_rejects_bool_and_unknown_fields() -> None:
+    coordinator = _api_replay_coordinator()
+    client, _, _ = build_client(
+        local_responses=[], cloud_responses=[], replay_coordinator=coordinator
+    )
+    with client:
+        for payload in (
+            {
+                "scenario_id": REPLAY_SCENARIO_ID,
+                "session_id": "session",
+                "expected_control_version": True,
+                "control": "STOP",
+            },
+            {
+                "scenario_id": REPLAY_SCENARIO_ID,
+                "session_id": "session",
+                "expected_control_version": 1,
+                "control": "START",
+            },
+            {"scenario_id": REPLAY_SCENARIO_ID, "extra": "forbidden"},
+        ):
+            path = (
+                "/api/v1/replay/start"
+                if "extra" in payload
+                else "/api/v1/replay/control"
+            )
+            response = client.post(path, json=payload)
+            assert response.status_code == 422
+            assert response.json() == {"code": "REPLAY_REQUEST_INVALID"}
+
+
+def test_replay_scenario_errors_are_code_only_without_detail_wrapper() -> None:
+    coordinator = _api_replay_coordinator()
+    client, _, _ = build_client(
+        local_responses=[], cloud_responses=[], replay_coordinator=coordinator
+    )
+    with client:
+        unknown = client.post(
+            "/api/v1/replay/start", json={"scenario_id": "UNKNOWN"}
+        )
+        non_replay = client.post(
+            "/api/v1/replay/start", json={"scenario_id": LIVE_SCENARIO}
+        )
+        assert (unknown.status_code, unknown.json()) == (
+            404,
+            {"code": "REPLAY_SCENARIO_NOT_FOUND"},
+        )
+        assert (non_replay.status_code, non_replay.json()) == (
+            409,
+            {"code": "REPLAY_SCENARIO_NOT_REPLAYABLE"},
+        )
+
+
+def test_fatal_exhaustion_precedes_even_malformed_replay_validation() -> None:
+    coordinator = _api_replay_coordinator()
+    client, _, _ = build_client(
+        local_responses=[], cloud_responses=[], replay_coordinator=coordinator
+    )
+    with client:
+        with coordinator._condition:
+            coordinator._version_exhausted = True
+        for method, path in (
+            ("post", "/api/v1/replay/start"),
+            ("post", "/api/v1/replay/control"),
+            ("get", "/api/v1/replay/state"),
+        ):
+            response = getattr(client, method)(
+                path,
+                **(
+                    {"content": b"not-json", "headers": {"content-type": "text/plain"}}
+                    if method == "post"
+                    else {}
+                ),
+            )
+            assert response.status_code == 503
+            assert response.json() == {"code": "REPLAY_VERSION_EXHAUSTED"}
+
+
+def test_mutating_route_rechecks_exhaustion_after_body_validation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    coordinator = _api_replay_coordinator()
+    original_reader = demo_api_module._read_replay_json
+
+    async def latch_after_validation(request):
+        payload = await original_reader(request)
+        with coordinator._condition:
+            coordinator._version_exhausted = True
+        return payload
+
+    monkeypatch.setattr(demo_api_module, "_read_replay_json", latch_after_validation)
+    client, _, _ = build_client(
+        local_responses=[], cloud_responses=[], replay_coordinator=coordinator
+    )
+    with client:
+        response = client.post(
+            "/api/v1/replay/start",
+            json={"scenario_id": REPLAY_SCENARIO_ID},
+        )
+        assert response.status_code == 503
+        assert response.json() == {"code": "REPLAY_VERSION_EXHAUSTED"}
+        assert coordinator._provisional_session_id is None
+
+
+def test_replay_routes_do_not_change_existing_nonreplay_422_contract() -> None:
+    baseline_client, _, _ = build_client(local_responses=[], cloud_responses=[])
+    baseline = baseline_client.post("/api/v1/governance/typed", json={})
+    coordinator = _api_replay_coordinator()
+    replay_client, _, _ = build_client(
+        local_responses=[], cloud_responses=[], replay_coordinator=coordinator
+    )
+    with replay_client:
+        with_replay = replay_client.post("/api/v1/governance/typed", json={})
+    assert baseline.status_code == with_replay.status_code == 422
+    assert baseline.json() == with_replay.json()
