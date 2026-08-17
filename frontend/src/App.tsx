@@ -33,17 +33,25 @@ import {
 import {
   ApiRequestError,
   ApiTransportError,
+  ReplayApiRequestError,
+  controlReplay,
   getDemoManifest,
+  getReplayState,
   getDemoStatus,
+  startReplay,
   submitTypedCommand,
   submitVoiceCommand,
   transcribeRecordedAudio,
 } from "./api";
 import {
+  acceptsReplayProjection,
   demoReducer,
   initialDemoState,
   type ClientFailure,
   type GovernanceContext,
+  type ReplayClientFailure,
+  type ReplayMutationContext,
+  type ReplayReadContext,
 } from "./demoState";
 import { ContractValidationError } from "./runtimeContracts";
 import {
@@ -57,7 +65,10 @@ import {
 } from "./authorityPresentation";
 import type {
   AvailabilityStatus,
+  DemoScenario,
   InferenceMode,
+  ReplayControl,
+  ReplayStateProjection,
 } from "./types";
 
 const gateDefinitions = [
@@ -101,6 +112,37 @@ function formatLatency(value: number | null | undefined): string {
 export const BOOTSTRAP_CLIENT_DEADLINE_MS = 30_000;
 export const GOVERNANCE_CLIENT_DEADLINE_MS = 60_000;
 export const SPEECH_CLIENT_DEADLINE_MS = 130_000;
+export const REPLAY_START_CLIENT_DEADLINE_MS = 20_000;
+export const REPLAY_CONTROL_CLIENT_DEADLINE_MS = 10_000;
+export const REPLAY_GET_CLIENT_DEADLINE_MS = 5_000;
+export const REPLAY_POLL_INTERVAL_MS = 500;
+
+const replayControls = [
+  ["START", "Start"],
+  ["PAUSE", "Pause"],
+  ["RESUME", "Resume"],
+  ["NEXT_SNAPSHOT", "Next snapshot"],
+  ["PREVIOUS_SNAPSHOT", "Previous snapshot"],
+  ["STOP", "Stop"],
+  ["RESET_VIEW", "Reset view"],
+] as const satisfies readonly (readonly [ReplayControl, string])[];
+
+const reconciliationErrors = new Set<ReplayClientFailure["code"]>([
+  "CLIENT_TIMEOUT",
+  "NETWORK_FAILURE",
+  "REPLAY_START_TIMEOUT",
+  "REPLAY_CONTROL_SETTLEMENT_UNKNOWN",
+  "REPLAY_COMMAND_EXPIRED",
+  "REPLAY_SESSION_ACTIVE",
+  "REPLAY_SESSION_STALE",
+  "REPLAY_CONTROL_VERSION_STALE",
+  "REPLAY_CONTROL_INVALID_STATE",
+  "REPLAY_FRAME_BOUNDARY",
+  "REPLAY_COMMAND_CHANNEL_FULL",
+  "REPLAY_CLEANUP_UNRESOLVED",
+  "REPLAY_RUNTIME_INTEGRITY_FAILED",
+  "REPLAY_SCENE_FAILED",
+]);
 
 interface OperationOwner {
   readonly operationId: number;
@@ -117,6 +159,19 @@ function failureMessage(failure: ClientFailure): string {
 function classifyClientFailure(error: unknown): ClientFailure {
   if (error instanceof ApiRequestError) {
     return { code: "HTTP_ERROR", detail: error.message };
+  }
+  if (error instanceof ContractValidationError) {
+    return { code: "CONTRACT_FAILURE", detail: null };
+  }
+  if (error instanceof ApiTransportError) {
+    return { code: "NETWORK_FAILURE", detail: null };
+  }
+  return { code: "UNKNOWN_CLIENT_FAILURE", detail: null };
+}
+
+function classifyReplayFailure(error: unknown): ReplayClientFailure {
+  if (error instanceof ReplayApiRequestError) {
+    return { code: error.code, detail: null };
   }
   if (error instanceof ContractValidationError) {
     return { code: "CONTRACT_FAILURE", detail: null };
@@ -197,6 +252,111 @@ export function selectInferenceMode(
   return isInferenceMode(candidate) ? candidate : current;
 }
 
+function isReplayScenario(scenario: DemoScenario | null): boolean {
+  return scenario?.replay_capability_classification === "FROZEN_B2_REPLAY_COMPATIBLE" &&
+    scenario.qualification_replay_access === "SERVER_REGISTERED_ONLY";
+}
+
+interface ReplayPanelProps {
+  readonly projection: ReplayStateProjection | null;
+  readonly clientKind: "INACTIVE" | "RECONCILING" | "READY" | "MUTATING" | "ERROR" | "FATAL";
+  readonly failure: ReplayClientFailure | null;
+  readonly announcement: string | null;
+  readonly physicalAuthority: "NOT_IMPLEMENTED";
+  readonly onControl: (control: ReplayControl) => void;
+}
+
+function ReplayPanel({
+  projection,
+  clientKind,
+  failure,
+  announcement,
+  physicalAuthority,
+  onControl,
+}: ReplayPanelProps) {
+  const available = new Set(projection?.available_controls ?? []);
+  const controlsLocked = clientKind !== "READY";
+  const frame = projection?.current_frame ?? null;
+  const qualification = projection?.qualification ?? null;
+  const recorded = qualification?.recorded_failure_example ?? null;
+  return (
+    <section className="replay-panel" aria-labelledby="replay-heading" aria-busy={clientKind === "RECONCILING" || clientKind === "MUTATING"}>
+      <div className="replay-heading-row">
+        <div>
+          <h2 id="replay-heading">EVIDENCE REPLAY</h2>
+          <strong>NOT PHYSICAL EXECUTION</strong>
+        </div>
+        <Badge appearance="outline" color={projection?.lifecycle_state === "FAILED" || projection?.lifecycle_state === "CLEANUP_FAILED" ? "danger" : "informative"}>
+          {projection?.lifecycle_state ?? "STATE NOT LOADED"}
+        </Badge>
+      </div>
+      <p className="replay-timing-label">DISCRETE SAMPLED STATES — NO DYNAMIC TIMING</p>
+      <p className="replay-boundary-note">
+        SCHEMA VALIDITY ≠ EXECUTION ELIGIBILITY ≠ DOWNSTREAM GEOMETRIC VALIDITY ≠ PHYSICAL SAFETY
+      </p>
+      <div className="replay-live-region" role="status" aria-live="polite" aria-atomic="true">
+        {announcement ?? "Awaiting authoritative replay state."}
+      </div>
+      {(clientKind === "RECONCILING" || clientKind === "MUTATING") && (
+        <Spinner size="small" label={clientKind === "MUTATING" ? "Replay control unsettled" : "Reconciling replay state"} />
+      )}
+      {failure !== null && (
+        <div className="request-error" role="alert">
+          <strong>{clientKind === "FATAL" ? "Replay restart required" : "Replay request failed"}</strong>
+          <span>{failure.code}</span>
+        </div>
+      )}
+      <div className="replay-controls" aria-label="Evidence replay controls">
+        {replayControls.map(([control, label]) => (
+          <Button
+            key={control}
+            disabled={controlsLocked || !available.has(control)}
+            onClick={() => onControl(control)}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+      <div className="replay-state-grid">
+        <div><span>Lifecycle</span><strong>{projection?.lifecycle_state ?? "NOT LOADED"}</strong></div>
+        <div><span>Frame</span><strong>{frame === null ? "NO ACTIVE FRAME" : `Frame ${frame.frame_index + 1} of ${projection?.frame_count ?? 469}`}</strong></div>
+        <div><span>Semantic snapshot</span><strong>{frame?.semantic_snapshot_index ?? "N/A"}</strong></div>
+        <div><span>Route configuration</span><strong>{frame?.route_configuration_index ?? "N/A"}</strong></div>
+        <div><span>Route state</span><strong>{frame?.route_state ?? "N/A"}</strong></div>
+        <div><span>Phase</span><strong>{frame?.phase ?? "N/A"}</strong></div>
+        <div><span>Boundary snapshot</span><strong>{frame?.boundary_snapshot ?? "N/A"}</strong></div>
+        <div><span>Key snapshot</span><strong>{frame === null ? "N/A" : frame.is_key_snapshot ? "YES" : "NO"}</strong></div>
+      </div>
+      <section className="replay-evidence" aria-labelledby="replay-evidence-heading">
+        <h3 id="replay-evidence-heading">Frozen downstream qualification</h3>
+        <div className="replay-evidence-grid">
+          <span>Overall result</span><strong>{qualification?.overall_result ?? "AUTHORITATIVE STATE NOT LOADED"}</strong>
+          <span>Scientific failures</span><strong>{qualification?.scientific_failure_count ?? "N/A"}</strong>
+          <span>Support-material penetrations</span><strong>{qualification?.support_material_penetration_failure_count ?? "N/A"}</strong>
+          <span>Forbidden-contact failures</span><strong>{qualification?.forbidden_contact_failure_count ?? "N/A"}</strong>
+          <span>Required-support-missing failures</span><strong>{qualification?.required_support_missing_failure_count ?? "N/A"}</strong>
+          <span>Last replay error</span><strong>{projection?.last_error_code ?? "NONE"}</strong>
+          <span>Physical execution authority</span><strong>{projection?.physical_execution_authority ?? physicalAuthority}</strong>
+        </div>
+        {recorded !== null && (
+          <p className="recorded-failure">
+            <strong>Recorded frozen failure example:</strong>{" "}
+            snapshot {recorded.semantic_snapshot_index}, pair {recorded.pair_index},{" "}
+            {recorded.decision}, signed distance {recorded.signed_distance_m} m.
+          </p>
+        )}
+        <dl className="replay-digests">
+          <div><dt>B2 SHA-256</dt><dd>{projection?.b2_sha256 ?? "NOT LOADED"}</dd></div>
+          <div><dt>B3.2 SHA-256</dt><dd>{projection?.b3_2_sha256 ?? "NOT LOADED"}</dd></div>
+        </dl>
+      </section>
+      <p className="replay-completion-note">
+        COMPLETED means only that the frozen replay reached its final registered discrete state.
+      </p>
+    </section>
+  );
+}
+
 export function App() {
   const [state, dispatch] = useReducer(demoReducer, initialDemoState);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -205,6 +365,12 @@ export function App() {
   const bootstrapOwnerRef = useRef<OperationOwner | null>(null);
   const governanceOwnerRef = useRef<OperationOwner | null>(null);
   const transcriptionOwnerRef = useRef<OperationOwner | null>(null);
+  const replayMutationOwnerRef = useRef<OperationOwner | null>(null);
+  const replayReadOwnerRef = useRef<OperationOwner | null>(null);
+  const replayPollHandleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const selectedScenarioIdRef = useRef("");
+  const replayProjectionRef = useRef<ReplayStateProjection | null>(null);
+  const replayFatalRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -242,6 +408,7 @@ export function App() {
           );
         }
         if (!releaseOwner(bootstrapOwnerRef, operationId)) return;
+        selectedScenarioIdRef.current = initial.scenario_id;
         dispatch({
           type: "BOOTSTRAP_SUCCEEDED",
           operationId,
@@ -269,6 +436,12 @@ export function App() {
       cancelOwner(bootstrapOwnerRef);
       cancelOwner(governanceOwnerRef);
       cancelOwner(transcriptionOwnerRef);
+      cancelOwner(replayMutationOwnerRef);
+      cancelOwner(replayReadOwnerRef);
+      if (replayPollHandleRef.current !== null) {
+        clearTimeout(replayPollHandleRef.current);
+        replayPollHandleRef.current = null;
+      }
     };
   }, []);
 
@@ -307,6 +480,12 @@ export function App() {
   const selectedScenario = manifest?.scenarios.find(
     (scenario) => scenario.scenario_id === scenarioId,
   ) ?? null;
+
+  useEffect(() => {
+    selectedScenarioIdRef.current = scenarioId;
+    replayProjectionRef.current = state.replay.projection;
+    if (state.replay.kind === "FATAL") replayFatalRef.current = true;
+  }, [scenarioId, state.replay.kind, state.replay.projection]);
   const authorityRows = useMemo(
     () =>
       manifest && selectedScenario
@@ -317,10 +496,13 @@ export function App() {
             proposalPresent: result?.canonical_result.proposal != null,
             physicalExecutionAuthorityState:
               manifest.physical_execution_authority_state,
-            d2ReplayEnabled: manifest.d2_replay_enabled,
+            replayLifecycle:
+              state.replay.projection?.scenario_id === selectedScenario.scenario_id
+                ? state.replay.projection.lifecycle_state
+                : null,
           })
         : [],
-    [manifest, record, result, selectedScenario],
+    [manifest, record, result, selectedScenario, state.replay.projection],
   );
   const proposalText = useMemo(
     () =>
@@ -329,6 +511,268 @@ export function App() {
         : "No schema-valid proposal available.",
     [result],
   );
+
+  function clearReplayPoll(): void {
+    if (replayPollHandleRef.current === null) return;
+    clearTimeout(replayPollHandleRef.current);
+    replayPollHandleRef.current = null;
+  }
+
+  function publishReplayFatal(originScenarioId: string): void {
+    replayFatalRef.current = true;
+    clearReplayPoll();
+    cancelOwner(replayReadOwnerRef);
+    cancelOwner(replayMutationOwnerRef);
+    dispatch({ type: "REPLAY_FATAL", originScenarioId });
+  }
+
+  function cancelReplayRead(): void {
+    clearReplayPoll();
+    const owner = replayReadOwnerRef.current;
+    if (owner === null) return;
+    dispatch({ type: "REPLAY_READ_CANCELLED", operationId: owner.operationId });
+    cancelOwner(replayReadOwnerRef);
+  }
+
+  function shouldMonitorReplay(projection: ReplayStateProjection): boolean {
+    return projection.command_in_flight ||
+      projection.lifecycle_state === "PAUSED" ||
+      projection.lifecycle_state === "PLAYING" ||
+      projection.lifecycle_state === "COMPLETED";
+  }
+
+  function scheduleReplayPoll(projection: ReplayStateProjection): void {
+    clearReplayPoll();
+    if (
+      replayFatalRef.current ||
+      !shouldMonitorReplay(projection) ||
+      !mountedRef.current
+    ) return;
+    const expectedScenarioId = projection.scenario_id;
+    const purpose: ReplayReadContext["purpose"] = projection.command_in_flight
+      ? "RECONCILE"
+      : "POLL";
+    replayPollHandleRef.current = setTimeout(() => {
+      replayPollHandleRef.current = null;
+      if (selectedScenarioIdRef.current !== expectedScenarioId) return;
+      void beginReplayRead(expectedScenarioId, purpose);
+    }, REPLAY_POLL_INTERVAL_MS);
+  }
+
+  function beginReplayRead(
+    expectedScenarioId: string,
+    purpose: ReplayReadContext["purpose"],
+  ): void {
+    if (
+      !mountedRef.current ||
+      replayFatalRef.current ||
+      selectedScenarioIdRef.current !== expectedScenarioId ||
+      replayReadOwnerRef.current !== null ||
+      replayMutationOwnerRef.current !== null
+    ) {
+      return;
+    }
+    clearReplayPoll();
+    const operationId = nextOperationId(nextOperationIdRef);
+    const context: ReplayReadContext = {
+      operationId,
+      scenarioId: expectedScenarioId,
+      purpose,
+    };
+    dispatch({ type: "REPLAY_READ_STARTED", context });
+    const owner = startOwner(
+      replayReadOwnerRef,
+      operationId,
+      REPLAY_GET_CLIENT_DEADLINE_MS,
+      () => {
+        if (!mountedRef.current || selectedScenarioIdRef.current !== expectedScenarioId) return;
+        dispatch({
+          type: "REPLAY_OPERATION_FAILED",
+          operationId,
+          source: "READ",
+          failure: { code: "CLIENT_TIMEOUT", detail: null },
+        });
+      },
+    );
+    void getReplayState(expectedScenarioId, owner.controller.signal)
+      .then((projection) => {
+        if (
+          !mountedRef.current ||
+          replayReadOwnerRef.current !== owner ||
+          selectedScenarioIdRef.current !== expectedScenarioId ||
+          !releaseOwner(replayReadOwnerRef, operationId)
+        ) {
+          return;
+        }
+        const currentProjection = replayProjectionRef.current;
+        const accepted = acceptsReplayProjection(
+          currentProjection,
+          projection,
+          "READ",
+          null,
+          purpose,
+        );
+        dispatch({
+          type: "REPLAY_PROJECTION_RECEIVED",
+          operationId,
+          source: "READ",
+          projection,
+        });
+        if (accepted) {
+          replayProjectionRef.current = projection;
+          scheduleReplayPoll(projection);
+        } else if (currentProjection !== null) {
+          scheduleReplayPoll(currentProjection);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!mountedRef.current) return;
+        if (isAbortError(error)) return;
+        const failure = classifyReplayFailure(error);
+        if (failure.code === "REPLAY_VERSION_EXHAUSTED") {
+          publishReplayFatal(expectedScenarioId);
+          return;
+        }
+        if (replayReadOwnerRef.current !== owner) return;
+        if (!releaseOwner(replayReadOwnerRef, operationId)) return;
+        dispatch({
+          type: "REPLAY_OPERATION_FAILED",
+          operationId,
+          source: "READ",
+          failure,
+        });
+      });
+  }
+
+  function handleReplayControl(control: ReplayControl): void {
+    if (
+      replayFatalRef.current ||
+      selectedScenario === null ||
+      !isReplayScenario(selectedScenario)
+    ) return;
+    const projection = state.replay.projection;
+    if (
+      state.replay.kind !== "READY" ||
+      projection === null ||
+      state.replay.mutation !== null ||
+      replayMutationOwnerRef.current !== null ||
+      !projection.available_controls.includes(control)
+    ) {
+      return;
+    }
+    if (control !== "START" && projection.session_id === null) return;
+    cancelReplayRead();
+    const operationId = nextOperationId(nextOperationIdRef);
+    const context: ReplayMutationContext = {
+      operationId,
+      scenarioId: selectedScenario.scenario_id,
+      control,
+      sessionId: projection.session_id,
+      controlVersion: projection.control_version,
+    };
+    dispatch({ type: "REPLAY_MUTATION_STARTED", context });
+    const owner = startOwner(
+      replayMutationOwnerRef,
+      operationId,
+      control === "START"
+        ? REPLAY_START_CLIENT_DEADLINE_MS
+        : REPLAY_CONTROL_CLIENT_DEADLINE_MS,
+      () => {
+        if (!mountedRef.current || selectedScenarioIdRef.current !== context.scenarioId) return;
+        dispatch({
+          type: "REPLAY_OPERATION_FAILED",
+          operationId,
+          source: "MUTATION",
+          failure: { code: "CLIENT_TIMEOUT", detail: null },
+        });
+      },
+    );
+    const mutationSessionId = context.sessionId;
+    const request = control === "START"
+      ? startReplay({ scenario_id: context.scenarioId }, owner.controller.signal)
+      : mutationSessionId === null
+        ? Promise.reject(new ContractValidationError("replay: active control has no session"))
+        : controlReplay({
+            scenario_id: context.scenarioId,
+            session_id: mutationSessionId,
+            expected_control_version: context.controlVersion,
+            control,
+          }, owner.controller.signal);
+    void request
+      .then((nextProjection) => {
+        if (
+          !mountedRef.current ||
+          replayMutationOwnerRef.current !== owner ||
+          selectedScenarioIdRef.current !== context.scenarioId ||
+          !releaseOwner(replayMutationOwnerRef, operationId)
+        ) {
+          return;
+        }
+        const accepted = acceptsReplayProjection(
+          replayProjectionRef.current,
+          nextProjection,
+          "MUTATION",
+          context.control,
+          null,
+        );
+        dispatch({
+          type: "REPLAY_PROJECTION_RECEIVED",
+          operationId,
+          source: "MUTATION",
+          projection: nextProjection,
+        });
+        if (accepted) {
+          replayProjectionRef.current = nextProjection;
+          scheduleReplayPoll(nextProjection);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!mountedRef.current) return;
+        if (isAbortError(error)) return;
+        const failure = classifyReplayFailure(error);
+        if (failure.code === "REPLAY_VERSION_EXHAUSTED") {
+          publishReplayFatal(context.scenarioId);
+          return;
+        }
+        if (replayMutationOwnerRef.current !== owner) return;
+        if (!releaseOwner(replayMutationOwnerRef, operationId)) return;
+        dispatch({
+          type: "REPLAY_OPERATION_FAILED",
+          operationId,
+          source: "MUTATION",
+          failure,
+        });
+      });
+  }
+
+  useEffect(() => {
+    cancelOwner(replayMutationOwnerRef);
+    cancelReplayRead();
+    dispatch({ type: "REPLAY_DEACTIVATED" });
+    if (replayFatalRef.current) return;
+    if (selectedScenario === null || !isReplayScenario(selectedScenario)) return;
+    const expectedScenarioId = selectedScenario.scenario_id;
+    const handle = setTimeout(() => beginReplayRead(expectedScenarioId, "INITIAL"), 0);
+    return () => clearTimeout(handle);
+  }, [selectedScenario?.scenario_id]);
+
+  useEffect(() => {
+    if (
+      state.replay.kind !== "ERROR" ||
+      state.replay.failure === null ||
+      state.replay.scenarioId === null ||
+      replayFatalRef.current ||
+      !reconciliationErrors.has(state.replay.failure.code)
+    ) {
+      return;
+    }
+    const expectedScenarioId = state.replay.scenarioId;
+    const handle = setTimeout(
+      () => beginReplayRead(expectedScenarioId, "RECONCILE"),
+      REPLAY_POLL_INTERVAL_MS,
+    );
+    return () => clearTimeout(handle);
+  }, [state.replay.kind, state.replay.failure?.code, state.replay.scenarioId]);
 
   async function handleSubmit() {
     const trimmed = command.trim();
@@ -604,6 +1048,8 @@ export function App() {
                   if (!next || next.scenario_id === scenarioId) return;
                   cancelOwner(governanceOwnerRef);
                   cancelOwner(transcriptionOwnerRef);
+                  selectedScenarioIdRef.current = next.scenario_id;
+                  if (!replayFatalRef.current) replayProjectionRef.current = null;
                   const nextMode = next.allowed_inference_modes[0];
                   dispatch({
                     type: "SCENARIO_SELECTED",
@@ -677,6 +1123,17 @@ export function App() {
             )}
           </div>
 
+          {isReplayScenario(selectedScenario) ? (
+            <ReplayPanel
+              projection={state.replay.projection}
+              clientKind={state.replay.kind}
+              failure={state.replay.failure}
+              announcement={state.replay.announcement}
+              physicalAuthority={manifest?.physical_execution_authority_state ?? "NOT_IMPLEMENTED"}
+              onControl={handleReplayControl}
+            />
+          ) : (
+            <>
           <div className="conversation" aria-live="polite">
             {!submittedCommand && !pending && (
               <div className="empty-state">
@@ -847,6 +1304,8 @@ export function App() {
               </Button>
             </div>
           </div>
+            </>
+          )}
         </section>
 
         <aside className="inspector" aria-label="Governance inspector">

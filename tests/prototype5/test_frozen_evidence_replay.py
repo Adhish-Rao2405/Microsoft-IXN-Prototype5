@@ -768,7 +768,86 @@ def test_session_rejects_cross_thread_pybullet_access(
         worker.join(timeout=2)
         assert not worker.is_alive()
         assert len(errors) == 1
-        assert isinstance(errors[0], visual.ReplaySessionStateError)
+        assert type(errors[0]) is visual.ReplaySessionStateError
+        assert not isinstance(errors[0], visual.ReplayClientDisconnectedError)
+
+
+def test_external_owned_client_disconnect_has_distinct_state_error(
+    plan: replay.FrozenEvidenceReplayPlan,
+) -> None:
+    session = _session(plan).open()
+    client_id = session.client_id
+    pb.disconnect(physicsClientId=client_id)
+
+    with pytest.raises(
+        visual.ReplayClientDisconnectedError,
+        match="client disconnected unexpectedly",
+    ):
+        session.apply_frame(0)
+
+    assert session.lifecycle_state == "CLOSED"
+    assert session.is_open is False
+    assert session._client_id is None
+    assert not pb.isConnected(client_id)
+
+
+def test_frame_native_failure_detects_owned_client_disconnect(
+    monkeypatch: pytest.MonkeyPatch,
+    plan: replay.FrozenEvidenceReplayPlan,
+) -> None:
+    session = _session(plan).open()
+    client_id = session.client_id
+    actual_disconnect = visual.pb.disconnect
+
+    def disconnect_during_frame(**_kwargs: object) -> None:
+        actual_disconnect(physicsClientId=client_id)
+        raise RuntimeError("native frame call failed")
+
+    try:
+        monkeypatch.setattr(visual.pb, "resetJointState", disconnect_during_frame)
+        with pytest.raises(visual.ReplayClientDisconnectedError) as error:
+            session.apply_frame(0)
+
+        assert isinstance(error.value.__cause__, RuntimeError)
+        assert str(error.value.__cause__) == "native frame call failed"
+        assert session.lifecycle_state == "CLOSED"
+        assert session._client_id is None
+        assert not pb.isConnected(client_id)
+    finally:
+        if pb.isConnected(client_id):
+            actual_disconnect(physicsClientId=client_id)
+
+
+def test_gui_reset_native_failure_detects_owned_client_disconnect(
+    monkeypatch: pytest.MonkeyPatch,
+    plan: replay.FrozenEvidenceReplayPlan,
+) -> None:
+    session = _session(plan).open()
+    client_id = session.client_id
+    actual_disconnect = visual.pb.disconnect
+
+    def disconnect_during_reset(**_kwargs: object) -> None:
+        actual_disconnect(physicsClientId=client_id)
+        raise RuntimeError("native view reset failed")
+
+    try:
+        session._connection_mode = pb.GUI
+        monkeypatch.setattr(
+            visual.pb,
+            "resetDebugVisualizerCamera",
+            disconnect_during_reset,
+        )
+        with pytest.raises(visual.ReplayClientDisconnectedError) as error:
+            session.reset_view()
+
+        assert isinstance(error.value.__cause__, RuntimeError)
+        assert str(error.value.__cause__) == "native view reset failed"
+        assert session.lifecycle_state == "CLOSED"
+        assert session._client_id is None
+        assert not pb.isConnected(client_id)
+    finally:
+        if pb.isConnected(client_id):
+            actual_disconnect(physicsClientId=client_id)
 
 
 def test_identical_quaternion_representation_is_accepted(

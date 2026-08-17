@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
 const PRODUCTION_BASE_URL = "http://127.0.0.1:8000";
+const REPLAY_SCENARIO_ID = "FROZEN_B2_PICK_PLACE_EVIDENCE_REPLAY";
 
 const governedScenarios = [
   {
@@ -140,6 +141,112 @@ test(
   },
 );
 
+test("real browser controls the frozen replay through the DIRECT coordinator", async ({ page }) => {
+  test.setTimeout(60_000);
+  const replayPosts: Array<{ path: string; body: Record<string, unknown> }> = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (request.method() !== "POST" || !url.pathname.startsWith("/api/v1/replay/")) return;
+    replayPosts.push({
+      path: url.pathname,
+      body: request.postDataJSON() as Record<string, unknown>,
+    });
+  });
+
+  await waitForApplication(page);
+  const scenarioSelector = page.getByRole("combobox", { name: "Scenario" });
+  const initialStateResponse = page.waitForResponse(
+    (response) => response.url().endsWith("/api/v1/replay/state"),
+  );
+  await scenarioSelector.click();
+  await page
+    .getByRole("option", { name: "Frozen B2/B3.2 evidence replay" })
+    .click();
+  expect((await initialStateResponse).status()).toBe(200);
+
+  await expect(page.getByRole("heading", { name: "EVIDENCE REPLAY" })).toBeVisible();
+  await expect(page.getByText("NOT PHYSICAL EXECUTION", { exact: true })).toBeVisible();
+  await expect(page.getByText("DISCRETE SAMPLED STATES — NO DYNAMIC TIMING", { exact: true })).toBeVisible();
+  await expect(page.getByRole("radiogroup", { name: "Inference mode" })).toHaveCount(0);
+  await expect(authorityRow(page, "QUALIFICATION_REPLAY_ACCESS")).toContainText("SERVER_REGISTERED_ONLY");
+  await expect(authorityRow(page, "QUALIFICATION_REPLAY_ACCESS")).not.toContainText("GRANTED");
+  await expect(authorityRow(page, "DOWNSTREAM_GEOMETRIC_QUALIFICATION")).toContainText("FAIL");
+  const replayEvidence = page.getByLabel("Frozen downstream qualification");
+  await expect(replayEvidence.getByText("B3_2_FAIL_DISCRETE_ROUTE_QUALIFICATION", { exact: true })).toBeVisible();
+  await expect(replayEvidence.getByText("118", { exact: true })).toHaveCount(2);
+  await expect(replayEvidence.getByText("0", { exact: true })).toHaveCount(2);
+  await expect(replayEvidence.getByText("NOT_IMPLEMENTED", { exact: true })).toBeVisible();
+
+  const controlNames = ["Start", "Pause", "Resume", "Next snapshot", "Previous snapshot", "Stop", "Reset view"];
+  for (const name of controlNames) {
+    await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
+  }
+  await expect(page.getByRole("button", { name: "Start", exact: true })).toBeEnabled();
+
+  const startResponsePromise = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/v1/replay/start") &&
+      response.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  const startResponse = await startResponsePromise;
+  expect(startResponse.status()).toBe(200);
+  const startProjection = (await startResponse.json()) as { session_id?: unknown };
+  expect(typeof startProjection.session_id).toBe("string");
+  expect(startProjection.session_id).not.toBe("");
+  const serverSessionId = startProjection.session_id as string;
+  await expect(page.getByText("Frame 1 of 469", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeEnabled();
+  await expectNoAxeViolations(page);
+
+  for (const width of [980, 600]) {
+    await page.setViewportSize({ width, height: 1200 });
+    const dimensions = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+  }
+
+  await page.getByRole("button", { name: "Reset view", exact: true }).click();
+  await expect(page.getByText("Frame 1 of 469", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Next snapshot", exact: true }).click();
+  await expect(page.getByText("Frame 2 of 469", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Previous snapshot", exact: true }).click();
+  await expect(page.getByText("Frame 1 of 469", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Resume", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Pause", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Pause", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Resume", exact: true }).click();
+
+  await expect(page.getByText("Frame 469 of 469", { exact: true })).toBeVisible({ timeout: 35_000 });
+  await expect(page.getByText("COMPLETED", { exact: true }).first()).toBeVisible();
+  await expect(replayEvidence.getByText("B3_2_FAIL_DISCRETE_ROUTE_QUALIFICATION", { exact: true })).toBeVisible();
+  await expect(replayEvidence.getByText("NOT_IMPLEMENTED", { exact: true })).toBeVisible();
+  await expectNoAxeViolations(page);
+
+  await page.getByRole("button", { name: "Stop", exact: true }).click();
+  await expect(page.getByText("IDLE", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("NO ACTIVE FRAME", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start", exact: true })).toBeEnabled();
+
+  expect(replayPosts).toEqual([
+    { path: "/api/v1/replay/start", body: { scenario_id: REPLAY_SCENARIO_ID } },
+    { path: "/api/v1/replay/control", body: { scenario_id: REPLAY_SCENARIO_ID, session_id: serverSessionId, expected_control_version: 1, control: "RESET_VIEW" } },
+    { path: "/api/v1/replay/control", body: { scenario_id: REPLAY_SCENARIO_ID, session_id: serverSessionId, expected_control_version: 2, control: "NEXT_SNAPSHOT" } },
+    { path: "/api/v1/replay/control", body: { scenario_id: REPLAY_SCENARIO_ID, session_id: serverSessionId, expected_control_version: 3, control: "PREVIOUS_SNAPSHOT" } },
+    { path: "/api/v1/replay/control", body: { scenario_id: REPLAY_SCENARIO_ID, session_id: serverSessionId, expected_control_version: 4, control: "RESUME" } },
+    { path: "/api/v1/replay/control", body: { scenario_id: REPLAY_SCENARIO_ID, session_id: serverSessionId, expected_control_version: 5, control: "PAUSE" } },
+    { path: "/api/v1/replay/control", body: { scenario_id: REPLAY_SCENARIO_ID, session_id: serverSessionId, expected_control_version: 6, control: "RESUME" } },
+    { path: "/api/v1/replay/control", body: { scenario_id: REPLAY_SCENARIO_ID, session_id: serverSessionId, expected_control_version: 8, control: "STOP" } },
+  ]);
+  const sessionIds = replayPosts
+    .filter((entry) => entry.path === "/api/v1/replay/control")
+    .map((entry) => entry.body.session_id);
+  expect(new Set(sessionIds).size).toBe(1);
+});
+
 for (const scenario of governedScenarios) {
   test(
     `real governance derives ${scenario.decision} for ${scenario.displayName}`,
@@ -229,8 +336,7 @@ for (const scenario of governedScenarios) {
         "QUALIFICATION_REPLAY_ACCESS",
       );
 
-      await expect(replayRow).toContainText("NOT REQUESTED");
-      await expect(replayRow).toContainText("NOT ENABLED IN D2");
+      await expect(replayRow).toContainText("PROHIBITED");
       await expect(replayRow).not.toContainText("GRANTED");
 
       await expect(

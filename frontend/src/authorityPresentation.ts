@@ -3,6 +3,7 @@ import type {
   DemoScenario,
   GateDisplayStatus,
   GovernanceRecord,
+  ReplayLifecycle,
 } from "./types";
 
 export const SYSTEM_STATUS_EVIDENCE_LABEL =
@@ -21,7 +22,7 @@ interface AuthorityPresentationInput {
   readonly record: GovernanceRecord | null;
   readonly proposalPresent: boolean;
   readonly physicalExecutionAuthorityState: "NOT_IMPLEMENTED";
-  readonly d2ReplayEnabled: boolean;
+  readonly replayLifecycle: ReplayLifecycle | null;
 }
 
 function authorityLabel(state: AuthorityState): string {
@@ -69,9 +70,11 @@ function authorityState(
       };
     case "QUALIFICATION_REPLAY_ACCESS":
       return {
-        state: input.d2ReplayEnabled
-          ? "NOT REQUESTED"
-          : "NOT REQUESTED — NOT ENABLED IN D2",
+        state: scenario.qualification_replay_access === "SERVER_REGISTERED_ONLY"
+          ? input.replayLifecycle === null
+            ? "SERVER_REGISTERED_ONLY — RECONCILING"
+            : `SERVER_REGISTERED_ONLY — ${input.replayLifecycle}`
+          : "PROHIBITED",
         detail: [
           `Policy: ${scenario.qualification_replay_access}`,
           `Capability class: ${scenario.replay_capability_classification}`,

@@ -11,6 +11,8 @@ import type {
   DemoStatus,
   HybridGovernanceResult,
   RecordedTranscription,
+  ReplayLifecycle,
+  ReplayStateProjection,
 } from "../src/types";
 
 const failure = { code: "NETWORK_FAILURE", detail: null } as const;
@@ -405,5 +407,376 @@ describe("demoReducer operation ownership", () => {
       context: governanceContext(2, "VOICE"),
     });
     expect(voiceWithoutReadyTranscript).toBe(voiceBase);
+  });
+});
+
+function replayProjection(
+  sessionId: string | null,
+  projectionVersion: number,
+  lifecycle: ReplayLifecycle = sessionId === null ? "IDLE" : "PAUSED",
+): ReplayStateProjection {
+  const idle = sessionId === null;
+  return {
+    contract_id: "PROTOTYPE5_D3_REPLAY_STATE_V1",
+    contract_version: "1.0.0",
+    scenario_id: "scenario-a",
+    binding_id: "FROZEN_B2_B3_2_EVIDENCE_V1",
+    session_id: sessionId,
+    control_version: idle ? 0 : projectionVersion,
+    projection_version: idle ? 0 : projectionVersion,
+    lifecycle_state: lifecycle,
+    command_in_flight: false,
+    current_frame: idle ? null : {
+      frame_index: lifecycle === "COMPLETED" ? 468 : 0,
+      semantic_snapshot_index: lifecycle === "COMPLETED" ? 468 : 0,
+      route_configuration_index: lifecycle === "COMPLETED" ? 466 : 0,
+      route_state: "HOME",
+      phase: lifecycle === "COMPLETED" ? "DESTINATION_SUPPORTED" : "SOURCE_SUPPORTED",
+      boundary_snapshot: "NONE",
+      is_key_snapshot: true,
+    },
+    frame_count: 469,
+    key_snapshot_indices: [0, 78, 118, 119, 157, 311, 351, 352, 390, 468],
+    allowed_controls: ["START", "PAUSE", "RESUME", "NEXT_SNAPSHOT", "PREVIOUS_SNAPSHOT", "STOP", "RESET_VIEW"],
+    available_controls: idle ? ["START"] : ["RESUME", "NEXT_SNAPSHOT", "STOP", "RESET_VIEW"],
+    presentation_cadence_ms: 50,
+    b2_sha256: "a".repeat(64),
+    b3_2_sha256: "b".repeat(64),
+    qualification: {
+      overall_result: "B3_2_FAIL_DISCRETE_ROUTE_QUALIFICATION",
+      scientific_failure_count: 118,
+      forbidden_contact_failure_count: 0,
+      support_material_penetration_failure_count: 118,
+      required_support_missing_failure_count: 0,
+      failure_codes_present: ["B3_2_FAIL_SUPPORT_MATERIAL_PENETRATION"],
+      recorded_failure_example: {
+        semantic_snapshot_index: 352,
+        route_state: "DESTINATION_PLACE",
+        phase: "RELEASE_BOUNDARY",
+        boundary_snapshot: "POST",
+        pair_index: 78,
+        signed_distance_m: -9.290505685985613e-7,
+        decision: "B3_2_FAIL_SUPPORT_MATERIAL_PENETRATION",
+      },
+    },
+    presentation_labels: ["EVIDENCE REPLAY", "NOT PHYSICAL EXECUTION", "DISCRETE SAMPLED STATES — NO DYNAMIC TIMING"],
+    physical_execution_authority: "NOT_IMPLEMENTED",
+    last_error_code: lifecycle === "FAILED" ? "REPLAY_SCENE_FAILED" : null,
+    updated_at_utc: "2026-08-14T10:00:00Z",
+  };
+}
+
+function replayReadyState(): DemoState {
+  const base = stateForScenario();
+  const started = demoReducer(base, {
+    type: "REPLAY_READ_STARTED",
+    context: { operationId: 101, scenarioId: "scenario-a", purpose: "INITIAL" },
+  });
+  return demoReducer(started, {
+    type: "REPLAY_PROJECTION_RECEIVED",
+    operationId: 101,
+    source: "READ",
+    projection: replayProjection(null, 0),
+  });
+}
+
+describe("replay reducer ownership", () => {
+  it("establishes START ownership and accepts only its new session", () => {
+    const ready = replayReadyState();
+    const started = demoReducer(ready, {
+      type: "REPLAY_MUTATION_STARTED",
+      context: {
+        operationId: 102,
+        scenarioId: "scenario-a",
+        control: "START",
+        sessionId: null,
+        controlVersion: 0,
+      },
+    });
+    expect(started.replay.kind).toBe("MUTATING");
+    const settled = demoReducer(started, {
+      type: "REPLAY_PROJECTION_RECEIVED",
+      operationId: 102,
+      source: "MUTATION",
+      projection: replayProjection("S1", 1),
+    });
+    expect(settled.replay.projection?.session_id).toBe("S1");
+    expect(settled.replay.kind).toBe("READY");
+  });
+
+  it("rejects double mutation and stale operation settlement", () => {
+    const ready = replayReadyState();
+    const started = demoReducer(ready, {
+      type: "REPLAY_MUTATION_STARTED",
+      context: { operationId: 102, scenarioId: "scenario-a", control: "START", sessionId: null, controlVersion: 0 },
+    });
+    const duplicate = demoReducer(started, {
+      type: "REPLAY_MUTATION_STARTED",
+      context: { operationId: 103, scenarioId: "scenario-a", control: "START", sessionId: null, controlVersion: 0 },
+    });
+    expect(duplicate).toBe(started);
+    const stale = demoReducer(started, {
+      type: "REPLAY_PROJECTION_RECEIVED",
+      operationId: 999,
+      source: "MUTATION",
+      projection: replayProjection("stale", 1),
+    });
+    expect(stale).toBe(started);
+  });
+
+  it("orders session identity before projection magnitude", () => {
+    const base = { ...replayReadyState(), replay: { ...replayReadyState().replay, projection: replayProjection("S2", 2) } };
+    const polling = demoReducer(base, {
+      type: "REPLAY_READ_STARTED",
+      context: { operationId: 104, scenarioId: "scenario-a", purpose: "POLL" },
+    });
+    const staleSession = demoReducer(polling, {
+      type: "REPLAY_PROJECTION_RECEIVED",
+      operationId: 104,
+      source: "READ",
+      projection: replayProjection("S1", 400),
+    });
+    expect(staleSession.replay.projection?.session_id).toBe("S2");
+    expect(staleSession.replay.read).toBeNull();
+    const reconciliating = demoReducer(base, {
+      type: "REPLAY_READ_STARTED",
+      context: { operationId: 105, scenarioId: "scenario-a", purpose: "POLL" },
+    });
+    const sameSessionHigher = demoReducer(reconciliating, {
+      type: "REPLAY_PROJECTION_RECEIVED",
+      operationId: 105,
+      source: "READ",
+      projection: replayProjection("S2", 3),
+    });
+    expect(sameSessionHigher.replay.projection?.projection_version).toBe(3);
+    const nextPoll = demoReducer(sameSessionHigher, {
+      type: "REPLAY_READ_STARTED",
+      context: { operationId: 106, scenarioId: "scenario-a", purpose: "POLL" },
+    });
+    const lowerSameSession = demoReducer(nextPoll, {
+      type: "REPLAY_PROJECTION_RECEIVED",
+      operationId: 106,
+      source: "READ",
+      projection: replayProjection("S2", 2),
+    });
+    expect(lowerSameSession.replay.projection?.projection_version).toBe(3);
+    expect(lowerSameSession.replay.read).toBeNull();
+  });
+
+  it("accepts authoritative STOP to canonical IDLE", () => {
+    const base = { ...replayReadyState(), replay: { ...replayReadyState().replay, projection: replayProjection("S1", 2) } };
+    const stopping = demoReducer(base, {
+      type: "REPLAY_MUTATION_STARTED",
+      context: { operationId: 106, scenarioId: "scenario-a", control: "STOP", sessionId: "S1", controlVersion: 2 },
+    });
+    const stopped = demoReducer(stopping, {
+      type: "REPLAY_PROJECTION_RECEIVED",
+      operationId: 106,
+      source: "MUTATION",
+      projection: replayProjection(null, 0),
+    });
+    expect(stopped.replay.projection?.session_id).toBeNull();
+    expect(stopped.replay.projection?.available_controls).toEqual(["START"]);
+  });
+
+  it("permits explicit reconciliation to recover a server-issued session", () => {
+    const ready = replayReadyState();
+    const reconciling = demoReducer(ready, {
+      type: "REPLAY_READ_STARTED",
+      context: { operationId: 107, scenarioId: "scenario-a", purpose: "RECONCILE" },
+    });
+    const recovered = demoReducer(reconciling, {
+      type: "REPLAY_PROJECTION_RECEIVED",
+      operationId: 107,
+      source: "READ",
+      projection: replayProjection("S1", 1),
+    });
+    expect(recovered.replay.projection?.session_id).toBe("S1");
+    expect(recovered.replay.projection?.projection_version).toBe(1);
+  });
+
+  it("accepts authoritative active-to-IDLE read settlement", () => {
+    const base = {
+      ...replayReadyState(),
+      replay: {
+        ...replayReadyState().replay,
+        projection: replayProjection("S1", 2),
+      },
+    };
+    const reading = demoReducer(base, {
+      type: "REPLAY_READ_STARTED",
+      context: { operationId: 113, scenarioId: "scenario-a", purpose: "POLL" },
+    });
+    const settled = demoReducer(reading, {
+      type: "REPLAY_PROJECTION_RECEIVED",
+      operationId: 113,
+      source: "READ",
+      projection: replayProjection(null, 0),
+    });
+    expect(settled.replay.projection?.session_id).toBeNull();
+    expect(settled.replay.projection?.projection_version).toBe(0);
+  });
+
+  it.each(["INITIAL", "RECONCILE"] as const)(
+    "rejects cross-session active replacement during %s read",
+    (purpose) => {
+      const base = {
+        ...replayReadyState(),
+        replay: {
+          ...replayReadyState().replay,
+          projection: replayProjection("S2", 2),
+        },
+      };
+      const reading = demoReducer(base, {
+        type: "REPLAY_READ_STARTED",
+        context: { operationId: 114, scenarioId: "scenario-a", purpose },
+      });
+      const rejected = demoReducer(reading, {
+        type: "REPLAY_PROJECTION_RECEIVED",
+        operationId: 114,
+        source: "READ",
+        projection: replayProjection("S1", 400),
+      });
+      expect(rejected.replay.projection?.session_id).toBe("S2");
+      expect(rejected.replay.projection?.projection_version).toBe(2);
+      expect(rejected.replay.read).toBeNull();
+    },
+  );
+
+  it("accepts an equal projection from the same active session", () => {
+    const current = replayProjection("S2", 2);
+    const base = {
+      ...replayReadyState(),
+      replay: { ...replayReadyState().replay, projection: current },
+    };
+    const reading = demoReducer(base, {
+      type: "REPLAY_READ_STARTED",
+      context: { operationId: 115, scenarioId: "scenario-a", purpose: "POLL" },
+    });
+    const candidate = { ...current, updated_at_utc: "2026-08-14T10:00:01Z" };
+    const accepted = demoReducer(reading, {
+      type: "REPLAY_PROJECTION_RECEIVED",
+      operationId: 115,
+      source: "READ",
+      projection: candidate,
+    });
+    expect(accepted.replay.projection).toBe(candidate);
+    expect(accepted.replay.read).toBeNull();
+  });
+
+  it("latches fatal exhaustion across deactivation and scenario changes", () => {
+    const fatal = demoReducer(replayReadyState(), {
+      type: "REPLAY_FATAL",
+      originScenarioId: "scenario-a",
+    });
+    expect(fatal.replay.kind).toBe("FATAL");
+    expect(demoReducer(fatal, {
+      type: "REPLAY_READ_STARTED",
+      context: { operationId: 108, scenarioId: "scenario-a", purpose: "RECONCILE" },
+    })).toBe(fatal);
+    expect(demoReducer(fatal, { type: "REPLAY_DEACTIVATED" })).toBe(fatal);
+    const switched = demoReducer(fatal, {
+      type: "SCENARIO_SELECTED",
+      scenarioId: "scenario-b",
+      command: "",
+      inferenceMode: "AUTO",
+    });
+    expect(switched.replay.kind).toBe("FATAL");
+    expect(switched.replay.failure?.code).toBe("REPLAY_VERSION_EXHAUSTED");
+    expect(demoReducer(switched, {
+      type: "REPLAY_READ_STARTED",
+      context: { operationId: 109, scenarioId: "scenario-b", purpose: "INITIAL" },
+    })).toBe(switched);
+    expect(demoReducer(switched, {
+      type: "REPLAY_MUTATION_STARTED",
+      context: {
+        operationId: 110,
+        scenarioId: "scenario-b",
+        control: "START",
+        sessionId: null,
+        controlVersion: 0,
+      },
+    })).toBe(switched);
+  });
+
+  it("publishes an owned fatal event after the selected scenario changes", () => {
+    const switched = demoReducer(replayReadyState(), {
+      type: "SCENARIO_SELECTED",
+      scenarioId: "scenario-b",
+      command: "",
+      inferenceMode: "AUTO",
+    });
+    const fatal = demoReducer(switched, {
+      type: "REPLAY_FATAL",
+      originScenarioId: "scenario-a",
+    });
+    expect(fatal.controls.scenarioId).toBe("scenario-b");
+    expect(fatal.replay.kind).toBe("FATAL");
+    expect(fatal.replay.scenarioId).toBe("scenario-a");
+    expect(fatal.replay.failure?.code).toBe("REPLAY_VERSION_EXHAUSTED");
+  });
+
+  it("rejects a mutation projection that changes session identity", () => {
+    const base = {
+      ...replayReadyState(),
+      replay: {
+        ...replayReadyState().replay,
+        projection: replayProjection("S1", 2),
+      },
+    };
+    const mutating = demoReducer(base, {
+      type: "REPLAY_MUTATION_STARTED",
+      context: {
+        operationId: 111,
+        scenarioId: "scenario-a",
+        control: "NEXT_SNAPSHOT",
+        sessionId: "S1",
+        controlVersion: 2,
+      },
+    });
+    const rejected = demoReducer(mutating, {
+      type: "REPLAY_PROJECTION_RECEIVED",
+      operationId: 111,
+      source: "MUTATION",
+      projection: replayProjection("S2", 400),
+    });
+    expect(rejected.replay.kind).toBe("ERROR");
+    expect(rejected.replay.failure?.code).toBe("CONTRACT_FAILURE");
+    expect(rejected.replay.projection?.session_id).toBe("S1");
+  });
+
+  it("does not announce same-lifecycle poll frame progression", () => {
+    const playing = replayProjection("S1", 2, "PLAYING");
+    const base = {
+      ...replayReadyState(),
+      replay: {
+        ...replayReadyState().replay,
+        projection: playing,
+        announcement: "Evidence replay playing.",
+      },
+    };
+    const polling = demoReducer(base, {
+      type: "REPLAY_READ_STARTED",
+      context: { operationId: 112, scenarioId: "scenario-a", purpose: "POLL" },
+    });
+    const progressed = demoReducer(polling, {
+      type: "REPLAY_PROJECTION_RECEIVED",
+      operationId: 112,
+      source: "READ",
+      projection: {
+        ...playing,
+        projection_version: 3,
+        current_frame: playing.current_frame === null
+          ? null
+          : {
+              ...playing.current_frame,
+              frame_index: 1,
+              semantic_snapshot_index: 1,
+              is_key_snapshot: false,
+            },
+      },
+    });
+    expect(progressed.replay.projection?.current_frame?.frame_index).toBe(1);
+    expect(progressed.replay.announcement).toBe("Evidence replay playing.");
   });
 });

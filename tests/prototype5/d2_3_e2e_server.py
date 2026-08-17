@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -28,6 +29,7 @@ from src.prototype5.canonical_governance_runner import (  # noqa: E402
     CanonicalRunnerConfigurationV2,
 )
 from src.prototype5.demo_api import create_demo_app  # noqa: E402
+from src.prototype5.demo_runtime import build_replay_coordinator  # noqa: E402
 from src.prototype5.demo_service import DemoApplicationService  # noqa: E402
 from src.prototype5.foundry_sdk_backend import ModelBackendResponse  # noqa: E402
 from src.prototype5.governance_contract_v2 import ProviderId  # noqa: E402
@@ -40,6 +42,7 @@ from src.prototype5.hybrid_inference_router import (  # noqa: E402
 from src.prototype5.manufacturing_policy_v2 import (  # noqa: E402
     load_manufacturing_policy,
 )
+from src.prototype5.replay_coordinator import ReplayCoordinator  # noqa: E402
 
 
 FIXED_TIME = datetime(2026, 8, 12, 12, 0, tzinfo=timezone.utc)
@@ -97,6 +100,21 @@ def _software_commit() -> str:
     return completed.stdout.strip().lower()
 
 
+def _build_direct_replay_coordinator() -> ReplayCoordinator:
+    """Capture the production replay composition in deterministic DIRECT mode."""
+
+    variable = "PROTOTYPE5_REPLAY_MODE"
+    previous = os.environ.get(variable)
+    os.environ[variable] = "DIRECT"
+    try:
+        return build_replay_coordinator(ROOT)
+    finally:
+        if previous is None:
+            os.environ.pop(variable, None)
+        else:
+            os.environ[variable] = previous
+
+
 def create_d2_3_app() -> FastAPI:
     sequence = count(1)
     software_commit = _software_commit()
@@ -150,9 +168,11 @@ def create_d2_3_app() -> FastAPI:
         speech_transcriber=None,
         utc_clock=lambda: FIXED_TIME,
     )
+    replay_coordinator = _build_direct_replay_coordinator()
     return create_demo_app(
         service,
         frontend_dist=ROOT / "frontend" / "dist",
+        replay_coordinator=replay_coordinator,
     )
 
 

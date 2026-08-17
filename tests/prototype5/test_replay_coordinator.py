@@ -12,6 +12,7 @@ from src.prototype5.frozen_evidence_replay import (
     FrozenEvidenceReplayPlan,
     load_registered_frozen_evidence_replay,
 )
+from src.prototype5.pybullet_evidence_replay import ReplayClientDisconnectedError
 from src.prototype5.replay_coordinator import (
     MAX_SAFE_INTEGER,
     ReplayControl,
@@ -42,6 +43,9 @@ class _FakeSession:
         self.closed = False
         self.fail_open = False
         self.fail_apply = False
+        self.fail_apply_client_disconnected = False
+        self.fail_reset = False
+        self.fail_reset_client_disconnected = False
         self.fail_close = False
         self.block_open: threading.Event | None = None
         self.block_reset: threading.Event | None = None
@@ -75,6 +79,11 @@ class _FakeSession:
             assert self.block_frame.wait(timeout=5)
         if self.fail_apply:
             raise RuntimeError("frame failure")
+        if self.fail_apply_client_disconnected:
+            self.connected = False
+            raise ReplayClientDisconnectedError(
+                "PyBullet replay client disconnected unexpectedly"
+            )
         self.frame_index = frame_index
         self.applied_frames.append(frame_index)
         return _Readback(self.plan.frame_at(frame_index))
@@ -96,6 +105,13 @@ class _FakeSession:
         self._owned("reset_view")
         if self.block_reset is not None:
             assert self.block_reset.wait(timeout=5)
+        if self.fail_reset:
+            raise RuntimeError("view reset failure")
+        if self.fail_reset_client_disconnected:
+            self.connected = False
+            raise ReplayClientDisconnectedError(
+                "PyBullet replay client disconnected unexpectedly"
+            )
 
     def close(self) -> None:
         self._owned("close")
@@ -645,6 +661,191 @@ def test_gui_liveness_loss_publishes_closed_failure(plan: FrozenEvidenceReplayPl
         failed = coordinator.get_state()
         assert failed.session_id == state.session_id
         assert failed.last_error_code == "REPLAY_GUI_CLOSED"
+    finally:
+        coordinator.shutdown()
+
+
+def test_cadence_client_disconnect_uses_gui_closed_taxonomy_and_stop_recovers(
+    plan: FrozenEvidenceReplayPlan,
+) -> None:
+    factory = _Factory(plan)
+    coordinator = _coordinator(factory)
+    try:
+        paused = _start(coordinator)
+        playing = _control(coordinator, paused, ReplayControl.RESUME)
+        session = factory.sessions[0]
+        session.connected = False
+        session.fail_apply_client_disconnected = True
+        with coordinator._condition:
+            coordinator._next_liveness = time.monotonic() + 100.0
+            coordinator._next_cadence = time.monotonic()
+            coordinator._condition.notify_all()
+
+        _eventually(lambda: coordinator.get_state().lifecycle_state == "FAILED")
+        failed = coordinator.get_state()
+        assert failed.session_id == playing.session_id
+        assert failed.current_frame == playing.current_frame
+        assert failed.current_frame.frame_index == 0
+        assert failed.control_version == playing.control_version + 1
+        assert failed.projection_version == playing.projection_version + 1
+        assert failed.last_error_code == "REPLAY_GUI_CLOSED"
+        assert session.applied_frames == [0]
+        assert [name for name, _ in session.calls].count("apply_frame") == 2
+        assert "probe_connection" not in [name for name, _ in session.calls]
+        with coordinator._condition:
+            assert coordinator._next_cadence is None
+            assert coordinator._next_liveness is None
+            assert coordinator._periodic_in_progress is False
+
+        idle = _control(coordinator, failed, ReplayControl.STOP)
+        assert idle.lifecycle_state == "IDLE"
+        assert idle.session_id is None
+        assert (idle.control_version, idle.projection_version) == (0, 0)
+        assert idle.current_frame is None
+        assert idle.last_error_code is None
+    finally:
+        coordinator.shutdown()
+
+
+def test_cadence_generic_apply_failure_remains_scene_failed(
+    plan: FrozenEvidenceReplayPlan,
+) -> None:
+    factory = _Factory(plan)
+    coordinator = _coordinator(factory)
+    try:
+        paused = _start(coordinator)
+        playing = _control(coordinator, paused, ReplayControl.RESUME)
+        session = factory.sessions[0]
+        session.fail_apply = True
+        with coordinator._condition:
+            coordinator._next_liveness = time.monotonic() + 100.0
+            coordinator._next_cadence = time.monotonic()
+            coordinator._condition.notify_all()
+
+        _eventually(lambda: coordinator.get_state().lifecycle_state == "FAILED")
+        failed = coordinator.get_state()
+        assert failed.session_id == playing.session_id
+        assert failed.current_frame == playing.current_frame
+        assert failed.current_frame.frame_index == 0
+        assert failed.last_error_code == "REPLAY_SCENE_FAILED"
+        assert session.applied_frames == [0]
+        assert "probe_connection" not in [name for name, _ in session.calls]
+        with coordinator._condition:
+            assert coordinator._next_cadence is None
+            assert coordinator._next_liveness is None
+            assert coordinator._periodic_in_progress is False
+    finally:
+        coordinator.shutdown()
+
+
+def test_navigation_client_disconnect_returns_gui_closed_state_and_stop_recovers(
+    plan: FrozenEvidenceReplayPlan,
+) -> None:
+    factory = _Factory(plan)
+    coordinator = _coordinator(factory)
+    try:
+        paused = _start(coordinator)
+        session = factory.sessions[0]
+        session.connected = False
+        session.fail_apply_client_disconnected = True
+
+        failed = _control(coordinator, paused, ReplayControl.NEXT_SNAPSHOT)
+        assert failed.lifecycle_state == "FAILED"
+        assert failed.session_id == paused.session_id
+        assert failed.current_frame == paused.current_frame
+        assert failed.current_frame.frame_index == 0
+        assert failed.control_version == paused.control_version + 1
+        assert failed.projection_version == paused.projection_version + 1
+        assert failed.last_error_code == "REPLAY_GUI_CLOSED"
+        assert session.applied_frames == [0]
+        assert "probe_connection" not in [name for name, _ in session.calls]
+        with coordinator._condition:
+            assert coordinator._next_cadence is None
+            assert coordinator._next_liveness is None
+
+        idle = _control(coordinator, failed, ReplayControl.STOP)
+        assert idle.lifecycle_state == "IDLE"
+        assert idle.session_id is None
+        assert (idle.control_version, idle.projection_version) == (0, 0)
+        assert idle.current_frame is None
+        assert idle.last_error_code is None
+    finally:
+        coordinator.shutdown()
+
+
+def test_playing_reset_client_disconnect_returns_gui_closed_state_and_stop_recovers(
+    plan: FrozenEvidenceReplayPlan,
+) -> None:
+    factory = _Factory(plan)
+    coordinator = _coordinator(factory)
+    try:
+        paused = _start(coordinator)
+        playing = _control(coordinator, paused, ReplayControl.RESUME)
+        session = factory.sessions[0]
+        session.connected = False
+        session.fail_reset_client_disconnected = True
+
+        failed = _control(coordinator, playing, ReplayControl.RESET_VIEW)
+        assert failed.lifecycle_state == "FAILED"
+        assert failed.session_id == playing.session_id
+        assert failed.current_frame == playing.current_frame
+        assert failed.current_frame.frame_index == 0
+        assert failed.control_version == playing.control_version + 1
+        assert failed.projection_version == playing.projection_version + 1
+        assert failed.last_error_code == "REPLAY_GUI_CLOSED"
+        assert "probe_connection" not in [name for name, _ in session.calls]
+        with coordinator._condition:
+            assert coordinator._next_cadence is None
+            assert coordinator._next_liveness is None
+
+        idle = _control(coordinator, failed, ReplayControl.STOP)
+        assert idle.lifecycle_state == "IDLE"
+        assert idle.session_id is None
+        assert (idle.control_version, idle.projection_version) == (0, 0)
+        assert idle.current_frame is None
+        assert idle.last_error_code is None
+    finally:
+        coordinator.shutdown()
+
+
+def test_navigation_generic_apply_failure_remains_scene_failed(
+    plan: FrozenEvidenceReplayPlan,
+) -> None:
+    factory = _Factory(plan)
+    coordinator = _coordinator(factory)
+    try:
+        paused = _start(coordinator)
+        session = factory.sessions[0]
+        session.fail_apply = True
+
+        with pytest.raises(ReplayCoordinatorError) as raised:
+            _control(coordinator, paused, ReplayControl.NEXT_SNAPSHOT)
+        assert raised.value.code is ReplayErrorCode.SCENE_FAILED
+        failed = coordinator.get_state()
+        assert failed.lifecycle_state == "FAILED"
+        assert failed.current_frame == paused.current_frame
+        assert failed.last_error_code == "REPLAY_SCENE_FAILED"
+    finally:
+        coordinator.shutdown()
+
+
+def test_reset_view_generic_failure_remains_scene_failed(
+    plan: FrozenEvidenceReplayPlan,
+) -> None:
+    factory = _Factory(plan)
+    coordinator = _coordinator(factory)
+    try:
+        paused = _start(coordinator)
+        session = factory.sessions[0]
+        session.fail_reset = True
+
+        with pytest.raises(ReplayCoordinatorError) as raised:
+            _control(coordinator, paused, ReplayControl.RESET_VIEW)
+        assert raised.value.code is ReplayErrorCode.SCENE_FAILED
+        failed = coordinator.get_state()
+        assert failed.lifecycle_state == "FAILED"
+        assert failed.current_frame == paused.current_frame
+        assert failed.last_error_code == "REPLAY_SCENE_FAILED"
     finally:
         coordinator.shutdown()
 

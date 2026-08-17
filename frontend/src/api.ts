@@ -4,12 +4,18 @@ import {
   decodeDemoStatus,
   decodeGovernanceResult,
   decodeRecordedTranscription,
+  decodeReplayError,
+  decodeReplayState,
 } from "./runtimeContracts";
 import type {
   DemoManifest,
   DemoStatus,
   HybridGovernanceResult,
   RecordedTranscription,
+  ReplayControlPayload,
+  ReplayErrorCode,
+  ReplayStartPayload,
+  ReplayStateProjection,
   TypedCommandPayload,
   VoiceCommandPayload,
 } from "./types";
@@ -31,6 +37,18 @@ export class ApiTransportError extends Error {
   constructor() {
     super("NETWORK_FAILURE");
     this.name = "ApiTransportError";
+  }
+}
+
+export class ReplayApiRequestError extends Error {
+  readonly status: number;
+  readonly code: ReplayErrorCode;
+
+  constructor(status: number, code: ReplayErrorCode) {
+    super(code);
+    this.name = "ReplayApiRequestError";
+    this.status = status;
+    this.code = code;
   }
 }
 
@@ -82,6 +100,17 @@ async function validatedResponse<T>(
     throw new ApiRequestError(response.status, boundedHttpDetail(body, response.status));
   }
   return decode(body);
+}
+
+async function replayValidatedResponse(
+  response: Response,
+  expectedScenarioId: string,
+): Promise<ReplayStateProjection> {
+  const body = await responseJson(response);
+  if (!response.ok) {
+    throw new ReplayApiRequestError(response.status, decodeReplayError(body));
+  }
+  return decodeReplayState(body, expectedScenarioId);
 }
 
 export async function getDemoManifest(
@@ -138,4 +167,38 @@ export async function submitVoiceCommand(
     signal,
   });
   return validatedResponse(response, decodeGovernanceResult);
+}
+
+export async function startReplay(
+  payload: ReplayStartPayload,
+  signal?: AbortSignal,
+): Promise<ReplayStateProjection> {
+  const response = await request("/api/v1/replay/start", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    signal,
+  });
+  return replayValidatedResponse(response, payload.scenario_id);
+}
+
+export async function controlReplay(
+  payload: ReplayControlPayload,
+  signal?: AbortSignal,
+): Promise<ReplayStateProjection> {
+  const response = await request("/api/v1/replay/control", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    signal,
+  });
+  return replayValidatedResponse(response, payload.scenario_id);
+}
+
+export async function getReplayState(
+  scenarioId: string,
+  signal?: AbortSignal,
+): Promise<ReplayStateProjection> {
+  const response = await request("/api/v1/replay/state", { signal });
+  return replayValidatedResponse(response, scenarioId);
 }

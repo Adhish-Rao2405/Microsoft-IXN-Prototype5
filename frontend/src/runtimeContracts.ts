@@ -12,6 +12,16 @@ import type {
   LocalHealth,
   RecordedAudioMetadata,
   RecordedTranscription,
+  ReplayBoundarySnapshot,
+  ReplayControl,
+  ReplayErrorCode,
+  ReplayFrameProjection,
+  ReplayLastErrorCode,
+  ReplayLifecycle,
+  ReplayPhase,
+  ReplayQualificationProjection,
+  ReplayRouteState,
+  ReplayStateProjection,
   TranscriptStatus,
 } from "./types";
 
@@ -76,6 +86,43 @@ const QUALIFIED_TRANSCRIPT_BACKEND = "foundry_nemotron";
 const QUALIFIED_SPEECH_ALIAS = "nemotron-speech-streaming-en-0.6b";
 const QUALIFIED_SPEECH_MODEL =
   "nemotron-speech-streaming-en-0.6b-generic-cpu:3";
+const MAX_SAFE_INTEGER = 9_007_199_254_740_991;
+const REPLAY_CONTROLS = [
+  "START", "PAUSE", "RESUME", "NEXT_SNAPSHOT", "PREVIOUS_SNAPSHOT", "STOP", "RESET_VIEW",
+] as const satisfies readonly ReplayControl[];
+const REPLAY_LIFECYCLES = [
+  "IDLE", "PAUSED", "PLAYING", "COMPLETED", "FAILED", "CLEANUP_FAILED",
+] as const satisfies readonly ReplayLifecycle[];
+const REPLAY_LAST_ERRORS = [
+  "REPLAY_RUNTIME_INTEGRITY_FAILED", "REPLAY_SCENE_FAILED", "REPLAY_GUI_CLOSED",
+  "REPLAY_CLEANUP_UNRESOLVED",
+] as const satisfies readonly ReplayLastErrorCode[];
+const REPLAY_ERRORS = [
+  "REPLAY_SCENARIO_NOT_FOUND", "REPLAY_SCENARIO_NOT_REPLAYABLE", "REPLAY_SESSION_ACTIVE",
+  "REPLAY_SESSION_STALE", "REPLAY_CONTROL_VERSION_STALE", "REPLAY_CONTROL_INVALID_STATE",
+  "REPLAY_FRAME_BOUNDARY", "REPLAY_REQUEST_INVALID", "REPLAY_COMMAND_CHANNEL_FULL",
+  "REPLAY_CLEANUP_UNRESOLVED", "REPLAY_SERVER_SHUTTING_DOWN",
+  "REPLAY_RUNTIME_INTEGRITY_FAILED", "REPLAY_VERSION_EXHAUSTED", "REPLAY_SCENE_FAILED",
+  "REPLAY_COMMAND_EXPIRED", "REPLAY_START_TIMEOUT", "REPLAY_CONTROL_SETTLEMENT_UNKNOWN",
+] as const satisfies readonly ReplayErrorCode[];
+const REPLAY_ROUTE_STATES = [
+  "HOME", "SOURCE_HIGH", "SOURCE_PICK", "SOURCE_HIGH_RETURN", "DESTINATION_HIGH",
+  "DESTINATION_PLACE", "DESTINATION_HIGH_RETURN", "INTERPOLATED",
+] as const satisfies readonly ReplayRouteState[];
+const REPLAY_PHASES = [
+  "SOURCE_SUPPORTED", "ATTACHMENT_BOUNDARY", "CARRIED", "RELEASE_BOUNDARY",
+  "DESTINATION_SUPPORTED",
+] as const satisfies readonly ReplayPhase[];
+const REPLAY_BOUNDARIES = ["NONE", "PRE", "POST"] as const satisfies readonly ReplayBoundarySnapshot[];
+const REPLAY_KEY_INDICES = [0, 78, 118, 119, 157, 311, 351, 352, 390, 468] as const;
+const REPLAY_KEY_INDEX_SET = new Set<number>(REPLAY_KEY_INDICES);
+const REPLAY_LABELS = [
+  "EVIDENCE REPLAY",
+  "NOT PHYSICAL EXECUTION",
+  "DISCRETE SAMPLED STATES — NO DYNAMIC TIMING",
+] as const;
+const B2_SHA256 = "a5a468145aea5aa21a649cccd1de3d6d2f8f15349d4b326db9380a6ad1256554";
+const B3_2_SHA256 = "11c8b83f8c4d0545c9a8df604046a335acb00121a51bf6e1d5b39504991c1798";
 
 type JsonObject = Record<string, unknown>;
 
@@ -1116,4 +1163,370 @@ export function decodeRecordedTranscription(value: unknown): RecordedTranscripti
     error_code: errorCode,
     error_detail: boundedNullableString(source.error_detail, `${path}.error_detail`, 500),
   };
+}
+
+function safeInteger(value: unknown, path: string, maximum: number): number {
+  const result = integerValue(value, path);
+  if (!Number.isSafeInteger(result) || result > maximum) {
+    return fail(path, `expected safe integer <= ${maximum}`);
+  }
+  return result;
+}
+
+function exactInteger(value: unknown, expected: number, path: string): number {
+  const result = safeInteger(value, path, MAX_SAFE_INTEGER);
+  if (result !== expected) return fail(path, `expected ${expected}`);
+  return expected;
+}
+
+function exactStringTuple<const T extends readonly string[]>(
+  value: unknown,
+  expected: T,
+  path: string,
+): T {
+  const source = arrayValue(value, path);
+  if (source.length !== expected.length) return fail(path, "unexpected tuple length");
+  expected.forEach((item, index) => exactString(source[index], item, `${path}[${index}]`));
+  return expected;
+}
+
+function exactIntegerTuple<const T extends readonly number[]>(
+  value: unknown,
+  expected: T,
+  path: string,
+): T {
+  const source = arrayValue(value, path);
+  if (source.length !== expected.length) return fail(path, "unexpected tuple length");
+  expected.forEach((item, index) => exactInteger(source[index], item, `${path}[${index}]`));
+  return expected;
+}
+
+function decodeReplayFrame(value: unknown, path: string): ReplayFrameProjection {
+  const source = objectValue(value, path, [
+    "frame_index",
+    "semantic_snapshot_index",
+    "route_configuration_index",
+    "route_state",
+    "phase",
+    "boundary_snapshot",
+    "is_key_snapshot",
+  ]);
+  const frameIndex = safeInteger(requiredProperty(source, "frame_index", path), `${path}.frame_index`, 468);
+  const semanticIndex = safeInteger(
+    requiredProperty(source, "semantic_snapshot_index", path),
+    `${path}.semantic_snapshot_index`,
+    468,
+  );
+  if (semanticIndex !== frameIndex) fail(path, "frame and semantic indices diverge");
+  const routeConfigurationIndex = safeInteger(
+    requiredProperty(source, "route_configuration_index", path),
+    `${path}.route_configuration_index`,
+    466,
+  );
+  const routeState = enumValue(
+    requiredProperty(source, "route_state", path),
+    REPLAY_ROUTE_STATES,
+    `${path}.route_state`,
+  );
+  const phase = enumValue(
+    requiredProperty(source, "phase", path),
+    REPLAY_PHASES,
+    `${path}.phase`,
+  );
+  const boundary = enumValue(
+    requiredProperty(source, "boundary_snapshot", path),
+    REPLAY_BOUNDARIES,
+    `${path}.boundary_snapshot`,
+  );
+  const keySnapshot = booleanValue(
+    requiredProperty(source, "is_key_snapshot", path),
+    `${path}.is_key_snapshot`,
+  );
+  if (keySnapshot !== REPLAY_KEY_INDEX_SET.has(semanticIndex)) {
+    fail(path, "key-snapshot flag contradicts semantic index");
+  }
+  return {
+    frame_index: frameIndex,
+    semantic_snapshot_index: semanticIndex,
+    route_configuration_index: routeConfigurationIndex,
+    route_state: routeState,
+    phase,
+    boundary_snapshot: boundary,
+    is_key_snapshot: keySnapshot,
+  };
+}
+
+function decodeReplayQualification(
+  value: unknown,
+  path: string,
+): ReplayQualificationProjection {
+  const source = objectValue(value, path, [
+    "overall_result",
+    "scientific_failure_count",
+    "forbidden_contact_failure_count",
+    "support_material_penetration_failure_count",
+    "required_support_missing_failure_count",
+    "failure_codes_present",
+    "recorded_failure_example",
+  ]);
+  const recordedPath = `${path}.recorded_failure_example`;
+  const recorded = objectValue(
+    requiredProperty(source, "recorded_failure_example", path),
+    recordedPath,
+    [
+      "semantic_snapshot_index",
+      "route_state",
+      "phase",
+      "boundary_snapshot",
+      "pair_index",
+      "signed_distance_m",
+      "decision",
+    ],
+  );
+  const signedDistance = finiteNumber(
+    requiredProperty(recorded, "signed_distance_m", recordedPath),
+    `${recordedPath}.signed_distance_m`,
+    -Number.MAX_VALUE,
+  );
+  if (signedDistance !== -9.290505685985613e-7) {
+    fail(`${recordedPath}.signed_distance_m`, "unexpected frozen distance");
+  }
+  return {
+    overall_result: exactString(
+      requiredProperty(source, "overall_result", path),
+      "B3_2_FAIL_DISCRETE_ROUTE_QUALIFICATION",
+      `${path}.overall_result`,
+    ) as "B3_2_FAIL_DISCRETE_ROUTE_QUALIFICATION",
+    scientific_failure_count: exactInteger(
+      requiredProperty(source, "scientific_failure_count", path),
+      118,
+      `${path}.scientific_failure_count`,
+    ) as 118,
+    forbidden_contact_failure_count: exactInteger(
+      requiredProperty(source, "forbidden_contact_failure_count", path),
+      0,
+      `${path}.forbidden_contact_failure_count`,
+    ) as 0,
+    support_material_penetration_failure_count: exactInteger(
+      requiredProperty(source, "support_material_penetration_failure_count", path),
+      118,
+      `${path}.support_material_penetration_failure_count`,
+    ) as 118,
+    required_support_missing_failure_count: exactInteger(
+      requiredProperty(source, "required_support_missing_failure_count", path),
+      0,
+      `${path}.required_support_missing_failure_count`,
+    ) as 0,
+    failure_codes_present: exactStringTuple(
+      requiredProperty(source, "failure_codes_present", path),
+      ["B3_2_FAIL_SUPPORT_MATERIAL_PENETRATION"] as const,
+      `${path}.failure_codes_present`,
+    ),
+    recorded_failure_example: {
+      semantic_snapshot_index: exactInteger(
+        requiredProperty(recorded, "semantic_snapshot_index", recordedPath),
+        352,
+        `${recordedPath}.semantic_snapshot_index`,
+      ) as 352,
+      route_state: exactString(
+        requiredProperty(recorded, "route_state", recordedPath),
+        "DESTINATION_PLACE",
+        `${recordedPath}.route_state`,
+      ) as "DESTINATION_PLACE",
+      phase: exactString(
+        requiredProperty(recorded, "phase", recordedPath),
+        "RELEASE_BOUNDARY",
+        `${recordedPath}.phase`,
+      ) as "RELEASE_BOUNDARY",
+      boundary_snapshot: exactString(
+        requiredProperty(recorded, "boundary_snapshot", recordedPath),
+        "POST",
+        `${recordedPath}.boundary_snapshot`,
+      ) as "POST",
+      pair_index: exactInteger(
+        requiredProperty(recorded, "pair_index", recordedPath),
+        78,
+        `${recordedPath}.pair_index`,
+      ) as 78,
+      signed_distance_m: signedDistance,
+      decision: exactString(
+        requiredProperty(recorded, "decision", recordedPath),
+        "B3_2_FAIL_SUPPORT_MATERIAL_PENETRATION",
+        `${recordedPath}.decision`,
+      ) as "B3_2_FAIL_SUPPORT_MATERIAL_PENETRATION",
+    },
+  };
+}
+
+export function decodeReplayState(
+  value: unknown,
+  expectedScenarioId: string,
+): ReplayStateProjection {
+  const path = "replay";
+  const source = objectValue(value, path, [
+    "contract_id",
+    "contract_version",
+    "scenario_id",
+    "binding_id",
+    "session_id",
+    "control_version",
+    "projection_version",
+    "lifecycle_state",
+    "command_in_flight",
+    "current_frame",
+    "frame_count",
+    "key_snapshot_indices",
+    "allowed_controls",
+    "available_controls",
+    "presentation_cadence_ms",
+    "b2_sha256",
+    "b3_2_sha256",
+    "qualification",
+    "presentation_labels",
+    "physical_execution_authority",
+    "last_error_code",
+    "updated_at_utc",
+  ]);
+  const expectedScenario = scenarioIdentifier(expectedScenarioId, "expectedScenarioId");
+  const scenarioId = scenarioIdentifier(
+    requiredProperty(source, "scenario_id", path),
+    `${path}.scenario_id`,
+  );
+  if (scenarioId !== expectedScenario) fail(`${path}.scenario_id`, "unexpected scenario identity");
+  const lifecycle = enumValue(
+    requiredProperty(source, "lifecycle_state", path),
+    REPLAY_LIFECYCLES,
+    `${path}.lifecycle_state`,
+  );
+  const sessionValue = requiredProperty(source, "session_id", path);
+  const sessionId = sessionValue === null
+    ? null
+    : boundedString(sessionValue, `${path}.session_id`, 200);
+  if (sessionId !== null && !sessionId.trim()) fail(`${path}.session_id`, "must be non-blank");
+  const controlVersion = safeInteger(
+    requiredProperty(source, "control_version", path),
+    `${path}.control_version`,
+    MAX_SAFE_INTEGER,
+  );
+  const projectionVersion = safeInteger(
+    requiredProperty(source, "projection_version", path),
+    `${path}.projection_version`,
+    MAX_SAFE_INTEGER,
+  );
+  const commandInFlight = booleanValue(
+    requiredProperty(source, "command_in_flight", path),
+    `${path}.command_in_flight`,
+  );
+  const frameValue = requiredProperty(source, "current_frame", path);
+  const frame = frameValue === null ? null : decodeReplayFrame(frameValue, `${path}.current_frame`);
+  const availableSource = arrayValue(
+    requiredProperty(source, "available_controls", path),
+    `${path}.available_controls`,
+  );
+  const available = availableSource.map((item, index) =>
+    enumValue(item, REPLAY_CONTROLS, `${path}.available_controls[${index}]`),
+  );
+  if (new Set(available).size !== available.length) fail(`${path}.available_controls`, "duplicates forbidden");
+  const availableOrder = available.map((control) => REPLAY_CONTROLS.indexOf(control));
+  if (availableOrder.some((value, index) => index > 0 && value <= availableOrder[index - 1]!)) {
+    fail(`${path}.available_controls`, "control order is not canonical");
+  }
+  const lastErrorValue = requiredProperty(source, "last_error_code", path);
+  const lastError = lastErrorValue === null
+    ? null
+    : enumValue(lastErrorValue, REPLAY_LAST_ERRORS, `${path}.last_error_code`);
+
+  if (lifecycle === "IDLE") {
+    if (sessionId !== null || controlVersion !== 0 || projectionVersion !== 0 || frame !== null || lastError !== null) {
+      fail(path, "canonical IDLE projection is contradictory");
+    }
+    const expectedAvailable = commandInFlight ? [] : ["START"];
+    if (available.join("|") !== expectedAvailable.join("|")) {
+      fail(`${path}.available_controls`, "canonical IDLE availability is contradictory");
+    }
+  } else {
+    if (sessionId === null || controlVersion < 1 || projectionVersion < 1) {
+      fail(path, "retained session identity/version is missing");
+    }
+    if (["PAUSED", "PLAYING", "COMPLETED"].includes(lifecycle) && frame === null) {
+      fail(path, "healthy active projection requires a current frame");
+    }
+    if (["PAUSED", "PLAYING", "COMPLETED"].includes(lifecycle) && lastError !== null) {
+      fail(path, "healthy projection cannot carry a replay error");
+    }
+    if (lifecycle === "FAILED" && lastError === null) fail(path, "FAILED requires a replay error");
+    if (lifecycle === "CLEANUP_FAILED" && lastError !== "REPLAY_CLEANUP_UNRESOLVED") {
+      fail(path, "CLEANUP_FAILED requires cleanup-unresolved error");
+    }
+    if (lifecycle === "COMPLETED" && frame?.frame_index !== 468) {
+      fail(path, "COMPLETED requires final frame");
+    }
+    if (available.includes("START")) fail(`${path}.available_controls`, "active session cannot START");
+  }
+  if (commandInFlight && available.length !== 0) {
+    fail(`${path}.available_controls`, "unsettled command requires empty availability");
+  }
+
+  return {
+    contract_id: exactString(
+      requiredProperty(source, "contract_id", path),
+      "PROTOTYPE5_D3_REPLAY_STATE_V1",
+      `${path}.contract_id`,
+    ) as "PROTOTYPE5_D3_REPLAY_STATE_V1",
+    contract_version: exactString(
+      requiredProperty(source, "contract_version", path),
+      "1.0.0",
+      `${path}.contract_version`,
+    ) as "1.0.0",
+    scenario_id: scenarioId,
+    binding_id: exactString(
+      requiredProperty(source, "binding_id", path),
+      "FROZEN_B2_B3_2_EVIDENCE_V1",
+      `${path}.binding_id`,
+    ) as "FROZEN_B2_B3_2_EVIDENCE_V1",
+    session_id: sessionId,
+    control_version: controlVersion,
+    projection_version: projectionVersion,
+    lifecycle_state: lifecycle,
+    command_in_flight: commandInFlight,
+    current_frame: frame,
+    frame_count: exactInteger(requiredProperty(source, "frame_count", path), 469, `${path}.frame_count`) as 469,
+    key_snapshot_indices: exactIntegerTuple(
+      requiredProperty(source, "key_snapshot_indices", path),
+      REPLAY_KEY_INDICES,
+      `${path}.key_snapshot_indices`,
+    ),
+    allowed_controls: exactStringTuple(
+      requiredProperty(source, "allowed_controls", path),
+      REPLAY_CONTROLS,
+      `${path}.allowed_controls`,
+    ),
+    available_controls: available,
+    presentation_cadence_ms: exactInteger(
+      requiredProperty(source, "presentation_cadence_ms", path),
+      50,
+      `${path}.presentation_cadence_ms`,
+    ) as 50,
+    b2_sha256: exactString(requiredProperty(source, "b2_sha256", path), B2_SHA256, `${path}.b2_sha256`),
+    b3_2_sha256: exactString(requiredProperty(source, "b3_2_sha256", path), B3_2_SHA256, `${path}.b3_2_sha256`),
+    qualification: decodeReplayQualification(requiredProperty(source, "qualification", path), `${path}.qualification`),
+    presentation_labels: exactStringTuple(
+      requiredProperty(source, "presentation_labels", path),
+      REPLAY_LABELS,
+      `${path}.presentation_labels`,
+    ),
+    physical_execution_authority: exactString(
+      requiredProperty(source, "physical_execution_authority", path),
+      "NOT_IMPLEMENTED",
+      `${path}.physical_execution_authority`,
+    ) as "NOT_IMPLEMENTED",
+    last_error_code: lastError,
+    updated_at_utc: utcTimestamp(requiredProperty(source, "updated_at_utc", path), `${path}.updated_at_utc`),
+  };
+}
+
+export function decodeReplayError(value: unknown): ReplayErrorCode {
+  const path = "replayError";
+  const source = objectValue(value, path, ["code"]);
+  return enumValue(requiredProperty(source, "code", path), REPLAY_ERRORS, `${path}.code`);
 }

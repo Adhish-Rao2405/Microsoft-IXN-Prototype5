@@ -4,6 +4,9 @@ import type {
   HybridGovernanceResult,
   InferenceMode,
   RecordedTranscription,
+  ReplayControl,
+  ReplayErrorCode,
+  ReplayStateProjection,
 } from "./types";
 
 export type ClientFailureCode =
@@ -56,6 +59,42 @@ export type TranscriptionState =
     }
   | { kind: "FAILED"; context: TranscriptionContext; failure: ClientFailure };
 
+export type ReplayClientFailureCode =
+  | ReplayErrorCode
+  | "CLIENT_TIMEOUT"
+  | "NETWORK_FAILURE"
+  | "CONTRACT_FAILURE"
+  | "UNKNOWN_CLIENT_FAILURE";
+
+export interface ReplayClientFailure {
+  readonly code: ReplayClientFailureCode;
+  readonly detail: null;
+}
+
+export interface ReplayReadContext {
+  readonly operationId: number;
+  readonly scenarioId: string;
+  readonly purpose: "INITIAL" | "POLL" | "RECONCILE";
+}
+
+export interface ReplayMutationContext {
+  readonly operationId: number;
+  readonly scenarioId: string;
+  readonly control: ReplayControl;
+  readonly sessionId: string | null;
+  readonly controlVersion: number;
+}
+
+export interface ReplayClientState {
+  readonly kind: "INACTIVE" | "RECONCILING" | "READY" | "MUTATING" | "ERROR" | "FATAL";
+  readonly scenarioId: string | null;
+  readonly projection: ReplayStateProjection | null;
+  readonly read: ReplayReadContext | null;
+  readonly mutation: ReplayMutationContext | null;
+  readonly failure: ReplayClientFailure | null;
+  readonly announcement: string | null;
+}
+
 export interface DemoState {
   readonly bootstrap: BootstrapState;
   readonly controls: {
@@ -66,6 +105,7 @@ export interface DemoState {
   };
   readonly governance: GovernanceState;
   readonly transcription: TranscriptionState;
+  readonly replay: ReplayClientState;
 }
 
 export type DemoAction =
@@ -97,7 +137,24 @@ export type DemoAction =
       transcription: RecordedTranscription;
     }
   | { type: "TRANSCRIPTION_FAILED"; operationId: number; failure: ClientFailure }
-  | { type: "DISCARD_TRANSCRIPT" };
+  | { type: "DISCARD_TRANSCRIPT" }
+  | { type: "REPLAY_DEACTIVATED" }
+  | { type: "REPLAY_READ_STARTED"; context: ReplayReadContext }
+  | { type: "REPLAY_READ_CANCELLED"; operationId: number }
+  | { type: "REPLAY_MUTATION_STARTED"; context: ReplayMutationContext }
+  | {
+      type: "REPLAY_PROJECTION_RECEIVED";
+      operationId: number;
+      source: "READ" | "MUTATION";
+      projection: ReplayStateProjection;
+    }
+  | {
+      type: "REPLAY_OPERATION_FAILED";
+      operationId: number;
+      source: "READ" | "MUTATION";
+      failure: ReplayClientFailure;
+    }
+  | { type: "REPLAY_FATAL"; originScenarioId: string };
 
 export const initialDemoState: DemoState = {
   bootstrap: { kind: "BOOTSTRAPPING", operationId: 0 },
@@ -109,10 +166,53 @@ export const initialDemoState: DemoState = {
   },
   governance: { kind: "IDLE" },
   transcription: { kind: "NONE" },
+  replay: {
+    kind: "INACTIVE",
+    scenarioId: null,
+    projection: null,
+    read: null,
+    mutation: null,
+    failure: null,
+    announcement: null,
+  },
 };
 
 function isPositiveSafeOperationId(operationId: number): boolean {
   return Number.isSafeInteger(operationId) && operationId > 0;
+}
+
+function replayAnnouncement(projection: ReplayStateProjection): string {
+  const frame = projection.current_frame;
+  return frame === null
+    ? `Evidence replay ${projection.lifecycle_state.toLowerCase()}.`
+    : `Evidence replay ${projection.lifecycle_state.toLowerCase()}, frame ${frame.frame_index + 1} of ${projection.frame_count}.`;
+}
+
+export function acceptsReplayProjection(
+  current: ReplayStateProjection | null,
+  candidate: ReplayStateProjection,
+  source: "READ" | "MUTATION",
+  control: ReplayControl | null,
+  readPurpose: ReplayReadContext["purpose"] | null,
+): boolean {
+  if (current === null) {
+    return source === "READ" &&
+      (readPurpose === "INITIAL" || readPurpose === "RECONCILE");
+  }
+  if (candidate.scenario_id !== current.scenario_id) return false;
+  if (candidate.session_id === current.session_id) {
+    if (candidate.session_id === null) return candidate.projection_version === 0;
+    return candidate.projection_version >= current.projection_version;
+  }
+  if (source === "READ") {
+    if (candidate.session_id === null && current.session_id !== null) return true;
+    return current.session_id === null &&
+      candidate.session_id !== null &&
+      (readPurpose === "INITIAL" || readPurpose === "RECONCILE");
+  }
+  if (control === "START") return current.session_id === null && candidate.session_id !== null;
+  if (control === "STOP") return current.session_id !== null && candidate.session_id === null;
+  return false;
 }
 
 export function demoReducer(state: DemoState, action: DemoAction): DemoState {
@@ -172,6 +272,9 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         },
         governance: { kind: "IDLE" },
         transcription: { kind: "NONE" },
+        replay: state.replay.kind === "FATAL"
+          ? state.replay
+          : initialDemoState.replay,
       };
 
     case "MODE_SELECTED":
@@ -326,6 +429,158 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
             ? { kind: "IDLE" }
             : state.governance,
         transcription: { kind: "NONE" },
+      };
+
+    case "REPLAY_DEACTIVATED":
+      return state.replay.kind === "INACTIVE" || state.replay.kind === "FATAL"
+        ? state
+        : { ...state, replay: initialDemoState.replay };
+
+    case "REPLAY_READ_STARTED":
+      if (
+        !isPositiveSafeOperationId(action.context.operationId) ||
+        action.context.scenarioId !== state.controls.scenarioId ||
+        state.replay.mutation !== null ||
+        state.replay.read !== null ||
+        state.replay.kind === "FATAL"
+      ) {
+        return state;
+      }
+      return {
+        ...state,
+        replay: {
+          ...state.replay,
+          kind: action.context.purpose === "POLL" && state.replay.projection !== null
+            ? "READY"
+            : "RECONCILING",
+          scenarioId: action.context.scenarioId,
+          read: action.context,
+          failure: null,
+        },
+      };
+
+    case "REPLAY_READ_CANCELLED":
+      if (state.replay.read?.operationId !== action.operationId) return state;
+      return {
+        ...state,
+        replay: {
+          ...state.replay,
+          kind: state.replay.projection === null ? "INACTIVE" : "READY",
+          read: null,
+        },
+      };
+
+    case "REPLAY_MUTATION_STARTED": {
+      const projection = state.replay.projection;
+      if (
+        !isPositiveSafeOperationId(action.context.operationId) ||
+        action.context.scenarioId !== state.controls.scenarioId ||
+        state.replay.kind === "FATAL" ||
+        state.replay.mutation !== null ||
+        state.replay.read !== null ||
+        projection === null ||
+        !projection.available_controls.includes(action.context.control) ||
+        action.context.sessionId !== projection.session_id ||
+        action.context.controlVersion !== projection.control_version
+      ) {
+        return state;
+      }
+      return {
+        ...state,
+        replay: {
+          ...state.replay,
+          kind: "MUTATING",
+          mutation: action.context,
+          failure: null,
+        },
+      };
+    }
+
+    case "REPLAY_PROJECTION_RECEIVED": {
+      const owner = action.source === "READ" ? state.replay.read : state.replay.mutation;
+      if (
+        owner === null ||
+        owner.operationId !== action.operationId ||
+        owner.scenarioId !== state.controls.scenarioId ||
+        action.projection.scenario_id !== owner.scenarioId
+      ) {
+        return state;
+      }
+      if (!acceptsReplayProjection(
+          state.replay.projection,
+          action.projection,
+          action.source,
+          action.source === "MUTATION" ? state.replay.mutation?.control ?? null : null,
+          action.source === "READ" ? state.replay.read?.purpose ?? null : null,
+        )) {
+        if (action.source === "READ") {
+          return {
+            ...state,
+            replay: {
+              ...state.replay,
+              kind: state.replay.projection === null ? "INACTIVE" : "READY",
+              read: null,
+            },
+          };
+        }
+        return {
+          ...state,
+          replay: {
+            ...state.replay,
+            kind: "ERROR",
+            mutation: null,
+            failure: { code: "CONTRACT_FAILURE", detail: null },
+            announcement: "Evidence replay response rejected.",
+          },
+        };
+      }
+      const shouldAnnounce = action.source === "MUTATION" ||
+        state.replay.read?.purpose !== "POLL" ||
+        state.replay.projection?.lifecycle_state !== action.projection.lifecycle_state;
+      return {
+        ...state,
+        replay: {
+          kind: "READY",
+          scenarioId: owner.scenarioId,
+          projection: action.projection,
+          read: null,
+          mutation: null,
+          failure: null,
+          announcement: shouldAnnounce
+            ? replayAnnouncement(action.projection)
+            : state.replay.announcement,
+        },
+      };
+    }
+
+    case "REPLAY_OPERATION_FAILED": {
+      const owner = action.source === "READ" ? state.replay.read : state.replay.mutation;
+      if (owner === null || owner.operationId !== action.operationId) return state;
+      return {
+        ...state,
+        replay: {
+          ...state.replay,
+          kind: "ERROR",
+          read: null,
+          mutation: null,
+          failure: action.failure,
+          announcement: "Evidence replay request failed.",
+        },
+      };
+    }
+
+    case "REPLAY_FATAL":
+      return {
+        ...state,
+        replay: {
+          kind: "FATAL",
+          scenarioId: action.originScenarioId,
+          projection: state.replay.projection,
+          read: null,
+          mutation: null,
+          failure: { code: "REPLAY_VERSION_EXHAUSTED", detail: null },
+          announcement: "Evidence replay unavailable until application restart.",
+        },
       };
   }
 }

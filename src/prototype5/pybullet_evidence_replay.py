@@ -37,6 +37,10 @@ class ReplaySessionStateError(PyBulletEvidenceReplayError):
     """Replay session lifecycle or navigation was invalid."""
 
 
+class ReplayClientDisconnectedError(ReplaySessionStateError):
+    """The exact owned PyBullet client disconnected unexpectedly."""
+
+
 class ReplaySceneError(PyBulletEvidenceReplayError):
     """The deterministic replay scene could not be constructed or applied."""
 
@@ -310,7 +314,9 @@ class PyBulletEvidenceReplaySession:
             raise ReplaySessionStateError("replay session is not open")
         if not pb.isConnected(physicsClientId=self._client_id):
             self._mark_closed()
-            raise ReplaySessionStateError("PyBullet replay client disconnected unexpectedly")
+            raise ReplayClientDisconnectedError(
+                "PyBullet replay client disconnected unexpectedly"
+            )
         return self._client_id
 
     def _mark_closed(self) -> None:
@@ -321,6 +327,24 @@ class PyBulletEvidenceReplaySession:
         self._current_replay_index = None
         self._current_frame_index = None
         self._state = _ReplaySessionState.CLOSED
+
+    def _raise_if_owned_client_disconnected(
+        self,
+        client_id: int,
+        original: BaseException,
+    ) -> None:
+        if self._state is not _ReplaySessionState.OPEN or self._client_id != client_id:
+            return
+        try:
+            connected = bool(pb.isConnected(physicsClientId=client_id))
+        except BaseException:
+            return
+        if connected:
+            return
+        self._mark_closed()
+        raise ReplayClientDisconnectedError(
+            "PyBullet replay client disconnected unexpectedly"
+        ) from original
 
     def _disconnect_owned_client(self, client_id: int) -> None:
         if self._client_id != client_id:
@@ -479,6 +503,7 @@ class PyBulletEvidenceReplaySession:
                     "PyBullet component orientation differs from frozen frame"
                 )
         except BaseException as exc:
+            self._raise_if_owned_client_disconnected(client_id, exc)
             self._disconnect_after_failure(client_id, exc)
             if not isinstance(exc, Exception):
                 raise
@@ -537,6 +562,7 @@ class PyBulletEvidenceReplaySession:
                 physicsClientId=client_id,
             )
         except BaseException as exc:
+            self._raise_if_owned_client_disconnected(client_id, exc)
             self._disconnect_after_failure(client_id, exc)
             if not isinstance(exc, Exception):
                 raise
@@ -584,6 +610,7 @@ class PyBulletEvidenceReplaySession:
 __all__ = (
     "PyBulletEvidenceReplayError",
     "PyBulletEvidenceReplaySession",
+    "ReplayClientDisconnectedError",
     "ReplayFrameReadback",
     "ReplayRuntimeAttestation",
     "ReplayRuntimeIntegrityError",

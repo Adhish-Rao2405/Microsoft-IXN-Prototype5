@@ -26,6 +26,7 @@ from src.prototype5.frozen_evidence_replay import (
 )
 from src.prototype5.pybullet_evidence_replay import (
     PyBulletEvidenceReplaySession,
+    ReplayClientDisconnectedError,
     ReplayFrameReadback,
     ReplayRuntimeIntegrityError,
     ReplaySceneError,
@@ -756,6 +757,9 @@ class ReplayCoordinator:
             target = self._current_frame.frame_index + delta
         try:
             readback = session.apply_frame(target)
+        except ReplayClientDisconnectedError:
+            self._settle_command_gui_closed(command)
+            return
         except BaseException:
             self._settle_frame_failure(command)
             return
@@ -769,6 +773,9 @@ class ReplayCoordinator:
     def _execute_reset_view(self, command: _AdmittedCommand) -> None:
         try:
             self._require_owner_session().reset_view()
+        except ReplayClientDisconnectedError:
+            self._settle_command_gui_closed(command)
+            return
         except BaseException:
             self._settle_frame_failure(command)
             return
@@ -877,28 +884,52 @@ class ReplayCoordinator:
                 self._periodic_in_progress = False
                 self._condition.notify_all()
             return
+        self._settle_periodic_gui_closed()
+
+    def _settle_periodic_gui_closed(self) -> None:
         if self._would_exhaust(1, 1):
             self._latch_version_exhaustion(None)
             return
         cleanup_succeeded = self._cleanup_owner_session(self._owner_session)
         with self._condition:
             self._advance_versions_locked(1, 1)
-            self._public_lifecycle = (
-                ReplayLifecycle.FAILED
-                if cleanup_succeeded
-                else ReplayLifecycle.CLEANUP_FAILED
-            )
-            self._internal_lifecycle = self._public_lifecycle
-            self._last_error = (
-                ReplayLastErrorCode.GUI_CLOSED
-                if cleanup_succeeded
-                else ReplayLastErrorCode.CLEANUP_UNRESOLVED
-            )
-            self._next_liveness = None
-            self._next_cadence = None
-            self._updated_at_utc = self._utc_timestamp()
+            self._publish_gui_closed_locked(cleanup_succeeded)
             self._periodic_in_progress = False
             self._condition.notify_all()
+
+    def _settle_command_gui_closed(self, command: _AdmittedCommand) -> None:
+        if self._would_exhaust(1, 1):
+            self._latch_version_exhaustion(command)
+            return
+        cleanup_succeeded = self._cleanup_owner_session(self._owner_session)
+        with self._condition:
+            self._advance_versions_locked(1, 1)
+            self._publish_gui_closed_locked(cleanup_succeeded)
+            result = self._complete_command_locked(
+                command,
+                error_code=(
+                    None
+                    if cleanup_succeeded
+                    else ReplayErrorCode.CLEANUP_UNRESOLVED
+                ),
+            )
+        self._resolve_command_future(command, result)
+
+    def _publish_gui_closed_locked(self, cleanup_succeeded: bool) -> None:
+        self._public_lifecycle = (
+            ReplayLifecycle.FAILED
+            if cleanup_succeeded
+            else ReplayLifecycle.CLEANUP_FAILED
+        )
+        self._internal_lifecycle = self._public_lifecycle
+        self._last_error = (
+            ReplayLastErrorCode.GUI_CLOSED
+            if cleanup_succeeded
+            else ReplayLastErrorCode.CLEANUP_UNRESOLVED
+        )
+        self._next_liveness = None
+        self._next_cadence = None
+        self._updated_at_utc = self._utc_timestamp()
 
     def _execute_cadence(self) -> None:
         with self._lock:
@@ -911,6 +942,9 @@ class ReplayCoordinator:
             return
         try:
             readback = self._require_owner_session().apply_frame(target)
+        except ReplayClientDisconnectedError:
+            self._settle_periodic_gui_closed()
+            return
         except BaseException:
             self._settle_periodic_frame_failure()
             return

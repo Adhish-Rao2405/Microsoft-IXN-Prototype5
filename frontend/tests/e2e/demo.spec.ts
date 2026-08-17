@@ -88,6 +88,140 @@ const manifest = {
   }),
 };
 
+const replayScenarioId = "FROZEN_B2_PICK_PLACE_EVIDENCE_REPLAY";
+const replaySessionId = "mocked-replay-session-s1";
+const replayKeySnapshotIndices = [0, 78, 118, 119, 157, 311, 351, 352, 390, 468];
+
+type MockedReplayFrameIndex = 0 | 1 | 468;
+
+function replayFrame(frameIndex: MockedReplayFrameIndex) {
+  switch (frameIndex) {
+    case 0:
+      return {
+        frame_index: 0,
+        semantic_snapshot_index: 0,
+        route_configuration_index: 0,
+        route_state: "HOME",
+        phase: "SOURCE_SUPPORTED",
+        boundary_snapshot: "NONE",
+        is_key_snapshot: true,
+      };
+    case 1:
+      return {
+        frame_index: 1,
+        semantic_snapshot_index: 1,
+        route_configuration_index: 1,
+        route_state: "INTERPOLATED",
+        phase: "SOURCE_SUPPORTED",
+        boundary_snapshot: "NONE",
+        is_key_snapshot: false,
+      };
+    case 468:
+      return {
+        frame_index: 468,
+        semantic_snapshot_index: 468,
+        route_configuration_index: 466,
+        route_state: "HOME",
+        phase: "DESTINATION_SUPPORTED",
+        boundary_snapshot: "NONE",
+        is_key_snapshot: true,
+      };
+    default: {
+      const unsupportedFrameIndex: never = frameIndex;
+      throw new Error(`Unsupported mocked replay frame: ${unsupportedFrameIndex}`);
+    }
+  }
+}
+
+function replayState(overrides: Record<string, unknown> = {}) {
+  return {
+    contract_id: "PROTOTYPE5_D3_REPLAY_STATE_V1",
+    contract_version: "1.0.0",
+    scenario_id: replayScenarioId,
+    binding_id: "FROZEN_B2_B3_2_EVIDENCE_V1",
+    session_id: null,
+    control_version: 0,
+    projection_version: 0,
+    lifecycle_state: "IDLE",
+    command_in_flight: false,
+    current_frame: null,
+    frame_count: 469,
+    key_snapshot_indices: replayKeySnapshotIndices,
+    allowed_controls: [
+      "START",
+      "PAUSE",
+      "RESUME",
+      "NEXT_SNAPSHOT",
+      "PREVIOUS_SNAPSHOT",
+      "STOP",
+      "RESET_VIEW",
+    ],
+    available_controls: ["START"],
+    presentation_cadence_ms: 50,
+    b2_sha256: "a5a468145aea5aa21a649cccd1de3d6d2f8f15349d4b326db9380a6ad1256554",
+    b3_2_sha256: "11c8b83f8c4d0545c9a8df604046a335acb00121a51bf6e1d5b39504991c1798",
+    qualification: {
+      overall_result: "B3_2_FAIL_DISCRETE_ROUTE_QUALIFICATION",
+      scientific_failure_count: 118,
+      forbidden_contact_failure_count: 0,
+      support_material_penetration_failure_count: 118,
+      required_support_missing_failure_count: 0,
+      failure_codes_present: ["B3_2_FAIL_SUPPORT_MATERIAL_PENETRATION"],
+      recorded_failure_example: {
+        semantic_snapshot_index: 352,
+        route_state: "DESTINATION_PLACE",
+        phase: "RELEASE_BOUNDARY",
+        boundary_snapshot: "POST",
+        pair_index: 78,
+        signed_distance_m: -9.290505685985613e-7,
+        decision: "B3_2_FAIL_SUPPORT_MATERIAL_PENETRATION",
+      },
+    },
+    presentation_labels: [
+      "EVIDENCE REPLAY",
+      "NOT PHYSICAL EXECUTION",
+      "DISCRETE SAMPLED STATES — NO DYNAMIC TIMING",
+    ],
+    physical_execution_authority: "NOT_IMPLEMENTED",
+    last_error_code: null,
+    updated_at_utc: "2026-08-14T12:00:00Z",
+    ...overrides,
+  };
+}
+
+function activeReplayState({
+  lifecycle,
+  frameIndex,
+  controlVersion,
+  projectionVersion = controlVersion,
+}: {
+  lifecycle: "PAUSED" | "PLAYING" | "COMPLETED";
+  frameIndex: MockedReplayFrameIndex;
+  controlVersion: number;
+  projectionVersion?: number;
+}) {
+  const availableControls = lifecycle === "PLAYING"
+    ? ["PAUSE", "STOP", "RESET_VIEW"]
+    : lifecycle === "COMPLETED"
+      ? ["PREVIOUS_SNAPSHOT", "STOP", "RESET_VIEW"]
+      : [
+          "RESUME",
+          "NEXT_SNAPSHOT",
+          ...(frameIndex > 0 ? ["PREVIOUS_SNAPSHOT"] : []),
+          "STOP",
+          "RESET_VIEW",
+        ];
+  return replayState({
+    session_id: replaySessionId,
+    control_version: controlVersion,
+    projection_version: projectionVersion,
+    lifecycle_state: lifecycle,
+    current_frame: replayFrame(frameIndex),
+    available_controls: availableControls,
+    updated_at_utc: `2026-08-14T12:00:${String(controlVersion).padStart(2, "0")}Z`,
+  });
+}
+
 const rawMoveResponse =
   '{"actions":[{"action":"MOVE","object_id":"blue_component",' +
   '"source_id":"input_tray_a","destination_id":"assembly_fixture_b",' +
@@ -288,13 +422,21 @@ test.beforeEach(async ({ page }) => {
   await page.route("**/api/v1/governance/voice", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(accepted("VOICE")) }),
   );
+  await page.route("**/api/v1/replay/state", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(replayState()) }),
+  );
 });
 
 test("typed command renders a complete governance trace", async ({ page }, testInfo) => {
-  const forbiddenCapabilityRequests: string[] = [];
+  const prematureReplayRequests: string[] = [];
+  const forbiddenRuntimeRequests: string[] = [];
+  let replayScenarioSelected = false;
   page.on("request", (request) => {
-    if (/replay|simulation|pybullet/i.test(request.url())) {
-      forbiddenCapabilityRequests.push(request.url());
+    if (request.url().includes("/api/v1/replay/") && !replayScenarioSelected) {
+      prematureReplayRequests.push(request.url());
+    }
+    if (/\/simulation\/|\/pybullet\//i.test(request.url())) {
+      forbiddenRuntimeRequests.push(request.url());
     }
   });
   const manifestResponsePromise = page.waitForResponse(
@@ -349,7 +491,7 @@ test("typed command renders a complete governance trace", async ({ page }, testI
   ).toContainText("ELIGIBLE");
   await expect(
     authority.locator('[data-authority-state="QUALIFICATION_REPLAY_ACCESS"]'),
-  ).toContainText("NOT REQUESTED — NOT ENABLED IN D2");
+  ).toContainText("PROHIBITED");
   await expect(
     authority.locator(
       '[data-authority-state="PHYSICAL_EXECUTION_AUTHORITY_NOT_IMPLEMENTED"]',
@@ -367,10 +509,16 @@ test("typed command renders a complete governance trace", async ({ page }, testI
     fullPage: true,
   });
 
+  expect(prematureReplayRequests).toEqual([]);
+  replayScenarioSelected = true;
+  const replayStateResponse = page.waitForResponse(
+    (response) => response.url().endsWith("/api/v1/replay/state"),
+  );
   await scenarioSelector.click();
   await page
     .getByRole("option", { name: "Frozen B2 pick/place evidence replay" })
     .click();
+  expect((await replayStateResponse).status()).toBe(200);
   await expect(page.getByText("FROZEN EVIDENCE REPLAY")).toBeVisible();
   await expect(
     page.getByText("FROZEN RESEARCH EVIDENCE — EXACT REGISTERED ARTIFACT"),
@@ -391,8 +539,175 @@ test("typed command renders a complete governance trace", async ({ page }, testI
     authority.locator('[data-authority-state="GOVERNANCE_DECISION"]'),
   ).toContainText("NOT REQUESTED");
   await expect(page.getByRole("radiogroup", { name: "Inference mode" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /replay/i })).toHaveCount(0);
-  expect(forbiddenCapabilityRequests).toEqual([]);
+  for (const name of ["Start", "Pause", "Resume", "Next snapshot", "Previous snapshot", "Stop", "Reset view"]) {
+    await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
+  }
+  await expect(page.getByRole("button", { name: "Start", exact: true })).toBeEnabled();
+  expect(forbiddenRuntimeRequests).toEqual([]);
+});
+
+test("registered replay uses server state and bounded CAS controls", async ({ page }) => {
+  await page.unroute("**/api/v1/replay/state");
+  let projection = replayState();
+  let completeOnNextRead = false;
+  const postBodies: Array<{ path: string; body: Record<string, unknown> }> = [];
+
+  await page.route("**/api/v1/replay/state", (route) => {
+    if (completeOnNextRead) {
+      projection = activeReplayState({
+        lifecycle: "COMPLETED",
+        frameIndex: 468,
+        controlVersion: 8,
+      });
+      completeOnNextRead = false;
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(projection),
+    });
+  });
+  await page.route("**/api/v1/replay/start", (route) => {
+    postBodies.push({
+      path: "/api/v1/replay/start",
+      body: route.request().postDataJSON() as Record<string, unknown>,
+    });
+    projection = activeReplayState({ lifecycle: "PAUSED", frameIndex: 0, controlVersion: 1 });
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(projection) });
+  });
+  await page.route("**/api/v1/replay/control", (route) => {
+    const body = route.request().postDataJSON() as Record<string, unknown>;
+    postBodies.push({ path: "/api/v1/replay/control", body });
+    switch (body.control) {
+      case "RESET_VIEW":
+        projection = activeReplayState({ lifecycle: "PAUSED", frameIndex: 0, controlVersion: 2 });
+        break;
+      case "NEXT_SNAPSHOT":
+        projection = activeReplayState({ lifecycle: "PAUSED", frameIndex: 1, controlVersion: 3 });
+        break;
+      case "PREVIOUS_SNAPSHOT":
+        projection = activeReplayState({ lifecycle: "PAUSED", frameIndex: 0, controlVersion: 4 });
+        break;
+      case "RESUME": {
+        const nextVersion = (projection as { control_version: number }).control_version + 1;
+        projection = activeReplayState({ lifecycle: "PLAYING", frameIndex: 0, controlVersion: nextVersion });
+        completeOnNextRead = nextVersion === 7;
+        break;
+      }
+      case "PAUSE":
+        projection = activeReplayState({ lifecycle: "PAUSED", frameIndex: 0, controlVersion: 6 });
+        break;
+      case "STOP":
+        projection = replayState();
+        break;
+      default:
+        throw new Error(`Unexpected mocked replay control: ${String(body.control)}`);
+    }
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(projection) });
+  });
+
+  await page.goto("/");
+  const scenarioSelector = page.getByRole("combobox", { name: "Scenario" });
+  await scenarioSelector.click();
+  await page.getByRole("option", { name: "Frozen B2 pick/place evidence replay" }).click();
+
+  const controlNames = ["Start", "Pause", "Resume", "Next snapshot", "Previous snapshot", "Stop", "Reset view"];
+  for (const name of controlNames) {
+    await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
+  }
+  await expect(page.getByRole("button", { name: "Start", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Pause", exact: true })).toBeDisabled();
+  await expect(page.getByRole("heading", { name: "EVIDENCE REPLAY" })).toBeVisible();
+  await expect(page.getByText("NOT PHYSICAL EXECUTION", { exact: true })).toBeVisible();
+  await expect(page.getByText("DISCRETE SAMPLED STATES — NO DYNAMIC TIMING", { exact: true })).toBeVisible();
+  const replayEvidence = page.getByLabel("Frozen downstream qualification");
+  await expect(replayEvidence.getByText("B3_2_FAIL_DISCRETE_ROUTE_QUALIFICATION", { exact: true })).toBeVisible();
+  await expect(replayEvidence.getByText("118", { exact: true })).toHaveCount(2);
+  await expect(replayEvidence.getByText("0", { exact: true })).toHaveCount(2);
+  await expect(replayEvidence.getByText("NOT_IMPLEMENTED", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await expect(page.getByText("Frame 1 of 469", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Previous snapshot", exact: true })).toBeDisabled();
+
+  await page.getByRole("button", { name: "Reset view", exact: true }).click();
+  await expect(page.getByText("Frame 1 of 469", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Next snapshot", exact: true }).click();
+  await expect(page.getByText("Frame 2 of 469", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Previous snapshot", exact: true }).click();
+  await expect(page.getByText("Frame 1 of 469", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Resume", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Pause", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Pause", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Resume", exact: true }).click();
+  await expect(page.getByText("Frame 469 of 469", { exact: true })).toBeVisible();
+  await expect(replayEvidence.getByText("B3_2_FAIL_DISCRETE_ROUTE_QUALIFICATION", { exact: true })).toBeVisible();
+  await expect(replayEvidence.getByText("NOT_IMPLEMENTED", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Stop", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Start", exact: true })).toBeEnabled();
+
+  expect(postBodies).toEqual([
+    { path: "/api/v1/replay/start", body: { scenario_id: replayScenarioId } },
+    { path: "/api/v1/replay/control", body: { scenario_id: replayScenarioId, session_id: replaySessionId, expected_control_version: 1, control: "RESET_VIEW" } },
+    { path: "/api/v1/replay/control", body: { scenario_id: replayScenarioId, session_id: replaySessionId, expected_control_version: 2, control: "NEXT_SNAPSHOT" } },
+    { path: "/api/v1/replay/control", body: { scenario_id: replayScenarioId, session_id: replaySessionId, expected_control_version: 3, control: "PREVIOUS_SNAPSHOT" } },
+    { path: "/api/v1/replay/control", body: { scenario_id: replayScenarioId, session_id: replaySessionId, expected_control_version: 4, control: "RESUME" } },
+    { path: "/api/v1/replay/control", body: { scenario_id: replayScenarioId, session_id: replaySessionId, expected_control_version: 5, control: "PAUSE" } },
+    { path: "/api/v1/replay/control", body: { scenario_id: replayScenarioId, session_id: replaySessionId, expected_control_version: 6, control: "RESUME" } },
+    { path: "/api/v1/replay/control", body: { scenario_id: replayScenarioId, session_id: replaySessionId, expected_control_version: 8, control: "STOP" } },
+  ]);
+});
+
+test("fatal replay exhaustion remains latched across scenario changes", async ({ page }) => {
+  await page.unroute("**/api/v1/replay/state");
+  const replayRequests: string[] = [];
+  let fatalSettled = false;
+  const replayRequestsAfterFatal: string[] = [];
+  page.on("request", (request) => {
+    if (!request.url().includes("/api/v1/replay/")) return;
+    replayRequests.push(request.url());
+    if (fatalSettled) replayRequestsAfterFatal.push(request.url());
+  });
+  await page.route("**/api/v1/replay/state", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(replayState()) }),
+  );
+  await page.route("**/api/v1/replay/start", (route) => {
+    fatalSettled = true;
+    return route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ code: "REPLAY_VERSION_EXHAUSTED" }),
+    });
+  });
+  await page.route("**/api/v1/replay/control", (route) =>
+    route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ code: "UNEXPECTED_CONTROL" }) }),
+  );
+
+  await page.goto("/");
+  const scenarioSelector = page.getByRole("combobox", { name: "Scenario" });
+  await scenarioSelector.click();
+  await page.getByRole("option", { name: "Frozen B2 pick/place evidence replay" }).click();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("Replay restart required");
+  await expect(page.getByRole("alert")).toContainText("REPLAY_VERSION_EXHAUSTED");
+  for (const name of ["Start", "Pause", "Resume", "Next snapshot", "Previous snapshot", "Stop", "Reset view"]) {
+    await expect(page.getByRole("button", { name, exact: true })).toBeDisabled();
+  }
+
+  const requestCountAtFatal = replayRequests.length;
+  await scenarioSelector.click();
+  await page.getByRole("option", { name: "Manufacturing scenario 1" }).click();
+  await scenarioSelector.click();
+  await page.getByRole("option", { name: "Frozen B2 pick/place evidence replay" }).click();
+  await expect(page.getByRole("alert")).toContainText("Replay restart required");
+  await expect(page.getByRole("alert")).toContainText("REPLAY_VERSION_EXHAUSTED");
+  await expect(page.getByRole("heading", { name: "EVIDENCE REPLAY" })).toBeVisible();
+  await page.waitForTimeout(650);
+  expect(replayRequests.length).toBe(requestCountAtFatal);
+  expect(replayRequestsAfterFatal).toEqual([]);
 });
 
 test("recorded transcript is reviewable before voice governance", async ({ page }, testInfo) => {

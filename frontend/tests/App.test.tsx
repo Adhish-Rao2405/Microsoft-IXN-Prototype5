@@ -16,6 +16,7 @@ import {
   App,
   BOOTSTRAP_CLIENT_DEADLINE_MS,
   GOVERNANCE_CLIENT_DEADLINE_MS,
+  REPLAY_POLL_INTERVAL_MS,
   SPEECH_CLIENT_DEADLINE_MS,
   clientErrorMessage,
   selectInferenceMode,
@@ -313,6 +314,91 @@ function transcriptionWith(
   };
 }
 
+function replayState(overrides: Record<string, unknown> = {}) {
+  return {
+    contract_id: "PROTOTYPE5_D3_REPLAY_STATE_V1",
+    contract_version: "1.0.0",
+    scenario_id: "FROZEN_B2_PICK_PLACE_EVIDENCE_REPLAY",
+    binding_id: "FROZEN_B2_B3_2_EVIDENCE_V1",
+    session_id: null,
+    control_version: 0,
+    projection_version: 0,
+    lifecycle_state: "IDLE",
+    command_in_flight: false,
+    current_frame: null,
+    frame_count: 469,
+    key_snapshot_indices: [0, 78, 118, 119, 157, 311, 351, 352, 390, 468],
+    allowed_controls: ["START", "PAUSE", "RESUME", "NEXT_SNAPSHOT", "PREVIOUS_SNAPSHOT", "STOP", "RESET_VIEW"],
+    available_controls: ["START"],
+    presentation_cadence_ms: 50,
+    b2_sha256: "a5a468145aea5aa21a649cccd1de3d6d2f8f15349d4b326db9380a6ad1256554",
+    b3_2_sha256: "11c8b83f8c4d0545c9a8df604046a335acb00121a51bf6e1d5b39504991c1798",
+    qualification: {
+      overall_result: "B3_2_FAIL_DISCRETE_ROUTE_QUALIFICATION",
+      scientific_failure_count: 118,
+      forbidden_contact_failure_count: 0,
+      support_material_penetration_failure_count: 118,
+      required_support_missing_failure_count: 0,
+      failure_codes_present: ["B3_2_FAIL_SUPPORT_MATERIAL_PENETRATION"],
+      recorded_failure_example: {
+        semantic_snapshot_index: 352,
+        route_state: "DESTINATION_PLACE",
+        phase: "RELEASE_BOUNDARY",
+        boundary_snapshot: "POST",
+        pair_index: 78,
+        signed_distance_m: -9.290505685985613e-7,
+        decision: "B3_2_FAIL_SUPPORT_MATERIAL_PENETRATION",
+      },
+    },
+    presentation_labels: ["EVIDENCE REPLAY", "NOT PHYSICAL EXECUTION", "DISCRETE SAMPLED STATES — NO DYNAMIC TIMING"],
+    physical_execution_authority: "NOT_IMPLEMENTED",
+    last_error_code: null,
+    updated_at_utc: "2026-08-14T10:00:00Z",
+    ...overrides,
+  };
+}
+
+function pausedReplayState(overrides: Record<string, unknown> = {}) {
+  return replayState({
+    session_id: "opaque-session-s1",
+    control_version: 1,
+    projection_version: 1,
+    lifecycle_state: "PAUSED",
+    current_frame: {
+      frame_index: 0,
+      semantic_snapshot_index: 0,
+      route_configuration_index: 0,
+      route_state: "HOME",
+      phase: "SOURCE_SUPPORTED",
+      boundary_snapshot: "NONE",
+      is_key_snapshot: true,
+    },
+    available_controls: ["RESUME", "NEXT_SNAPSHOT", "STOP", "RESET_VIEW"],
+    updated_at_utc: "2026-08-14T10:00:01Z",
+    ...overrides,
+  });
+}
+
+function playingReplayState(overrides: Record<string, unknown> = {}) {
+  return pausedReplayState({
+    control_version: 2,
+    projection_version: 2,
+    lifecycle_state: "PLAYING",
+    current_frame: {
+      frame_index: 10,
+      semantic_snapshot_index: 10,
+      route_configuration_index: 10,
+      route_state: "INTERPOLATED",
+      phase: "CARRIED",
+      boundary_snapshot: "NONE",
+      is_key_snapshot: false,
+    },
+    available_controls: ["PAUSE", "STOP", "RESET_VIEW"],
+    updated_at_utc: "2026-08-14T10:00:02Z",
+    ...overrides,
+  });
+}
+
 function deferredFetch({
   governance = [],
   speech = [],
@@ -374,9 +460,7 @@ function authorityListItems(): HTMLElement[] {
 }
 
 function mockFetch(result = governanceResult()) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL) => {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       const url = String(input);
       if (url.includes("/api/v1/demo/manifest")) {
         return new Response(JSON.stringify(manifest), {
@@ -396,12 +480,37 @@ function mockFetch(result = governanceResult()) {
           headers: { "Content-Type": "application/json" },
         });
       }
+      if (url.includes("/api/v1/replay/state")) {
+        return new Response(JSON.stringify(replayState()), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.includes("/api/v1/replay/start")) {
+        return new Response(JSON.stringify(pausedReplayState()), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.includes("/api/v1/replay/control")) {
+        return new Response(JSON.stringify(pausedReplayState({
+          control_version: 2,
+          projection_version: 2,
+          lifecycle_state: "PLAYING",
+          available_controls: ["PAUSE", "STOP", "RESET_VIEW"],
+          updated_at_utc: "2026-08-14T10:00:02Z",
+        })), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       return new Response(JSON.stringify(result), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
-    }),
-  );
+    });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
 }
 
 describe("Prototype 5 typed UI", () => {
@@ -475,7 +584,7 @@ describe("Prototype 5 typed UI", () => {
     expect(rows[0]).toHaveTextContent("NOT REQUESTED");
     expect(rows[1]).toHaveTextContent("NOT REQUESTED");
     expect(rows[2]).toHaveTextContent("NOT REQUESTED");
-    expect(rows[3]).toHaveTextContent("NOT REQUESTED — NOT ENABLED IN D2");
+    expect(rows[3]).toHaveTextContent("PROHIBITED");
     expect(rows[3]).toHaveTextContent("Policy: PROHIBITED");
     expect(rows[5]).toHaveTextContent("NOT_IMPLEMENTED");
     expect(
@@ -590,7 +699,7 @@ describe("Prototype 5 typed UI", () => {
     expect(rows[0]).toHaveTextContent("PRESENT — NO AUTHORITY");
     expect(rows[1]).toHaveTextContent("ACCEPT");
     expect(rows[2]).toHaveTextContent("ELIGIBLE");
-    expect(rows[3]).toHaveTextContent("NOT REQUESTED — NOT ENABLED IN D2");
+    expect(rows[3]).toHaveTextContent("PROHIBITED");
     expect(rows[3]).not.toHaveTextContent("GRANTED");
     expect(rows[5]).toHaveTextContent("NOT_IMPLEMENTED");
     expect(screen.getByText("2026-07-30T12:00:00+00:00")).toBeInTheDocument();
@@ -700,14 +809,15 @@ describe("Prototype 5 typed UI", () => {
     expect(screen.getByText("EVIDENCE REPLAY — NOT PHYSICAL EXECUTION")).toBeInTheDocument();
     const rows = authorityListItems();
     expect(rows[1]).toHaveTextContent("NOT REQUESTED");
-    expect(rows[3]).toHaveTextContent("NOT REQUESTED — NOT ENABLED IN D2");
+    await waitFor(() => expect(rows[3]).toHaveTextContent("SERVER_REGISTERED_ONLY — IDLE"));
     expect(rows[3]).toHaveTextContent("Policy: SERVER_REGISTERED_ONLY");
     expect(rows[3]).toHaveTextContent("Capability class: FROZEN_B2_REPLAY_COMPATIBLE");
     expect(rows[3]).not.toHaveTextContent("GRANTED");
     expect(rows[4]).toHaveTextContent("FAIL");
     expect(rows[4]).toHaveTextContent("Independent of the governance decision");
     expect(rows[5]).toHaveTextContent("NOT_IMPLEMENTED");
-    expect(screen.queryByRole("button", { name: /replay/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Pause" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: /simulation/i })).not.toBeInTheDocument();
   });
 
@@ -1393,6 +1503,539 @@ describe("Prototype 5 typed UI", () => {
     expect(clientErrorMessage(new TypeError("not necessarily transport"))).toBe(
       "UNKNOWN_CLIENT_FAILURE",
     );
+  });
+
+  it("renders frozen qualification evidence and starts with scenario identity only", async () => {
+    const fetchMock = mockFetch();
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Start" })).toBeEnabled());
+    expect(screen.getByText("NOT PHYSICAL EXECUTION")).toBeInTheDocument();
+    expect(screen.getByText("DISCRETE SAMPLED STATES — NO DYNAMIC TIMING")).toBeInTheDocument();
+    expect(screen.getByText("B3_2_FAIL_DISCRETE_ROUTE_QUALIFICATION")).toBeInTheDocument();
+    expect(screen.getAllByText("NOT_IMPLEMENTED").length).toBeGreaterThan(0);
+    await user.click(screen.getByRole("button", { name: "Start" }));
+    await waitFor(() => expect(screen.getByText("Frame 1 of 469")).toBeInTheDocument());
+    const startCall = fetchMock.mock.calls.find(([input]) => String(input).includes("/api/v1/replay/start"));
+    expect(JSON.parse(String(startCall?.[1]?.body))).toEqual({
+      scenario_id: "FROZEN_B2_PICK_PLACE_EVIDENCE_REPLAY",
+    });
+    expect(screen.getByRole("button", { name: "Resume" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Pause" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Resume" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Pause" })).toBeEnabled());
+    const controlCall = fetchMock.mock.calls.find(([input]) => String(input).includes("/api/v1/replay/control"));
+    expect(JSON.parse(String(controlCall?.[1]?.body))).toEqual({
+      scenario_id: "FROZEN_B2_PICK_PLACE_EVIDENCE_REPLAY",
+      session_id: "opaque-session-s1",
+      expected_control_version: 1,
+      control: "RESUME",
+    });
+  });
+
+  it("recovers an unknown START settlement through GET without retrying START", async () => {
+    let stateCalls = 0;
+    let startCalls = 0;
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) return jsonResponse(manifest);
+      if (url.includes("/api/v1/status")) return jsonResponse(status);
+      if (url.includes("/api/v1/replay/state")) {
+        stateCalls += 1;
+        if (stateCalls === 1) return jsonResponse(replayState());
+        if (stateCalls === 2) {
+          return jsonResponse(replayState({
+            command_in_flight: true,
+            available_controls: [],
+          }));
+        }
+        return jsonResponse(pausedReplayState());
+      }
+      if (url.includes("/api/v1/replay/start")) {
+        startCalls += 1;
+        return jsonResponse({ code: "REPLAY_START_TIMEOUT" }, 504);
+      }
+      throw new Error("UNEXPECTED_REQUEST");
+    }));
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Start" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "Start" }));
+    await waitFor(() => expect(screen.getByText("Frame 1 of 469")).toBeInTheDocument(), { timeout: 2_000 });
+    expect(startCalls).toBe(1);
+    expect(stateCalls).toBeGreaterThanOrEqual(3);
+  });
+
+  it.each([
+    {
+      control: "PAUSE",
+      label: "Pause",
+      initial: playingReplayState(),
+    },
+    {
+      control: "NEXT_SNAPSHOT",
+      label: "Next snapshot",
+      initial: pausedReplayState(),
+    },
+    {
+      control: "PREVIOUS_SNAPSHOT",
+      label: "Previous snapshot",
+      initial: pausedReplayState({
+        available_controls: ["NEXT_SNAPSHOT", "PREVIOUS_SNAPSHOT", "STOP", "RESET_VIEW"],
+      }),
+    },
+    {
+      control: "RESET_VIEW",
+      label: "Reset view",
+      initial: pausedReplayState(),
+    },
+  ])("submits authoritative $control CAS ownership", async ({ control, label, initial }) => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) return jsonResponse(manifest);
+      if (url.includes("/api/v1/status")) return jsonResponse(status);
+      if (url.includes("/api/v1/replay/state")) return jsonResponse(initial);
+      if (url.includes("/api/v1/replay/control")) {
+        return jsonResponse(pausedReplayState({
+          control_version: Number(initial.control_version) + 1,
+          projection_version: Number(initial.projection_version) + 1,
+        }));
+      }
+      throw new Error("UNEXPECTED_REQUEST");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
+    await waitFor(() => expect(screen.getByRole("button", { name: label })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: label }));
+    const call = await waitFor(() => {
+      const next = fetchMock.mock.calls.find(([input]) => String(input).includes("/api/v1/replay/control"));
+      expect(next).toBeDefined();
+      return next;
+    });
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({
+      scenario_id: "FROZEN_B2_PICK_PLACE_EVIDENCE_REPLAY",
+      session_id: "opaque-session-s1",
+      expected_control_version: initial.control_version,
+      control,
+    });
+  });
+
+  it.each([
+    ["REPLAY_FRAME_BOUNDARY", 409],
+    ["REPLAY_CONTROL_VERSION_STALE", 409],
+    ["REPLAY_SESSION_STALE", 409],
+    ["REPLAY_CONTROL_INVALID_STATE", 409],
+    ["REPLAY_COMMAND_CHANNEL_FULL", 429],
+  ] as const)("reconciles %s through GET without retrying mutation", async (code, statusCode) => {
+    let stateCalls = 0;
+    let controlCalls = 0;
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) return jsonResponse(manifest);
+      if (url.includes("/api/v1/status")) return jsonResponse(status);
+      if (url.includes("/api/v1/replay/state")) {
+        stateCalls += 1;
+        return jsonResponse(pausedReplayState({
+          control_version: controlCalls === 0 ? 1 : 2,
+          projection_version: controlCalls === 0 ? 1 : 2,
+        }));
+      }
+      if (url.includes("/api/v1/replay/control")) {
+        controlCalls += 1;
+        return jsonResponse({ code }, statusCode);
+      }
+      throw new Error("UNEXPECTED_REQUEST");
+    }));
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Next snapshot" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "Next snapshot" }));
+    await waitFor(() => expect(stateCalls).toBeGreaterThanOrEqual(2), {
+      timeout: REPLAY_POLL_INTERVAL_MS + 1_500,
+    });
+    expect(controlCalls).toBe(1);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Next snapshot" })).toBeEnabled());
+  }, 10_000);
+
+  it.each([
+    ["REPLAY_RUNTIME_INTEGRITY_FAILED", "FAILED"],
+    ["REPLAY_CLEANUP_UNRESOLVED", "CLEANUP_FAILED"],
+  ] as const)("reconciles %s to the retained server failure projection", async (code, lifecycle) => {
+    let stateCalls = 0;
+    let controlCalls = 0;
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) return jsonResponse(manifest);
+      if (url.includes("/api/v1/status")) return jsonResponse(status);
+      if (url.includes("/api/v1/replay/state")) {
+        stateCalls += 1;
+        if (controlCalls === 0) return jsonResponse(pausedReplayState());
+        return jsonResponse(pausedReplayState({
+          control_version: 2,
+          projection_version: 2,
+          lifecycle_state: lifecycle,
+          current_frame: null,
+          available_controls: ["STOP"],
+          last_error_code: code,
+        }));
+      }
+      if (url.includes("/api/v1/replay/control")) {
+        controlCalls += 1;
+        return jsonResponse({ code }, 503);
+      }
+      throw new Error("UNEXPECTED_REQUEST");
+    }));
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Next snapshot" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "Next snapshot" }));
+    await waitFor(() => expect(screen.getByText(code)).toBeInTheDocument(), {
+      timeout: REPLAY_POLL_INTERVAL_MS + 1_500,
+    });
+    expect(controlCalls).toBe(1);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Stop" })).toBeEnabled(), {
+      timeout: REPLAY_POLL_INTERVAL_MS + 1_500,
+    });
+    expect(screen.getAllByText(lifecycle).length).toBeGreaterThan(0);
+  }, 10_000);
+
+  it("latches fatal version exhaustion across scenario changes without further replay I/O", async () => {
+    let replayCalls = 0;
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) return jsonResponse(manifest);
+      if (url.includes("/api/v1/status")) return jsonResponse(status);
+      if (url.includes("/api/v1/replay/")) {
+        replayCalls += 1;
+        return jsonResponse({ code: "REPLAY_VERSION_EXHAUSTED" }, 503);
+      }
+      throw new Error("UNEXPECTED_REQUEST");
+    }));
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("REPLAY_VERSION_EXHAUSTED"));
+    ["Start", "Pause", "Resume", "Next snapshot", "Previous snapshot", "Stop", "Reset view"].forEach((label) => {
+      expect(screen.getByRole("button", { name: label })).toBeDisabled();
+    });
+    expect(replayCalls).toBe(1);
+    await chooseScenario(user, "Manufacturing scenario 2");
+    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("REPLAY_VERSION_EXHAUSTED"));
+    await new Promise((resolve) => setTimeout(resolve, REPLAY_POLL_INTERVAL_MS + 100));
+    expect(replayCalls).toBe(1);
+  });
+
+  it("publishes an owned fatal response that settles during a scenario switch", async () => {
+    const fatalControl = deferred<Response>();
+    let replayCalls = 0;
+    let controlCalls = 0;
+    let nextScenario: HTMLElement | null = null;
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) return Promise.resolve(jsonResponse(manifest));
+      if (url.includes("/api/v1/status")) return Promise.resolve(jsonResponse(status));
+      if (url.includes("/api/v1/replay/state")) {
+        replayCalls += 1;
+        return Promise.resolve(jsonResponse(pausedReplayState()));
+      }
+      if (url.includes("/api/v1/replay/control")) {
+        replayCalls += 1;
+        controlCalls += 1;
+        if (nextScenario === null) throw new Error("SCENARIO_SWITCH_NOT_ARMED");
+        fireEvent.click(nextScenario);
+        fatalControl.resolve(jsonResponse({ code: "REPLAY_VERSION_EXHAUSTED" }, 503));
+        return fatalControl.promise;
+      }
+      throw new Error("UNEXPECTED_REQUEST");
+    }));
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Next snapshot" })).toBeEnabled());
+    await user.click(screen.getByRole("combobox", { name: "Scenario" }));
+    nextScenario = await screen.findByRole("option", { name: "Manufacturing scenario 2" });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Next snapshot" }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(controlCalls).toBe(1);
+
+    const callsAtFatalSettlement = replayCalls;
+    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("Replay restart required");
+      expect(screen.getByRole("alert")).toHaveTextContent("REPLAY_VERSION_EXHAUSTED");
+    });
+    await new Promise((resolve) => setTimeout(resolve, REPLAY_POLL_INTERVAL_MS + 100));
+    expect(replayCalls).toBe(callsAtFatalSettlement);
+    ["Start", "Pause", "Resume", "Next snapshot", "Previous snapshot", "Stop", "Reset view"]
+      .forEach((label) => expect(screen.getByRole("button", { name: label })).toBeDisabled());
+  }, 10_000);
+
+  it("keeps replay polling single-flight and aborts the poll on unmount", async () => {
+    const pendingPoll = deferred<Response>();
+    let stateCalls = 0;
+    let pollSignal: AbortSignal | undefined;
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) return Promise.resolve(jsonResponse(manifest));
+      if (url.includes("/api/v1/status")) return Promise.resolve(jsonResponse(status));
+      if (url.includes("/api/v1/replay/start")) return Promise.resolve(jsonResponse(pausedReplayState()));
+      if (url.includes("/api/v1/replay/state")) {
+        stateCalls += 1;
+        if (stateCalls === 1) return Promise.resolve(jsonResponse(replayState()));
+        pollSignal = init?.signal ?? undefined;
+        return pendingPoll.promise;
+      }
+      throw new Error("UNEXPECTED_REQUEST");
+    }));
+    const user = userEvent.setup();
+    const view = renderApp();
+    await waitUntilReady();
+    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Start" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "Start" }));
+    await waitFor(() => expect(stateCalls).toBe(2), { timeout: REPLAY_POLL_INTERVAL_MS + 1_500 });
+    await new Promise((resolve) => setTimeout(resolve, REPLAY_POLL_INTERVAL_MS + 100));
+    expect(stateCalls).toBe(2);
+    view.unmount();
+    expect(pollSignal?.aborted).toBe(true);
+  });
+
+  it("does not announce same-lifecycle frame polls but announces completion once", async () => {
+    let stateCalls = 0;
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) return jsonResponse(manifest);
+      if (url.includes("/api/v1/status")) return jsonResponse(status);
+      if (url.includes("/api/v1/replay/state")) {
+        stateCalls += 1;
+        if (stateCalls === 1) return jsonResponse(playingReplayState());
+        if (stateCalls === 2) {
+          return jsonResponse(playingReplayState({
+            projection_version: 3,
+            current_frame: {
+              frame_index: 20,
+              semantic_snapshot_index: 20,
+              route_configuration_index: 20,
+              route_state: "INTERPOLATED",
+              phase: "CARRIED",
+              boundary_snapshot: "NONE",
+              is_key_snapshot: false,
+            },
+          }));
+        }
+        return jsonResponse(pausedReplayState({
+          control_version: 3,
+          projection_version: 4,
+          lifecycle_state: "COMPLETED",
+          current_frame: {
+            frame_index: 468,
+            semantic_snapshot_index: 468,
+            route_configuration_index: 466,
+            route_state: "HOME",
+            phase: "DESTINATION_SUPPORTED",
+            boundary_snapshot: "NONE",
+            is_key_snapshot: true,
+          },
+          available_controls: ["PREVIOUS_SNAPSHOT", "STOP", "RESET_VIEW"],
+        }));
+      }
+      throw new Error("UNEXPECTED_REQUEST");
+    }));
+    const user = userEvent.setup();
+    const view = renderApp();
+    await waitUntilReady();
+    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
+    const liveRegion = view.container.querySelector(".replay-live-region");
+    await waitFor(() => expect(liveRegion).toHaveTextContent("Evidence replay playing, frame 11 of 469"));
+    const initialAnnouncement = liveRegion?.textContent;
+    await waitFor(() => expect(screen.getByText("Frame 21 of 469")).toBeInTheDocument(), {
+      timeout: REPLAY_POLL_INTERVAL_MS + 1_500,
+    });
+    expect(liveRegion?.textContent).toBe(initialAnnouncement);
+    await waitFor(() => expect(screen.getByText("Frame 469 of 469")).toBeInTheDocument(), {
+      timeout: REPLAY_POLL_INTERVAL_MS + 1_500,
+    });
+    expect(liveRegion).toHaveTextContent("Evidence replay completed, frame 469 of 469");
+    view.unmount();
+  });
+
+  it("rejects a mutation response from another session without scheduling from it", async () => {
+    let stateCalls = 0;
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) return jsonResponse(manifest);
+      if (url.includes("/api/v1/status")) return jsonResponse(status);
+      if (url.includes("/api/v1/replay/state")) {
+        stateCalls += 1;
+        return jsonResponse(pausedReplayState());
+      }
+      if (url.includes("/api/v1/replay/control")) {
+        return jsonResponse(pausedReplayState({
+          session_id: "opaque-session-s2",
+          control_version: 400,
+          projection_version: 400,
+        }));
+      }
+      throw new Error("UNEXPECTED_REQUEST");
+    }));
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Next snapshot" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "Next snapshot" }));
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("CONTRACT_FAILURE"));
+    const callsAfterRejection = stateCalls;
+    await new Promise((resolve) => setTimeout(resolve, REPLAY_POLL_INTERVAL_MS + 100));
+    expect(stateCalls).toBe(callsAfterRejection);
+  });
+
+  it("rejects a lower same-session poll without regressing the accepted projection", async () => {
+    let stateCalls = 0;
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) return jsonResponse(manifest);
+      if (url.includes("/api/v1/status")) return jsonResponse(status);
+      if (url.includes("/api/v1/replay/state")) {
+        stateCalls += 1;
+        if (stateCalls === 1) {
+          return jsonResponse(playingReplayState({
+            session_id: "opaque-session-s2",
+            control_version: 10,
+            projection_version: 10,
+          }));
+        }
+        return jsonResponse(playingReplayState({
+          session_id: "opaque-session-s2",
+          control_version: 9,
+          projection_version: 9,
+          current_frame: {
+            frame_index: 0,
+            semantic_snapshot_index: 0,
+            route_configuration_index: 0,
+            route_state: "HOME",
+            phase: "SOURCE_SUPPORTED",
+            boundary_snapshot: "NONE",
+            is_key_snapshot: true,
+          },
+        }));
+      }
+      throw new Error("UNEXPECTED_REQUEST");
+    }));
+    const user = userEvent.setup();
+    const view = renderApp();
+    await waitUntilReady();
+    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
+    await waitFor(() => expect(screen.getByText("Frame 11 of 469")).toBeInTheDocument());
+    await waitFor(() => expect(stateCalls).toBe(2), {
+      timeout: REPLAY_POLL_INTERVAL_MS + 1_500,
+    });
+    expect(screen.getByText("Frame 11 of 469")).toBeInTheDocument();
+    view.unmount();
+  });
+
+  it("renders COMPLETED as the final frozen frame rather than execution success", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) return jsonResponse(manifest);
+      if (url.includes("/api/v1/status")) return jsonResponse(status);
+      if (url.includes("/api/v1/replay/state")) {
+        return jsonResponse(pausedReplayState({
+          control_version: 9,
+          projection_version: 469,
+          lifecycle_state: "COMPLETED",
+          current_frame: {
+            frame_index: 468,
+            semantic_snapshot_index: 468,
+            route_configuration_index: 466,
+            route_state: "HOME",
+            phase: "DESTINATION_SUPPORTED",
+            boundary_snapshot: "NONE",
+            is_key_snapshot: true,
+          },
+          available_controls: ["PREVIOUS_SNAPSHOT", "STOP", "RESET_VIEW"],
+        }));
+      }
+      throw new Error("UNEXPECTED_REQUEST");
+    }));
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
+    await waitFor(() => expect(screen.getByText("Frame 469 of 469")).toBeInTheDocument());
+    expect(screen.getByText(/COMPLETED means only/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous snapshot" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Start" })).toBeDisabled();
+  });
+
+  it("propagates STOP CAS ownership and accepts canonical IDLE", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) return jsonResponse(manifest);
+      if (url.includes("/api/v1/status")) return jsonResponse(status);
+      if (url.includes("/api/v1/replay/state")) return jsonResponse(pausedReplayState());
+      if (url.includes("/api/v1/replay/control")) return jsonResponse(replayState());
+      throw new Error("UNEXPECTED_REQUEST");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Stop" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "Stop" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Start" })).toBeEnabled());
+    const call = fetchMock.mock.calls.find(([input]) => String(input).includes("/api/v1/replay/control"));
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({
+      scenario_id: "FROZEN_B2_PICK_PLACE_EVIDENCE_REPLAY",
+      session_id: "opaque-session-s1",
+      expected_control_version: 1,
+      control: "STOP",
+    });
+  });
+
+  it.each([
+    ["FAILED", "REPLAY_RUNTIME_INTEGRITY_FAILED"],
+    ["CLEANUP_FAILED", "REPLAY_CLEANUP_UNRESOLVED"],
+  ] as const)("renders retained %s recovery using server-projected STOP only", async (lifecycle, lastError) => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) return jsonResponse(manifest);
+      if (url.includes("/api/v1/status")) return jsonResponse(status);
+      if (url.includes("/api/v1/replay/state")) {
+        return jsonResponse(pausedReplayState({
+          lifecycle_state: lifecycle,
+          current_frame: null,
+          available_controls: ["STOP"],
+          last_error_code: lastError,
+        }));
+      }
+      throw new Error("UNEXPECTED_REQUEST");
+    }));
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
+    await waitFor(() => expect(screen.getByText(lastError)).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Stop" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Start" })).toBeDisabled();
   });
 
 });

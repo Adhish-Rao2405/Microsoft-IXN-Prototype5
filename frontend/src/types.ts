@@ -211,3 +211,148 @@ export interface RecordedTranscription {
   error_code: string | null;
   error_detail: string | null;
 }
+
+export type ReplayLifecycle =
+  | "IDLE"
+  | "PAUSED"
+  | "PLAYING"
+  | "COMPLETED"
+  | "FAILED"
+  | "CLEANUP_FAILED";
+
+export type ReplayControl =
+  | "START"
+  | "PAUSE"
+  | "RESUME"
+  | "NEXT_SNAPSHOT"
+  | "PREVIOUS_SNAPSHOT"
+  | "STOP"
+  | "RESET_VIEW";
+
+export type ReplayMutationControl = Exclude<ReplayControl, "START">;
+
+export type ReplayLastErrorCode =
+  | "REPLAY_RUNTIME_INTEGRITY_FAILED"
+  | "REPLAY_SCENE_FAILED"
+  | "REPLAY_GUI_CLOSED"
+  | "REPLAY_CLEANUP_UNRESOLVED";
+
+export type ReplayErrorCode =
+  | "REPLAY_SCENARIO_NOT_FOUND"
+  | "REPLAY_SCENARIO_NOT_REPLAYABLE"
+  | "REPLAY_SESSION_ACTIVE"
+  | "REPLAY_SESSION_STALE"
+  | "REPLAY_CONTROL_VERSION_STALE"
+  | "REPLAY_CONTROL_INVALID_STATE"
+  | "REPLAY_FRAME_BOUNDARY"
+  | "REPLAY_REQUEST_INVALID"
+  | "REPLAY_COMMAND_CHANNEL_FULL"
+  | "REPLAY_CLEANUP_UNRESOLVED"
+  | "REPLAY_SERVER_SHUTTING_DOWN"
+  | "REPLAY_RUNTIME_INTEGRITY_FAILED"
+  | "REPLAY_VERSION_EXHAUSTED"
+  | "REPLAY_SCENE_FAILED"
+  | "REPLAY_COMMAND_EXPIRED"
+  | "REPLAY_START_TIMEOUT"
+  | "REPLAY_CONTROL_SETTLEMENT_UNKNOWN";
+
+export type ReplayRouteState =
+  | "HOME"
+  | "SOURCE_HIGH"
+  | "SOURCE_PICK"
+  | "SOURCE_HIGH_RETURN"
+  | "DESTINATION_HIGH"
+  | "DESTINATION_PLACE"
+  | "DESTINATION_HIGH_RETURN"
+  | "INTERPOLATED";
+
+export type ReplayPhase =
+  | "SOURCE_SUPPORTED"
+  | "ATTACHMENT_BOUNDARY"
+  | "CARRIED"
+  | "RELEASE_BOUNDARY"
+  | "DESTINATION_SUPPORTED";
+
+export type ReplayBoundarySnapshot = "NONE" | "PRE" | "POST";
+
+export interface ReplayFrameProjection {
+  readonly frame_index: number;
+  readonly semantic_snapshot_index: number;
+  readonly route_configuration_index: number;
+  readonly route_state: ReplayRouteState;
+  readonly phase: ReplayPhase;
+  readonly boundary_snapshot: ReplayBoundarySnapshot;
+  readonly is_key_snapshot: boolean;
+}
+
+export interface RecordedReplayFailure {
+  readonly semantic_snapshot_index: 352;
+  readonly route_state: "DESTINATION_PLACE";
+  readonly phase: "RELEASE_BOUNDARY";
+  readonly boundary_snapshot: "POST";
+  readonly pair_index: 78;
+  readonly signed_distance_m: number;
+  readonly decision: "B3_2_FAIL_SUPPORT_MATERIAL_PENETRATION";
+}
+
+export interface ReplayQualificationProjection {
+  readonly overall_result: "B3_2_FAIL_DISCRETE_ROUTE_QUALIFICATION";
+  readonly scientific_failure_count: 118;
+  readonly forbidden_contact_failure_count: 0;
+  readonly support_material_penetration_failure_count: 118;
+  readonly required_support_missing_failure_count: 0;
+  readonly failure_codes_present: readonly [
+    "B3_2_FAIL_SUPPORT_MATERIAL_PENETRATION",
+  ];
+  readonly recorded_failure_example: RecordedReplayFailure;
+}
+
+export interface ReplayStateProjection {
+  readonly contract_id: "PROTOTYPE5_D3_REPLAY_STATE_V1";
+  readonly contract_version: "1.0.0";
+  readonly scenario_id: string;
+  readonly binding_id: "FROZEN_B2_B3_2_EVIDENCE_V1";
+  readonly session_id: string | null;
+  readonly control_version: number;
+  readonly projection_version: number;
+  readonly lifecycle_state: ReplayLifecycle;
+  readonly command_in_flight: boolean;
+  readonly current_frame: ReplayFrameProjection | null;
+  readonly frame_count: 469;
+  readonly key_snapshot_indices: readonly [
+    0, 78, 118, 119, 157, 311, 351, 352, 390, 468,
+  ];
+  readonly allowed_controls: readonly [
+    "START",
+    "PAUSE",
+    "RESUME",
+    "NEXT_SNAPSHOT",
+    "PREVIOUS_SNAPSHOT",
+    "STOP",
+    "RESET_VIEW",
+  ];
+  readonly available_controls: readonly ReplayControl[];
+  readonly presentation_cadence_ms: 50;
+  readonly b2_sha256: string;
+  readonly b3_2_sha256: string;
+  readonly qualification: ReplayQualificationProjection;
+  readonly presentation_labels: readonly [
+    "EVIDENCE REPLAY",
+    "NOT PHYSICAL EXECUTION",
+    "DISCRETE SAMPLED STATES — NO DYNAMIC TIMING",
+  ];
+  readonly physical_execution_authority: "NOT_IMPLEMENTED";
+  readonly last_error_code: ReplayLastErrorCode | null;
+  readonly updated_at_utc: string;
+}
+
+export interface ReplayStartPayload {
+  readonly scenario_id: string;
+}
+
+export interface ReplayControlPayload {
+  readonly scenario_id: string;
+  readonly session_id: string;
+  readonly expected_control_version: number;
+  readonly control: ReplayMutationControl;
+}

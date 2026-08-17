@@ -9,6 +9,7 @@ import type {
   AuthorityState,
   DemoScenario,
   GovernanceRecord,
+  ReplayLifecycle,
 } from "../src/types";
 
 const taxonomy: AuthorityState[] = [
@@ -60,6 +61,7 @@ function progression(
   scenario: DemoScenario,
   governanceRecord: GovernanceRecord | null,
   proposalPresent = false,
+  replayLifecycle: ReplayLifecycle | null = null,
 ) {
   return deriveAuthorityProgression({
     taxonomy,
@@ -67,7 +69,7 @@ function progression(
     record: governanceRecord,
     proposalPresent,
     physicalExecutionAuthorityState: "NOT_IMPLEMENTED",
-    d2ReplayEnabled: false,
+    replayLifecycle,
   });
 }
 
@@ -84,7 +86,7 @@ describe("authority presentation", () => {
       "NOT REQUESTED",
       "NOT REQUESTED",
       "NOT REQUESTED",
-      "NOT REQUESTED — NOT ENABLED IN D2",
+      "PROHIBITED",
       "NOT_APPLICABLE",
       "NOT_IMPLEMENTED",
     ]);
@@ -100,18 +102,26 @@ describe("authority presentation", () => {
     expect(rows[0]?.state).toBe("PRESENT — NO AUTHORITY");
     expect(rows[1]?.state).toBe(decision);
     expect(rows[2]?.state).toBe(state);
-    expect(rows[3]?.state).toBe("NOT REQUESTED — NOT ENABLED IN D2");
+    expect(rows[3]?.state).toBe("PROHIBITED");
     expect(rows[5]?.state).toBe("NOT_IMPLEMENTED");
   });
 
   it("presents registered replay policy without converting it into permission", () => {
     const rows = progression(frozenReplayScenario, null);
-    expect(rows[3]?.state).toBe("NOT REQUESTED — NOT ENABLED IN D2");
+    expect(rows[3]?.state).toBe("SERVER_REGISTERED_ONLY — RECONCILING");
     expect(rows[3]?.detail).toContain("Policy: SERVER_REGISTERED_ONLY");
     expect(rows[3]?.detail).toContain(
       "Capability class: FROZEN_B2_REPLAY_COMPATIBLE",
     );
     expect(rows[3]?.state).not.toContain("GRANTED");
+  });
+
+  it("presents replay lifecycle without granting execution authority", () => {
+    const rows = progression(frozenReplayScenario, null, false, "PLAYING");
+    expect(rows[3]?.state).toBe("SERVER_REGISTERED_ONLY — PLAYING");
+    expect(rows[3]?.state).not.toContain("GRANTED");
+    expect(rows[4]?.state).toBe("FAIL");
+    expect(rows[5]?.state).toBe("NOT_IMPLEMENTED");
   });
 
   it("keeps downstream FAIL independent from governance decision", () => {

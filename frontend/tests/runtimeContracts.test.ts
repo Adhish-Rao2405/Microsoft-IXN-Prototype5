@@ -8,8 +8,10 @@ import {
   decodeDemoStatus,
   decodeGovernanceResult,
   decodeRecordedTranscription,
+  decodeReplayError,
+  decodeReplayState,
 } from "../src/runtimeContracts";
-import { ApiRequestError, getDemoStatus } from "../src/api";
+import { ApiRequestError, getDemoStatus, getReplayState } from "../src/api";
 
 const authority = [
   "UNTRUSTED_PROPOSAL",
@@ -907,4 +909,188 @@ describe("runtime network contracts", () => {
     );
   });
 
+});
+
+function replayState() {
+  return {
+    contract_id: "PROTOTYPE5_D3_REPLAY_STATE_V1",
+    contract_version: "1.0.0",
+    scenario_id: "FROZEN_B2_PICK_PLACE_EVIDENCE_REPLAY",
+    binding_id: "FROZEN_B2_B3_2_EVIDENCE_V1",
+    session_id: null,
+    control_version: 0,
+    projection_version: 0,
+    lifecycle_state: "IDLE",
+    command_in_flight: false,
+    current_frame: null,
+    frame_count: 469,
+    key_snapshot_indices: [0, 78, 118, 119, 157, 311, 351, 352, 390, 468],
+    allowed_controls: ["START", "PAUSE", "RESUME", "NEXT_SNAPSHOT", "PREVIOUS_SNAPSHOT", "STOP", "RESET_VIEW"],
+    available_controls: ["START"],
+    presentation_cadence_ms: 50,
+    b2_sha256: "a5a468145aea5aa21a649cccd1de3d6d2f8f15349d4b326db9380a6ad1256554",
+    b3_2_sha256: "11c8b83f8c4d0545c9a8df604046a335acb00121a51bf6e1d5b39504991c1798",
+    qualification: {
+      overall_result: "B3_2_FAIL_DISCRETE_ROUTE_QUALIFICATION",
+      scientific_failure_count: 118,
+      forbidden_contact_failure_count: 0,
+      support_material_penetration_failure_count: 118,
+      required_support_missing_failure_count: 0,
+      failure_codes_present: ["B3_2_FAIL_SUPPORT_MATERIAL_PENETRATION"],
+      recorded_failure_example: {
+        semantic_snapshot_index: 352,
+        route_state: "DESTINATION_PLACE",
+        phase: "RELEASE_BOUNDARY",
+        boundary_snapshot: "POST",
+        pair_index: 78,
+        signed_distance_m: -9.290505685985613e-7,
+        decision: "B3_2_FAIL_SUPPORT_MATERIAL_PENETRATION",
+      },
+    },
+    presentation_labels: [
+      "EVIDENCE REPLAY",
+      "NOT PHYSICAL EXECUTION",
+      "DISCRETE SAMPLED STATES — NO DYNAMIC TIMING",
+    ],
+    physical_execution_authority: "NOT_IMPLEMENTED",
+    last_error_code: null,
+    updated_at_utc: "2026-08-14T10:00:00Z",
+  };
+}
+
+function activeReplayState(
+  lifecycle: "PAUSED" | "PLAYING" | "COMPLETED" | "FAILED" | "CLEANUP_FAILED",
+) {
+  const completed = lifecycle === "COMPLETED";
+  const healthy = lifecycle === "PAUSED" || lifecycle === "PLAYING" || completed;
+  return {
+    ...replayState(),
+    session_id: "opaque-session",
+    control_version: 1,
+    projection_version: completed ? 469 : 1,
+    lifecycle_state: lifecycle,
+    current_frame: healthy
+      ? {
+          frame_index: completed ? 468 : 0,
+          semantic_snapshot_index: completed ? 468 : 0,
+          route_configuration_index: completed ? 466 : 0,
+          route_state: "HOME",
+          phase: completed ? "DESTINATION_SUPPORTED" : "SOURCE_SUPPORTED",
+          boundary_snapshot: "NONE",
+          is_key_snapshot: true,
+        }
+      : null,
+    available_controls: lifecycle === "PAUSED"
+      ? ["RESUME", "NEXT_SNAPSHOT", "STOP", "RESET_VIEW"]
+      : lifecycle === "PLAYING"
+        ? ["PAUSE", "STOP", "RESET_VIEW"]
+        : lifecycle === "COMPLETED"
+          ? ["PREVIOUS_SNAPSHOT", "STOP", "RESET_VIEW"]
+          : ["STOP"],
+    last_error_code: lifecycle === "FAILED"
+      ? "REPLAY_SCENE_FAILED"
+      : lifecycle === "CLEANUP_FAILED"
+        ? "REPLAY_CLEANUP_UNRESOLVED"
+        : null,
+  };
+}
+
+describe("D3 replay runtime contracts", () => {
+  const scenarioId = "FROZEN_B2_PICK_PLACE_EVIDENCE_REPLAY";
+
+  it("accepts canonical IDLE and every public active lifecycle", () => {
+    expect(decodeReplayState(replayState(), scenarioId).lifecycle_state).toBe("IDLE");
+    (["PAUSED", "PLAYING", "COMPLETED", "FAILED", "CLEANUP_FAILED"] as const)
+      .forEach((lifecycle) => {
+        expect(decodeReplayState(activeReplayState(lifecycle), scenarioId).lifecycle_state)
+          .toBe(lifecycle);
+      });
+  });
+
+  it("rejects internal lifecycle values and malformed frame identity", () => {
+    expect(() => decodeReplayState({ ...replayState(), lifecycle_state: "STARTING" }, scenarioId))
+      .toThrow(ContractValidationError);
+    expect(() => decodeReplayState({ ...replayState(), lifecycle_state: "STOPPING" }, scenarioId))
+      .toThrow(ContractValidationError);
+    const paused = activeReplayState("PAUSED");
+    expect(() => decodeReplayState({
+      ...paused,
+      current_frame: { ...paused.current_frame!, semantic_snapshot_index: 1 },
+    }, scenarioId)).toThrow(ContractValidationError);
+    expect(() => decodeReplayState({
+      ...paused,
+      current_frame: { ...paused.current_frame!, route_state: "UNKNOWN" },
+    }, scenarioId)).toThrow(ContractValidationError);
+    expect(() => decodeReplayState({
+      ...paused,
+      current_frame: { ...paused.current_frame!, phase: "UNKNOWN" },
+    }, scenarioId)).toThrow(ContractValidationError);
+    expect(() => decodeReplayState({
+      ...paused,
+      current_frame: { ...paused.current_frame!, boundary_snapshot: "UNKNOWN" },
+    }, scenarioId)).toThrow(ContractValidationError);
+    expect(() => decodeReplayState({
+      ...paused,
+      current_frame: { ...paused.current_frame!, is_key_snapshot: false },
+    }, scenarioId)).toThrow(ContractValidationError);
+  });
+
+  it("rejects missing, extra, null, unsafe and contradictory replay fields", () => {
+    const missing = replayState();
+    delete (missing as Record<string, unknown>).frame_count;
+    expect(() => decodeReplayState(missing, scenarioId)).toThrow(ContractValidationError);
+    expect(() => decodeReplayState({ ...replayState(), extra: true }, scenarioId)).toThrow(ContractValidationError);
+    expect(() => decodeReplayState({ ...replayState(), lifecycle_state: null }, scenarioId)).toThrow(ContractValidationError);
+    expect(() => decodeReplayState({ ...replayState(), control_version: Number.MAX_SAFE_INTEGER + 1 }, scenarioId)).toThrow(ContractValidationError);
+    expect(() => decodeReplayState({ ...replayState(), session_id: "wrong" }, scenarioId)).toThrow(ContractValidationError);
+  });
+
+  it("rejects malformed frames, constants, controls, errors and qualification evidence", () => {
+    expect(() => decodeReplayState({ ...replayState(), frame_count: 468 }, scenarioId)).toThrow(ContractValidationError);
+    expect(() => decodeReplayState({ ...replayState(), key_snapshot_indices: [0] }, scenarioId)).toThrow(ContractValidationError);
+    expect(() => decodeReplayState({ ...replayState(), available_controls: ["STOP"] }, scenarioId)).toThrow(ContractValidationError);
+    expect(() => decodeReplayState({ ...replayState(), available_controls: ["START", "START"] }, scenarioId)).toThrow(ContractValidationError);
+    expect(() => decodeReplayState({ ...replayState(), available_controls: ["UNKNOWN"] }, scenarioId)).toThrow(ContractValidationError);
+    expect(() => decodeReplayState({ ...replayState(), last_error_code: "REPLAY_VERSION_EXHAUSTED" }, scenarioId)).toThrow(ContractValidationError);
+    expect(() => decodeReplayState({ ...replayState(), b2_sha256: "0".repeat(64) }, scenarioId)).toThrow(ContractValidationError);
+    expect(() => decodeReplayState({ ...replayState(), b3_2_sha256: "0".repeat(64) }, scenarioId)).toThrow(ContractValidationError);
+    expect(() => decodeReplayState({
+      ...replayState(),
+      presentation_labels: ["EVIDENCE REPLAY", "NOT PHYSICAL EXECUTION"],
+    }, scenarioId)).toThrow(ContractValidationError);
+    expect(() => decodeReplayState({
+      ...replayState(),
+      qualification: { ...replayState().qualification, scientific_failure_count: 117 },
+    }, scenarioId)).toThrow(ContractValidationError);
+    expect(() => decodeReplayState({
+      ...replayState(),
+      qualification: {
+        ...replayState().qualification,
+        recorded_failure_example: {
+          ...replayState().qualification.recorded_failure_example,
+          signed_distance_m: -1e-6,
+        },
+      },
+    }, scenarioId)).toThrow(ContractValidationError);
+  });
+
+  it("accepts only the exact replay error envelope", () => {
+    expect(decodeReplayError({ code: "REPLAY_SESSION_STALE" })).toBe("REPLAY_SESSION_STALE");
+    expect(() => decodeReplayError({ detail: { code: "REPLAY_SESSION_STALE" } })).toThrow(ContractValidationError);
+    expect(() => decodeReplayError({ code: "REPLAY_UNKNOWN" })).toThrow(ContractValidationError);
+    expect(() => decodeReplayError({ code: "REPLAY_SESSION_STALE", detail: "native" })).toThrow(ContractValidationError);
+  });
+
+  it("keeps replay HTTP error parsing separate from legacy detail envelopes", async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = () => Promise.resolve(new Response(
+      JSON.stringify({ detail: { code: "REPLAY_SESSION_STALE" } }),
+      { status: 409, headers: { "Content-Type": "application/json" } },
+    ));
+    try {
+      await expect(getReplayState(scenarioId)).rejects.toBeInstanceOf(ContractValidationError);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
 });
