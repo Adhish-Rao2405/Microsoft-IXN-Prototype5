@@ -16,6 +16,10 @@ import type {
 } from "../src/types";
 
 const failure = { code: "NETWORK_FAILURE", detail: null } as const;
+const transcriptionFailure = {
+  reason: "TRANSCRIPTION_NETWORK_FAILURE",
+  serverCode: null,
+} as const;
 
 const result = {
   routing_policy_id: "test-policy",
@@ -88,11 +92,15 @@ function governanceContext(
   };
 }
 
-function transcriptionContext(operationId: number): TranscriptionContext {
+function transcriptionContext(
+  operationId: number,
+  source: TranscriptionContext["source"] = "WAV_UPLOAD",
+): TranscriptionContext {
   return {
     operationId,
     scenarioId: "scenario-a",
     commandRevision: 4,
+    source,
   };
 }
 
@@ -356,7 +364,7 @@ describe("demoReducer operation ownership", () => {
       demoReducer(active, {
         type: "TRANSCRIPTION_FAILED",
         operationId: 3,
-        failure,
+        failure: transcriptionFailure,
       }),
     ).toBe(active);
   });
@@ -391,6 +399,11 @@ describe("demoReducer operation ownership", () => {
 
     expect(edited.transcription.kind).toBe("READY");
     expect(edited.controls.command).toBe("Reviewed voice text");
+    if (edited.transcription.kind === "READY") {
+      expect(edited.transcription.transcription.transcript_text).toBe(
+        "Move the blue component.",
+      );
+    }
   });
 
   it("rejects typed and voice ownership with invalid transcript identity", () => {
@@ -522,6 +535,43 @@ describe("replay reducer ownership", () => {
       projection: replayProjection("stale", 1),
     });
     expect(stale).toBe(started);
+  });
+
+  it.each([
+    {
+      mismatch: "session identity",
+      sessionId: "S2",
+      controlVersion: 2,
+    },
+    {
+      mismatch: "control version",
+      sessionId: "S1",
+      controlVersion: 1,
+    },
+  ])("rejects replay mutation start with stale $mismatch", ({ sessionId, controlVersion }) => {
+    const ready = replayReadyState();
+    const current = {
+      ...ready,
+      replay: {
+        ...ready.replay,
+        projection: replayProjection("S1", 2),
+      },
+    };
+
+    const rejected = demoReducer(current, {
+      type: "REPLAY_MUTATION_STARTED",
+      context: {
+        operationId: 116,
+        scenarioId: "scenario-a",
+        control: "NEXT_SNAPSHOT",
+        sessionId,
+        controlVersion,
+      },
+    });
+
+    expect(rejected).toBe(current);
+    expect(rejected.replay.kind).toBe("READY");
+    expect(rejected.replay.mutation).toBeNull();
   });
 
   it("orders session identity before projection magnitude", () => {

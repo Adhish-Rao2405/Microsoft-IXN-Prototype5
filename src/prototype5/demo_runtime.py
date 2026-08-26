@@ -140,27 +140,8 @@ def build_demo_service(repo_root: Path | None = None) -> DemoApplicationService:
         governance_runner=governance_runner,
         routing_policy=routing_policy,
     )
-    speech_python = Path(
-        os.getenv("PROTOTYPE5_SPEECH_PYTHON", sys.executable)
-    ).expanduser()
-    speech_temp_root_value = os.getenv("PROTOTYPE5_SPEECH_TEMP_ROOT")
     speech_transcriber = NemotronRecordedAudioClient(
-        RecordedSpeechClientConfiguration(
-            repository_root=root,
-            speech_python_executable=speech_python,
-            process_timeout_seconds=float(
-                os.getenv("PROTOTYPE5_SPEECH_TIMEOUT_SECONDS", "120")
-            ),
-            allow_model_download=(
-                os.getenv("PROTOTYPE5_SPEECH_ALLOW_MODEL_DOWNLOAD", "0")
-                == "1"
-            ),
-            temporary_root=(
-                Path(speech_temp_root_value).expanduser()
-                if speech_temp_root_value
-                else None
-            ),
-        )
+        _normal_demo_speech_configuration(root)
     )
     return DemoApplicationService(
         router=router,
@@ -168,6 +149,37 @@ def build_demo_service(repo_root: Path | None = None) -> DemoApplicationService:
         cloud_configured=bool(cloud_api_key),
         speech_transcriber=speech_transcriber,
         final_demo_presentation=final_demo_presentation,
+    )
+
+
+def _normal_demo_speech_configuration(
+    repository_root: Path,
+) -> RecordedSpeechClientConfiguration:
+    download_setting = os.getenv(
+        "PROTOTYPE5_SPEECH_ALLOW_MODEL_DOWNLOAD",
+        "",
+    )
+    if download_setting not in ("", "0"):
+        raise ValueError(
+            "PROTOTYPE5_SPEECH_ALLOW_MODEL_DOWNLOAD must be unset, empty, or 0 "
+            "for normal demo composition"
+        )
+    speech_python = Path(
+        os.getenv("PROTOTYPE5_SPEECH_PYTHON", sys.executable)
+    ).expanduser()
+    speech_temp_root_value = os.getenv("PROTOTYPE5_SPEECH_TEMP_ROOT")
+    return RecordedSpeechClientConfiguration(
+        repository_root=repository_root,
+        speech_python_executable=speech_python,
+        process_timeout_seconds=float(
+            os.getenv("PROTOTYPE5_SPEECH_TIMEOUT_SECONDS", "120")
+        ),
+        allow_model_download=False,
+        temporary_root=(
+            Path(speech_temp_root_value).expanduser()
+            if speech_temp_root_value
+            else None
+        ),
     )
 
 

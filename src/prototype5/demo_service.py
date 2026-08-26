@@ -41,7 +41,10 @@ from .manufacturing_policy_v2 import (
     RequesterContextV2,
     SceneObjectStateV2,
 )
-from .recorded_speech import RecordedTranscriptionResultV1
+from .recorded_speech import (
+    RecordedTranscriptionResultV1,
+    SpeechWorkerBusyError,
+)
 
 
 FROZEN_BASELINE_TAG = "prototype5-governance-reproducibility-complete"
@@ -139,6 +142,10 @@ class DemoStatusResponse(ContractModel):
 
 
 class SpeechBackendUnavailableError(RuntimeError):
+    pass
+
+
+class SpeechCapacityUnavailableError(RuntimeError):
     pass
 
 
@@ -272,10 +279,13 @@ class DemoApplicationService:
     ) -> RecordedTranscriptionResultV1:
         if self.speech_transcriber is None:
             raise SpeechBackendUnavailableError("VOICE_BACKEND_UNAVAILABLE")
-        result = self.speech_transcriber.transcribe_wav(
-            audio_bytes,
-            original_filename=original_filename,
-        )
+        try:
+            result = self.speech_transcriber.transcribe_wav(
+                audio_bytes,
+                original_filename=original_filename,
+            )
+        except SpeechWorkerBusyError as exc:
+            raise SpeechCapacityUnavailableError("SPEECH_BUSY") from exc
         with self._transcript_lock:
             self._last_speech_status = (
                 AvailabilityStatus.AVAILABLE

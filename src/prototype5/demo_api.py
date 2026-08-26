@@ -21,6 +21,7 @@ from .demo_service import (
     DemoApplicationService,
     DemoStatusResponse,
     SpeechBackendUnavailableError,
+    SpeechCapacityUnavailableError,
     TranscriptRegistryError,
     TranscriptNotReadyError,
     TypedCommandHttpRequest,
@@ -273,6 +274,11 @@ def create_demo_app(
                 original_filename=filename,
             )
         except SpeechBackendUnavailableError as exc:
+            raise HTTPException(
+                status_code=503,
+                detail={"code": str(exc)},
+            ) from exc
+        except SpeechCapacityUnavailableError as exc:
             raise HTTPException(
                 status_code=503,
                 detail={"code": str(exc)},

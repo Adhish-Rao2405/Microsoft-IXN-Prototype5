@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+import math
 import os
 import re
 import subprocess
 import tempfile
+import threading
 import time
 import wave
 from collections.abc import Callable, Mapping
@@ -14,6 +16,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Literal
 from uuid import uuid4
 
@@ -30,15 +33,32 @@ NEMOTRON_SPEECH_ALIAS = "nemotron-speech-streaming-en-0.6b"
 NEMOTRON_SPEECH_MODEL_ID = (
     "nemotron-speech-streaming-en-0.6b-generic-cpu:3"
 )
+NEMOTRON_SPEECH_EXECUTION_PROVIDER = "CPUExecutionProvider"
+QUALIFIED_SPEECH_PYTHON_VERSION = "3.12.10"
+QUALIFIED_FOUNDRY_SDK_VERSION = "1.2.3"
+QUALIFIED_FOUNDRY_CORE_VERSION = "1.2.3"
+QUALIFIED_ONNXRUNTIME_CORE_VERSION = "1.26.0"
+QUALIFIED_ONNXRUNTIME_GENAI_VERSION = "0.14.1"
 NEMOTRON_TRANSCRIPT_BACKEND = "foundry_nemotron"
 SPEECH_RESULT_SCHEMA_VERSION = "1.0.0"
 DEFAULT_MAX_AUDIO_BYTES = 20 * 1024 * 1024
 DEFAULT_MAX_AUDIO_SECONDS = 60.0
 DEFAULT_PROCESS_TIMEOUT_SECONDS = 120.0
+MIN_PROCESS_TIMEOUT_SECONDS = 1.0
+MAX_PROCESS_TIMEOUT_SECONDS = 120.0
 DEFAULT_MAX_TRANSCRIPT_CHARACTERS = 1000
 DEFAULT_MAX_TRANSCRIPT_SEGMENTS = 1000
 DEFAULT_MAX_WORKER_RESULT_BYTES = 256 * 1024
 ERROR_CODE_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")
+WORKER_STATUS_EXIT_CODES: Mapping[TranscriptStatus, int] = MappingProxyType(
+    {
+        TranscriptStatus.READY: 0,
+        TranscriptStatus.PARTIAL: 0,
+        TranscriptStatus.EMPTY: 0,
+        TranscriptStatus.BACKEND_UNAVAILABLE: 2,
+        TranscriptStatus.FAILED: 3,
+    }
+)
 
 
 class RecordedAudioMetadataV1(ContractModel):
@@ -127,6 +147,12 @@ class RecordedTranscriptionResultV1(ContractModel):
         elif text:
             raise ValueError("non-transcript status cannot contain transcript text")
 
+        if self.transcript_status is TranscriptStatus.PARTIAL and (
+            self.error_code != "TRANSCRIPTION_PARTIAL"
+        ):
+            raise ValueError(
+                "partial transcription requires TRANSCRIPTION_PARTIAL"
+            )
         if self.transcript_status in (
             TranscriptStatus.BACKEND_UNAVAILABLE,
             TranscriptStatus.FAILED,
@@ -143,6 +169,18 @@ class RecordedTranscriptionResultV1(ContractModel):
         ):
             if self.resolved_model_id != NEMOTRON_SPEECH_MODEL_ID:
                 raise ValueError("completed transcription requires the qualified model ID")
+            if self.execution_provider != NEMOTRON_SPEECH_EXECUTION_PROVIDER:
+                raise ValueError(
+                    "completed transcription requires the qualified execution provider"
+                )
+            if self.sdk_version != QUALIFIED_FOUNDRY_SDK_VERSION:
+                raise ValueError(
+                    "completed transcription requires the qualified SDK version"
+                )
+            if self.core_version != QUALIFIED_FOUNDRY_CORE_VERSION:
+                raise ValueError(
+                    "completed transcription requires the qualified core version"
+                )
             if not (self.model_loaded_before or self.model_loaded_for_request):
                 raise ValueError("completed transcription requires an observed loaded model")
         return self
@@ -152,6 +190,10 @@ class RecordedAudioValidationError(ValueError):
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
         self.code = code
+
+
+class SpeechWorkerBusyError(RuntimeError):
+    """The one process-scoped speech-worker slot is already owned."""
 
 
 @dataclass(frozen=True)
@@ -166,8 +208,17 @@ class RecordedSpeechClientConfiguration:
     temporary_root: Path | None = None
 
     def __post_init__(self) -> None:
-        if self.process_timeout_seconds <= 0:
-            raise ValueError("process_timeout_seconds must be positive")
+        if (
+            isinstance(self.process_timeout_seconds, bool)
+            or not isinstance(self.process_timeout_seconds, (int, float))
+            or not math.isfinite(self.process_timeout_seconds)
+            or not MIN_PROCESS_TIMEOUT_SECONDS
+            <= self.process_timeout_seconds
+            <= MAX_PROCESS_TIMEOUT_SECONDS
+        ):
+            raise ValueError(
+                "process_timeout_seconds must be a finite number between 1 and 120"
+            )
         if self.max_audio_bytes <= 0:
             raise ValueError("max_audio_bytes must be positive")
         if self.max_audio_seconds <= 0:
@@ -194,6 +245,7 @@ class NemotronRecordedAudioClient:
         self._clock = clock or (lambda: datetime.now(timezone.utc))
         self._timer = timer or time.perf_counter
         self._id_factory = id_factory or (lambda: str(uuid4()))
+        self._worker_admission = threading.Lock()
 
     @property
     def is_worker_configured(self) -> bool:
@@ -233,6 +285,27 @@ class NemotronRecordedAudioClient:
                 error_code="VOICE_BACKEND_UNAVAILABLE",
                 error_detail="Configured speech Python executable was not found.",
             )
+
+        if not self._worker_admission.acquire(blocking=False):
+            raise SpeechWorkerBusyError("SPEECH_BUSY")
+        try:
+            return self._transcribe_validated(
+                audio_bytes,
+                metadata=metadata,
+                transcription_id=transcription_id,
+                timestamp=timestamp,
+            )
+        finally:
+            self._worker_admission.release()
+
+    def _transcribe_validated(
+        self,
+        audio_bytes: bytes,
+        *,
+        metadata: RecordedAudioMetadataV1,
+        transcription_id: str,
+        timestamp: str,
+    ) -> RecordedTranscriptionResultV1:
 
         started = self._timer()
         temp_parent = self.configuration.temporary_root
@@ -349,13 +422,12 @@ class NemotronRecordedAudioClient:
                     error_detail=_sanitise_error(str(exc)),
                 )
 
+            expected_exit_code = WORKER_STATUS_EXIT_CODES.get(
+                result.transcript_status
+            )
             if (
-                completed.returncode != 0
-                and result.transcript_status
-                not in (
-                    TranscriptStatus.BACKEND_UNAVAILABLE,
-                    TranscriptStatus.FAILED,
-                )
+                expected_exit_code is None
+                or completed.returncode != expected_exit_code
             ):
                 return _base_result(
                     metadata,
@@ -368,8 +440,8 @@ class NemotronRecordedAudioClient:
                     * 1000,
                     error_code="SPEECH_WORKER_EXIT_MISMATCH",
                     error_detail=(
-                        "Speech worker returned a successful result with "
-                        f"exit code {completed.returncode}."
+                        "Speech worker status and exit code did not match the "
+                        "qualified truth table."
                     ),
                 )
             if not _audio_provenance_matches(result.audio, metadata):
@@ -384,6 +456,23 @@ class NemotronRecordedAudioClient:
                     * 1000,
                     error_code="SPEECH_WORKER_PROVENANCE_MISMATCH",
                     error_detail="Worker audio identity did not match submitted audio.",
+                )
+            lifecycle_provenance_error = _model_lifecycle_provenance_error(
+                result,
+                self.configuration,
+            )
+            if lifecycle_provenance_error is not None:
+                return _base_result(
+                    metadata,
+                    transcription_id=transcription_id,
+                    timestamp_utc=timestamp,
+                    transcript_status=TranscriptStatus.FAILED,
+                    transcription_latency_ms=(
+                        self._timer() - started
+                    )
+                    * 1000,
+                    error_code="SPEECH_WORKER_PROVENANCE_MISMATCH",
+                    error_detail=lifecycle_provenance_error,
                 )
             return RecordedTranscriptionResultV1.model_validate(
                 result.model_copy(
@@ -579,6 +668,68 @@ def _audio_provenance_matches(
         and worker.frame_count == submitted.frame_count
         and worker.duration_ms == submitted.duration_ms
     )
+
+
+def _model_lifecycle_provenance_error(
+    result: RecordedTranscriptionResultV1,
+    configuration: RecordedSpeechClientConfiguration,
+) -> str | None:
+    completed = result.transcript_status in (
+        TranscriptStatus.READY,
+        TranscriptStatus.PARTIAL,
+        TranscriptStatus.EMPTY,
+    )
+    if (
+        not configuration.allow_model_download
+        and result.model_downloaded_for_request
+    ):
+        return "Worker reported model acquisition when acquisition was disabled."
+    if (
+        result.model_downloaded_for_request
+        and result.model_cached_before is not False
+    ):
+        return "Worker model acquisition requires an uncached initial state."
+    if (
+        result.model_loaded_before is True
+        and result.model_cached_before is not True
+    ):
+        return "Initially loaded model requires initial cache evidence."
+    if completed and result.model_cached_before is None:
+        return "Completed worker result lacks initial model-cache evidence."
+    if completed and result.model_loaded_before is None:
+        return "Completed worker result lacks initial model-load evidence."
+    if (
+        completed
+        and not configuration.allow_model_download
+        and result.model_cached_before is not True
+    ):
+        return "Completed worker result requires a pre-cached model."
+    if (
+        completed
+        and result.model_cached_before is False
+        and not result.model_downloaded_for_request
+    ):
+        return "Completed uncached model requires acquisition evidence."
+    if result.model_loaded_before and result.model_loaded_for_request:
+        return "Worker reported conflicting model-load ownership."
+    if (
+        not configuration.unload_after_request
+        and result.model_unloaded_after_request
+    ):
+        return "Worker reported model unload when unload policy was disabled."
+    if (
+        result.model_unloaded_after_request
+        and not result.model_loaded_for_request
+    ):
+        return "Worker reported unloading a model it did not load."
+    if (
+        completed
+        and result.model_loaded_for_request
+        and configuration.unload_after_request
+        and not result.model_unloaded_after_request
+    ):
+        return "Completed request-owned model load lacks unload evidence."
+    return None
 
 
 def _sanitise_error(value: str) -> str:

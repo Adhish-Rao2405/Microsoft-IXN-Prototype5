@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 import importlib.metadata
+import math
+import platform
 import threading
 import time
 import wave
@@ -18,12 +20,23 @@ from .recorded_speech import (
     DEFAULT_MAX_TRANSCRIPT_CHARACTERS,
     DEFAULT_MAX_TRANSCRIPT_SEGMENTS,
     NEMOTRON_SPEECH_ALIAS,
+    NEMOTRON_SPEECH_EXECUTION_PROVIDER,
     NEMOTRON_SPEECH_MODEL_ID,
+    QUALIFIED_FOUNDRY_CORE_VERSION,
+    QUALIFIED_FOUNDRY_SDK_VERSION,
+    QUALIFIED_ONNXRUNTIME_CORE_VERSION,
+    QUALIFIED_ONNXRUNTIME_GENAI_VERSION,
+    QUALIFIED_SPEECH_PYTHON_VERSION,
     RecordedTranscriptionResultV1,
+    WORKER_STATUS_EXIT_CODES,
     _base_result,
     _sanitise_error,
     inspect_wav_bytes,
 )
+
+
+MIN_PUSHER_JOIN_TIMEOUT_SECONDS = 1.0
+MAX_PUSHER_JOIN_TIMEOUT_SECONDS = 30.0
 
 
 @dataclass(frozen=True)
@@ -40,8 +53,17 @@ class WorkerConfiguration:
             raise ValueError("only the approved Nemotron alias is permitted")
         if self.expected_model_id != NEMOTRON_SPEECH_MODEL_ID:
             raise ValueError("only the qualified Nemotron model ID is permitted")
-        if self.pusher_join_timeout_seconds <= 0:
-            raise ValueError("pusher_join_timeout_seconds must be positive")
+        if (
+            isinstance(self.pusher_join_timeout_seconds, bool)
+            or not isinstance(self.pusher_join_timeout_seconds, (int, float))
+            or not math.isfinite(self.pusher_join_timeout_seconds)
+            or not MIN_PUSHER_JOIN_TIMEOUT_SECONDS
+            <= self.pusher_join_timeout_seconds
+            <= MAX_PUSHER_JOIN_TIMEOUT_SECONDS
+        ):
+            raise ValueError(
+                "pusher_join_timeout_seconds must be a finite number between 1 and 30"
+            )
 
 
 @dataclass(frozen=True)
@@ -50,6 +72,9 @@ class FoundrySdkSurface:
     manager_type: Any
     sdk_version: str | None
     core_version: str | None
+    python_version: str | None = None
+    ort_core_version: str | None = None
+    ort_genai_version: str | None = None
 
 
 class SpeechWorkerError(RuntimeError):
@@ -59,10 +84,12 @@ class SpeechWorkerError(RuntimeError):
         message: str,
         *,
         unavailable: bool = False,
+        safe_to_unload: bool = True,
     ) -> None:
         super().__init__(message)
         self.code = code
         self.unavailable = unavailable
+        self.safe_to_unload = safe_to_unload
 
 
 def run_transcription_worker(
@@ -89,9 +116,11 @@ def run_transcription_worker(
     unloaded_after = False
     resolved_model_id: str | None = None
     execution_provider: str | None = None
+    safe_to_unload = True
 
     try:
         surface = surface or load_sdk_surface()
+        _require_qualified_runtime(surface)
         if surface.manager_type.instance is None:
             surface.manager_type.initialize(
                 surface.configuration_type(
@@ -106,11 +135,13 @@ def run_transcription_worker(
                 unavailable=True,
             )
 
-        model = manager.catalog.get_model(configuration.model_alias)
+        model = manager.catalog.get_model_variant(
+            configuration.expected_model_id
+        )
         if model is None:
             raise SpeechWorkerError(
-                "NEMOTRON_ALIAS_NOT_FOUND",
-                "Approved Nemotron speech alias is unavailable.",
+                "NEMOTRON_MODEL_NOT_FOUND",
+                "The qualified Nemotron model variant is unavailable.",
                 unavailable=True,
             )
 
@@ -121,7 +152,22 @@ def run_transcription_worker(
                 "Resolved Nemotron model ID does not match the qualified ID.",
                 unavailable=True,
             )
+        resolved_alias = str(getattr(model, "alias", ""))
+        if resolved_alias != configuration.model_alias:
+            raise SpeechWorkerError(
+                "NEMOTRON_MODEL_ALIAS_MISMATCH",
+                "Observed Nemotron alias does not match the qualified alias "
+                f"(observed={resolved_alias!r}).",
+                unavailable=True,
+            )
         execution_provider = _execution_provider(model)
+        if execution_provider != NEMOTRON_SPEECH_EXECUTION_PROVIDER:
+            raise SpeechWorkerError(
+                "NEMOTRON_EXECUTION_PROVIDER_MISMATCH",
+                "Observed execution provider does not match the qualified provider "
+                f"(observed={execution_provider!r}).",
+                unavailable=True,
+            )
         cached_before = bool(model.is_cached)
         loaded_before = bool(model.is_loaded)
         if not cached_before:
@@ -133,6 +179,12 @@ def run_transcription_worker(
                 )
             model.download()
             downloaded = True
+            if not bool(model.is_cached):
+                raise SpeechWorkerError(
+                    "NEMOTRON_MODEL_ACQUISITION_FAILED",
+                    "Explicit Nemotron acquisition did not produce a cached model.",
+                    unavailable=True,
+                )
 
         if not loaded_before:
             model.load()
@@ -192,6 +244,7 @@ def run_transcription_worker(
             ),
         )
     except SpeechWorkerError as exc:
+        safe_to_unload = exc.safe_to_unload
         status = (
             TranscriptStatus.BACKEND_UNAVAILABLE
             if exc.unavailable
@@ -237,6 +290,7 @@ def run_transcription_worker(
         model is not None
         and loaded_for_request
         and configuration.unload_after_request
+        and safe_to_unload
     ):
         try:
             model.unload()
@@ -276,7 +330,53 @@ def load_sdk_surface() -> FoundrySdkSurface:
         manager_type=FoundryLocalManager,
         sdk_version=_distribution_version("foundry-local-sdk-winml"),
         core_version=_distribution_version("foundry-local-core-winml"),
+        python_version=platform.python_version(),
+        ort_core_version=_distribution_version("onnxruntime-core"),
+        ort_genai_version=_distribution_version("onnxruntime-genai-core"),
     )
+
+
+def _require_qualified_runtime(surface: FoundrySdkSurface) -> None:
+    expected = (
+        (
+            "SPEECH_PYTHON_VERSION_MISMATCH",
+            "Python",
+            surface.python_version,
+            QUALIFIED_SPEECH_PYTHON_VERSION,
+        ),
+        (
+            "FOUNDRY_SDK_VERSION_MISMATCH",
+            "Foundry SDK",
+            surface.sdk_version,
+            QUALIFIED_FOUNDRY_SDK_VERSION,
+        ),
+        (
+            "FOUNDRY_CORE_VERSION_MISMATCH",
+            "Foundry core",
+            surface.core_version,
+            QUALIFIED_FOUNDRY_CORE_VERSION,
+        ),
+        (
+            "ONNXRUNTIME_CORE_VERSION_MISMATCH",
+            "ONNX Runtime core",
+            surface.ort_core_version,
+            QUALIFIED_ONNXRUNTIME_CORE_VERSION,
+        ),
+        (
+            "ONNXRUNTIME_GENAI_VERSION_MISMATCH",
+            "ONNX Runtime GenAI core",
+            surface.ort_genai_version,
+            QUALIFIED_ONNXRUNTIME_GENAI_VERSION,
+        ),
+    )
+    for code, label, observed, qualified in expected:
+        if observed != qualified:
+            raise SpeechWorkerError(
+                code,
+                f"{label} version drifted from the qualified runtime "
+                f"(observed={observed!r}, qualified={qualified!r}).",
+                unavailable=True,
+            )
 
 
 def transcribe_wav_live(
@@ -358,10 +458,13 @@ def transcribe_wav_live(
                 session.stop()
             except Exception:
                 pass
-            raise SpeechWorkerError(
-                "TRANSCRIPTION_DRAIN_TIMEOUT",
-                "Nemotron audio pusher did not terminate within the deadline.",
-            )
+            pusher.join(timeout=pusher_join_timeout_seconds)
+            if pusher.is_alive():
+                raise SpeechWorkerError(
+                    "TRANSCRIPTION_PUSHER_CLEANUP_UNRESOLVED",
+                    "Nemotron audio pusher remained live after bounded cleanup.",
+                    safe_to_unload=False,
+                )
 
     if push_error:
         raise SpeechWorkerError(
@@ -446,11 +549,9 @@ def main() -> int:
         result.model_dump_json(indent=2),
         encoding="utf-8",
     )
-    return (
-        0
-        if result.transcript_status
-        in (TranscriptStatus.READY, TranscriptStatus.EMPTY)
-        else 2
+    return WORKER_STATUS_EXIT_CODES.get(
+        result.transcript_status,
+        WORKER_STATUS_EXIT_CODES[TranscriptStatus.FAILED],
     )
 
 

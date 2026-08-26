@@ -381,6 +381,7 @@ def test_auto_fallback_registers_the_cloud_result_not_the_local_attempt():
 def test_voice_submission_registers_its_execution_context():
     from src.prototype5.demo_service import VoiceCommandApiRequest
     from src.prototype5.recorded_speech import (
+        NEMOTRON_SPEECH_EXECUTION_PROVIDER,
         NEMOTRON_SPEECH_MODEL_ID,
         RecordedAudioMetadataV1,
         RecordedTranscriptionResultV1,
@@ -408,6 +409,7 @@ def test_voice_submission_registers_its_execution_context():
                     duration_ms=1000.0,
                 ),
                 resolved_model_id=NEMOTRON_SPEECH_MODEL_ID,
+                execution_provider=NEMOTRON_SPEECH_EXECUTION_PROVIDER,
                 sdk_version="1.2.3",
                 core_version="1.2.3",
                 model_cached_before=True,

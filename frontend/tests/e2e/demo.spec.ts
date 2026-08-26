@@ -718,8 +718,10 @@ test("recorded transcript is reviewable before voice governance", async ({ page 
     buffer: Buffer.from([1, 2, 3]),
   });
 
-  await expect(page.getByText("Nemotron transcript")).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Operator command" })).toHaveValue(
+  await expect(
+    page.getByText("RAW ASR TRANSCRIPT — UNTRUSTED", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Operator review command" })).toHaveValue(
     "Move the blue component.",
   );
   const voiceRequestPromise = page.waitForRequest("**/api/v1/governance/voice");

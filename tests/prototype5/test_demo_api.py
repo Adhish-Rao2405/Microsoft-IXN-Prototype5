@@ -34,9 +34,11 @@ from src.prototype5.hybrid_inference_router import (
 from src.prototype5.manufacturing_policy_v2 import load_manufacturing_policy
 from src.prototype5.recorded_speech import (
     DEFAULT_MAX_AUDIO_BYTES,
+    NEMOTRON_SPEECH_EXECUTION_PROVIDER,
     NEMOTRON_SPEECH_MODEL_ID,
     RecordedAudioMetadataV1,
     RecordedTranscriptionResultV1,
+    SpeechWorkerBusyError,
 )
 from src.prototype5.frozen_evidence_replay import (
     REPLAY_SCENARIO_ID,
@@ -724,6 +726,7 @@ class FakeSpeechTranscriber:
                 duration_ms=100,
             ),
             resolved_model_id=NEMOTRON_SPEECH_MODEL_ID,
+            execution_provider=NEMOTRON_SPEECH_EXECUTION_PROVIDER,
             sdk_version="1.2.3",
             core_version="1.2.3",
             model_cached_before=True,
@@ -735,6 +738,10 @@ class FakeSpeechTranscriber:
             error_code=(
                 "VOICE_BACKEND_UNAVAILABLE"
                 if self.status == "BACKEND_UNAVAILABLE"
+                else "TRANSCRIPTION_PARTIAL"
+                if self.status == "PARTIAL"
+                else "TRANSCRIPT_EMPTY"
+                if self.status == "EMPTY"
                 else None
             ),
             error_detail=(
@@ -943,6 +950,91 @@ def test_audio_length_and_filename_are_rejected_before_transcriber_call():
     assert unsafe_name.status_code == 400
     assert unsafe_name.json()["detail"]["code"] == "AUDIO_FILENAME_INVALID"
     assert speech.calls == []
+
+
+def test_speech_worker_capacity_maps_to_stable_503_without_transport_redesign():
+    class BusySpeechTranscriber:
+        is_worker_configured = True
+
+        def transcribe_wav(self, audio_bytes, *, original_filename):
+            raise SpeechWorkerBusyError("SPEECH_BUSY")
+
+    client, _, _ = build_client(
+        local_responses=[],
+        cloud_responses=[],
+        speech_transcriber=BusySpeechTranscriber(),
+    )
+
+    response = client.post(
+        "/api/v1/speech/recorded",
+        content=b"bounded-request-body",
+        headers={"Content-Type": "audio/wav"},
+    )
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": {"code": "SPEECH_BUSY"}}
+
+
+@pytest.mark.parametrize(
+    ("status", "text"),
+    [
+        ("PARTIAL", "Move the blue component"),
+        ("EMPTY", None),
+    ],
+)
+def test_partial_and_empty_transcriptions_never_enter_registry(status, text):
+    speech = FakeSpeechTranscriber(status=status, text=text)
+    client, local, cloud = build_client(
+        local_responses=[],
+        cloud_responses=[],
+        speech_transcriber=speech,
+    )
+
+    transcription = client.post(
+        "/api/v1/speech/recorded",
+        content=b"bounded-request-body",
+        headers={"Content-Type": "audio/wav"},
+    )
+    governance = client.post(
+        "/api/v1/governance/voice",
+        json={
+            "scenario_id": LIVE_SCENARIO,
+            "transcription_id": "transcription-1",
+            "reviewed_transcript_text": "Move the blue component.",
+            "inference_mode": "LOCAL",
+        },
+    )
+
+    assert transcription.status_code == 200
+    assert transcription.json()["transcript_status"] == status
+    assert governance.status_code == 409
+    assert governance.json()["detail"]["code"] == (
+        "TRANSCRIPT_NOT_READY_OR_EXPIRED"
+    )
+    assert local.calls == []
+    assert cloud.calls == []
+
+
+def test_existing_body_limit_accepts_exact_boundary_without_new_408_semantics():
+    speech = FakeSpeechTranscriber()
+    client, _, _ = build_client(
+        local_responses=[],
+        cloud_responses=[],
+        speech_transcriber=speech,
+    )
+
+    response = client.post(
+        "/api/v1/speech/recorded",
+        content=b"x",
+        headers={
+            "Content-Type": "audio/wav",
+            "Content-Length": str(DEFAULT_MAX_AUDIO_BYTES),
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.status_code != 408
+    assert len(speech.calls) == 1
 
 
 def test_unavailable_transcript_cannot_be_submitted_to_planner():

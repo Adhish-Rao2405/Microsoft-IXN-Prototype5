@@ -52,7 +52,15 @@ import {
   type ReplayClientFailure,
   type ReplayMutationContext,
   type ReplayReadContext,
+  type TranscriptionContext,
+  type TranscriptionFailure,
 } from "./demoState";
+import {
+  createMicrophoneCaptureController,
+  type MicrophoneCaptureController,
+  type MicrophoneCaptureFailureReason,
+  type MicrophoneCaptureOutcome,
+} from "./microphoneCapture";
 import { ContractValidationError } from "./runtimeContracts";
 import {
   deriveAuthorityProgression,
@@ -67,6 +75,7 @@ import type {
   AvailabilityStatus,
   DemoScenario,
   InferenceMode,
+  RecordedTranscription,
   ReplayControl,
   ReplayStateProjection,
 } from "./types";
@@ -150,6 +159,12 @@ interface OperationOwner {
   deadlineHandle: ReturnType<typeof setTimeout> | null;
 }
 
+interface MicrophoneOwner {
+  readonly operationId: number;
+  readonly context: TranscriptionContext;
+  readonly controller: MicrophoneCaptureController;
+}
+
 type OperationOwnerRef = MutableRefObject<OperationOwner | null>;
 
 function failureMessage(failure: ClientFailure): string {
@@ -167,6 +182,67 @@ function classifyClientFailure(error: unknown): ClientFailure {
     return { code: "NETWORK_FAILURE", detail: null };
   }
   return { code: "UNKNOWN_CLIENT_FAILURE", detail: null };
+}
+
+function transcriptionFailure(
+  reason: TranscriptionFailure["reason"],
+  serverCode: string | null = null,
+): TranscriptionFailure {
+  return { reason, serverCode };
+}
+
+function classifyTranscriptionException(error: unknown): TranscriptionFailure {
+  if (error instanceof ApiRequestError) {
+    return error.message === "SPEECH_BUSY"
+      ? transcriptionFailure("SPEECH_BUSY", "SPEECH_BUSY")
+      : transcriptionFailure("TRANSCRIPTION_FAILED", error.message);
+  }
+  if (error instanceof ContractValidationError) {
+    return transcriptionFailure("TRANSCRIPTION_INVALID_RESPONSE");
+  }
+  if (error instanceof ApiTransportError) {
+    return transcriptionFailure("TRANSCRIPTION_NETWORK_FAILURE");
+  }
+  return transcriptionFailure("TRANSCRIPTION_FAILED");
+}
+
+function classifyTranscriptionResult(
+  transcription: RecordedTranscription,
+): TranscriptionFailure {
+  if (transcription.transcript_status === "PARTIAL") {
+    return transcriptionFailure(
+      "TRANSCRIPTION_PARTIAL",
+      transcription.error_code,
+    );
+  }
+  if (transcription.transcript_status === "EMPTY") {
+    return transcriptionFailure(
+      "TRANSCRIPTION_EMPTY",
+      transcription.error_code,
+    );
+  }
+  if (transcription.transcript_status === "BACKEND_UNAVAILABLE") {
+    return transcriptionFailure(
+      "SPEECH_BACKEND_UNAVAILABLE",
+      transcription.error_code,
+    );
+  }
+  if (transcription.error_code === "TRANSCRIPTION_TIMEOUT") {
+    return transcriptionFailure(
+      "TRANSCRIPTION_TIMEOUT",
+      transcription.error_code,
+    );
+  }
+  return transcriptionFailure(
+    "TRANSCRIPTION_FAILED",
+    transcription.error_code,
+  );
+}
+
+function captureFailure(
+  reason: MicrophoneCaptureFailureReason,
+): TranscriptionFailure {
+  return transcriptionFailure(reason);
 }
 
 function classifyReplayFailure(error: unknown): ReplayClientFailure {
@@ -187,7 +263,10 @@ export function clientErrorMessage(error: unknown): string {
 }
 
 function isAbortError(error: unknown): boolean {
-  return error instanceof Error && error.name === "AbortError";
+  return typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    error.name === "AbortError";
 }
 
 function nextOperationId(counter: MutableRefObject<number>): number {
@@ -365,6 +444,7 @@ export function App() {
   const bootstrapOwnerRef = useRef<OperationOwner | null>(null);
   const governanceOwnerRef = useRef<OperationOwner | null>(null);
   const transcriptionOwnerRef = useRef<OperationOwner | null>(null);
+  const microphoneOwnerRef = useRef<MicrophoneOwner | null>(null);
   const replayMutationOwnerRef = useRef<OperationOwner | null>(null);
   const replayReadOwnerRef = useRef<OperationOwner | null>(null);
   const replayPollHandleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -436,6 +516,9 @@ export function App() {
       cancelOwner(bootstrapOwnerRef);
       cancelOwner(governanceOwnerRef);
       cancelOwner(transcriptionOwnerRef);
+      const microphoneOwner = microphoneOwnerRef.current;
+      microphoneOwnerRef.current = null;
+      if (microphoneOwner) void microphoneOwner.controller.cancel();
       cancelOwner(replayMutationOwnerRef);
       cancelOwner(replayReadOwnerRef);
       if (replayPollHandleRef.current !== null) {
@@ -456,6 +539,12 @@ export function App() {
   const mode = state.controls.inferenceMode;
   const pending = state.governance.kind === "SUBMITTING";
   const transcribing = state.transcription.kind === "TRANSCRIBING";
+  const speechOperationActive =
+    state.transcription.kind === "REQUESTING_PERMISSION" ||
+    state.transcription.kind === "CAPTURING" ||
+    state.transcription.kind === "FINALISING" ||
+    transcribing;
+  const capturing = state.transcription.kind === "CAPTURING";
   const result = state.governance.kind === "SUCCEEDED"
     ? state.governance.result
     : null;
@@ -474,8 +563,13 @@ export function App() {
     ? state.transcription.consumed
     : false;
   const transcriptionError = state.transcription.kind === "FAILED"
-    ? failureMessage(state.transcription.failure)
+    ? state.transcription.failure.serverCode &&
+      state.transcription.failure.serverCode !== state.transcription.failure.reason
+      ? `${state.transcription.failure.reason} (${state.transcription.failure.serverCode})`
+      : state.transcription.failure.reason
     : null;
+  const reviewedTranscriptEdited = transcription?.transcript_text != null &&
+    command !== transcription.transcript_text;
   const record = result?.canonical_result.governance_record ?? null;
   const selectedScenario = manifest?.scenarios.find(
     (scenario) => scenario.scenario_id === scenarioId,
@@ -626,15 +720,18 @@ export function App() {
         }
       })
       .catch((error: unknown) => {
-        if (!mountedRef.current) return;
+        if (
+          !mountedRef.current ||
+          replayReadOwnerRef.current !== owner ||
+          selectedScenarioIdRef.current !== expectedScenarioId ||
+          !releaseOwner(replayReadOwnerRef, operationId)
+        ) return;
         if (isAbortError(error)) return;
         const failure = classifyReplayFailure(error);
         if (failure.code === "REPLAY_VERSION_EXHAUSTED") {
           publishReplayFatal(expectedScenarioId);
           return;
         }
-        if (replayReadOwnerRef.current !== owner) return;
-        if (!releaseOwner(replayReadOwnerRef, operationId)) return;
         dispatch({
           type: "REPLAY_OPERATION_FAILED",
           operationId,
@@ -727,15 +824,18 @@ export function App() {
         }
       })
       .catch((error: unknown) => {
-        if (!mountedRef.current) return;
+        if (
+          !mountedRef.current ||
+          replayMutationOwnerRef.current !== owner ||
+          selectedScenarioIdRef.current !== context.scenarioId ||
+          !releaseOwner(replayMutationOwnerRef, operationId)
+        ) return;
         if (isAbortError(error)) return;
         const failure = classifyReplayFailure(error);
         if (failure.code === "REPLAY_VERSION_EXHAUSTED") {
           publishReplayFatal(context.scenarioId);
           return;
         }
-        if (replayMutationOwnerRef.current !== owner) return;
-        if (!releaseOwner(replayMutationOwnerRef, operationId)) return;
         dispatch({
           type: "REPLAY_OPERATION_FAILED",
           operationId,
@@ -780,7 +880,7 @@ export function App() {
       !trimmed ||
       !selectedScenario?.model_input_enabled ||
       pending ||
-      transcribing ||
+      speechOperationActive ||
       transcriptConsumed
     ) return;
     const readyTranscription = state.transcription.kind === "READY"
@@ -849,34 +949,21 @@ export function App() {
     }
   }
 
-  async function handleAudioSelection(
-    event: ChangeEvent<HTMLInputElement>,
-  ) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (
-      !file ||
-      pending ||
-      state.bootstrap.kind !== "READY" ||
-      !selectedScenario?.model_input_enabled
-    ) return;
-    const operationId = nextOperationId(nextOperationIdRef);
-    const context = {
-      operationId,
-      scenarioId: selectedScenario.scenario_id,
-      commandRevision: state.controls.commandRevision,
-    };
+  async function transcribeFile(
+    file: File,
+    context: TranscriptionContext,
+  ): Promise<void> {
     dispatch({ type: "TRANSCRIPTION_STARTED", context });
     const owner = startOwner(
       transcriptionOwnerRef,
-      operationId,
+      context.operationId,
       SPEECH_CLIENT_DEADLINE_MS,
       () => {
         if (!mountedRef.current) return;
         dispatch({
           type: "TRANSCRIPTION_FAILED",
-          operationId,
-          failure: { code: "CLIENT_TIMEOUT", detail: null },
+          operationId: context.operationId,
+          failure: transcriptionFailure("TRANSCRIPTION_TIMEOUT"),
         });
       },
     );
@@ -887,7 +974,7 @@ export function App() {
       );
       if (
         !mountedRef.current ||
-        !releaseOwner(transcriptionOwnerRef, operationId)
+        !releaseOwner(transcriptionOwnerRef, context.operationId)
       ) return;
       if (
         nextTranscription.transcript_status === "READY" &&
@@ -895,35 +982,134 @@ export function App() {
       ) {
         dispatch({
           type: "TRANSCRIPTION_SUCCEEDED",
-          operationId,
+          operationId: context.operationId,
           transcription: nextTranscription,
         });
       } else {
         dispatch({
           type: "TRANSCRIPTION_FAILED",
-          operationId,
-          failure: {
-            code: "TRANSCRIPTION_FAILURE",
-            detail:
-              nextTranscription.error_code ?? nextTranscription.transcript_status,
-          },
+          operationId: context.operationId,
+          failure: classifyTranscriptionResult(nextTranscription),
         });
       }
     } catch (error: unknown) {
       if (
         !mountedRef.current ||
-        !releaseOwner(transcriptionOwnerRef, operationId) ||
+        !releaseOwner(transcriptionOwnerRef, context.operationId) ||
         isAbortError(error)
       ) return;
       dispatch({
         type: "TRANSCRIPTION_FAILED",
-        operationId,
-        failure: classifyClientFailure(error),
+        operationId: context.operationId,
+        failure: classifyTranscriptionException(error),
       });
     }
   }
 
+  async function handleAudioSelection(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (
+      !file ||
+      pending ||
+      state.bootstrap.kind !== "READY" ||
+      !selectedScenario?.model_input_enabled ||
+      (state.transcription.kind !== "NONE" &&
+        state.transcription.kind !== "FAILED")
+    ) return;
+    const context: TranscriptionContext = {
+      operationId: nextOperationId(nextOperationIdRef),
+      scenarioId: selectedScenario.scenario_id,
+      commandRevision: state.controls.commandRevision,
+      source: "WAV_UPLOAD",
+    };
+    await transcribeFile(file, context);
+  }
+
+  async function settleMicrophone(
+    owner: MicrophoneOwner,
+    outcome: MicrophoneCaptureOutcome,
+  ): Promise<void> {
+    if (!mountedRef.current || microphoneOwnerRef.current !== owner) return;
+    microphoneOwnerRef.current = null;
+    if (outcome.kind === "CAPTURED") {
+      dispatch({
+        type: "MICROPHONE_FINALISING",
+        operationId: owner.operationId,
+      });
+      await transcribeFile(outcome.file, owner.context);
+      return;
+    }
+    if (outcome.kind === "FAILED") {
+      dispatch({
+        type: "TRANSCRIPTION_FAILED",
+        operationId: owner.operationId,
+        failure: captureFailure(outcome.reason),
+      });
+      return;
+    }
+    dispatch({
+      type: "TRANSCRIPTION_CANCELLED",
+      operationId: owner.operationId,
+    });
+  }
+
+  async function startMicrophone(): Promise<void> {
+    if (
+      pending ||
+      state.bootstrap.kind !== "READY" ||
+      !selectedScenario?.model_input_enabled ||
+      (state.transcription.kind !== "NONE" &&
+        state.transcription.kind !== "FAILED") ||
+      microphoneOwnerRef.current !== null
+    ) return;
+    const context: TranscriptionContext = {
+      operationId: nextOperationId(nextOperationIdRef),
+      scenarioId: selectedScenario.scenario_id,
+      commandRevision: state.controls.commandRevision,
+      source: "MICROPHONE",
+    };
+    let owner: MicrophoneOwner;
+    const controller = createMicrophoneCaptureController(() => {
+      if (microphoneOwnerRef.current !== owner) return;
+      dispatch({
+        type: "MICROPHONE_FINALISING",
+        operationId: owner.operationId,
+      });
+    });
+    owner = { operationId: context.operationId, context, controller };
+    microphoneOwnerRef.current = owner;
+    dispatch({ type: "MICROPHONE_REQUESTED", context });
+    void controller.outcome.then((outcome) => settleMicrophone(owner, outcome));
+    const started = await controller.start();
+    if (!started || microphoneOwnerRef.current !== owner) return;
+    dispatch({
+      type: "MICROPHONE_CAPTURE_STARTED",
+      operationId: owner.operationId,
+    });
+  }
+
+  function stopMicrophone(): void {
+    const owner = microphoneOwnerRef.current;
+    if (owner === null) return;
+    dispatch({ type: "MICROPHONE_FINALISING", operationId: owner.operationId });
+    void owner.controller.stop();
+  }
+
+  function cancelMicrophone(publishCancellation: boolean): void {
+    const owner = microphoneOwnerRef.current;
+    if (owner === null) return;
+    microphoneOwnerRef.current = null;
+    if (publishCancellation) {
+      dispatch({ type: "TRANSCRIPTION_CANCELLED", operationId: owner.operationId });
+    }
+    void owner.controller.cancel();
+  }
+
   function discardTranscript() {
+    cancelMicrophone(false);
     cancelOwner(transcriptionOwnerRef);
     if (governanceContext?.inputMode === "VOICE") {
       cancelOwner(governanceOwnerRef);
@@ -1048,6 +1234,7 @@ export function App() {
                   if (!next || next.scenario_id === scenarioId) return;
                   cancelOwner(governanceOwnerRef);
                   cancelOwner(transcriptionOwnerRef);
+                  cancelMicrophone(false);
                   selectedScenarioIdRef.current = next.scenario_id;
                   if (!replayFatalRef.current) replayProjectionRef.current = null;
                   const nextMode = next.allowed_inference_modes[0];
@@ -1209,15 +1396,23 @@ export function App() {
           <div className="composer">
             {transcription?.transcript_status === "READY" && (
               <div className="transcript-review" role="status">
-                <div className="transcript-identity">
-                  <Mic24Regular aria-hidden="true" />
-                  <div>
-                    <strong>Nemotron transcript</strong>
-                    <span>
-                      {transcription.audio.original_filename} ·{" "}
-                      {formatLatency(transcription.transcription_latency_ms)}
-                    </span>
+                <div className="transcript-review-content">
+                  <div className="transcript-identity">
+                    <Mic24Regular aria-hidden="true" />
+                    <div>
+                      <strong>RAW ASR TRANSCRIPT — UNTRUSTED</strong>
+                      <span>
+                        {transcription.audio.original_filename} ·{" "}
+                        {formatLatency(transcription.transcription_latency_ms)}
+                      </span>
+                    </div>
                   </div>
+                  <blockquote className="raw-transcript">
+                    {transcription.transcript_text}
+                  </blockquote>
+                  <span className="transcript-edited-indicator">
+                    EDITED FROM ASR: {reviewedTranscriptEdited ? "YES" : "NO"}
+                  </span>
                 </div>
                 <div className="transcript-actions">
                   <Badge
@@ -1237,16 +1432,29 @@ export function App() {
                 </div>
               </div>
             )}
-            <Field label="Operator command">
+            <Field
+              label={
+                transcription?.transcript_status === "READY"
+                  ? "Operator review command"
+                  : "Operator command"
+              }
+            >
               <Textarea
                 value={command}
                 onChange={(_, data) => {
-                  if (transcribing) cancelOwner(transcriptionOwnerRef);
+                  if (speechOperationActive) {
+                    cancelMicrophone(false);
+                    cancelOwner(transcriptionOwnerRef);
+                  }
                   dispatch({ type: "COMMAND_EDITED", command: data.value });
                 }}
                 placeholder="Enter a bounded manufacturing command"
                 resize="vertical"
-                disabled={pending || !selectedScenario?.model_input_enabled}
+                disabled={
+                  pending ||
+                  transcriptConsumed ||
+                  !selectedScenario?.model_input_enabled
+                }
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
                     event.preventDefault();
@@ -1272,21 +1480,63 @@ export function App() {
                   aria-label="Upload WAV recording"
                   disabled={
                     pending ||
-                    !selectedScenario?.model_input_enabled
+                    !selectedScenario?.model_input_enabled ||
+                    (state.transcription.kind !== "NONE" &&
+                      state.transcription.kind !== "FAILED")
                   }
                   onClick={() => audioInputRef.current?.click()}
                 />
               </Tooltip>
-              <Tooltip content="Microphone available in V2" relationship="label">
+              <Tooltip
+                content={
+                  capturing
+                    ? "Stop microphone recording"
+                    : speechOperationActive
+                      ? "Cancel microphone operation"
+                      : "Start microphone recording"
+                }
+                relationship="label"
+              >
                 <Button
                   appearance="subtle"
                   icon={<Mic24Regular />}
-                  aria-label="Microphone available in V2"
-                  disabled
+                  aria-label={
+                    capturing
+                      ? "Stop microphone recording"
+                      : speechOperationActive
+                        ? "Cancel microphone operation"
+                        : "Start microphone recording"
+                  }
+                  disabled={
+                    pending ||
+                    !selectedScenario?.model_input_enabled ||
+                    state.transcription.kind === "READY" ||
+                    state.transcription.kind === "TRANSCRIBING"
+                  }
+                  onClick={() => {
+                    if (capturing) {
+                      stopMicrophone();
+                    } else if (speechOperationActive) {
+                      cancelMicrophone(true);
+                    } else {
+                      void startMicrophone();
+                    }
+                  }}
                 />
               </Tooltip>
-              {transcribing && (
-                <Spinner size="tiny" label="Transcribing recording" />
+              {speechOperationActive && (
+                <Spinner
+                  size="tiny"
+                  label={
+                    state.transcription.kind === "REQUESTING_PERMISSION"
+                      ? "Requesting microphone permission"
+                      : state.transcription.kind === "CAPTURING"
+                        ? "Recording microphone"
+                        : state.transcription.kind === "FINALISING"
+                          ? "Finalising recording"
+                          : "Transcribing recording"
+                  }
+                />
               )}
               <Button
                 appearance="primary"
@@ -1295,7 +1545,7 @@ export function App() {
                   !command.trim() ||
                   !selectedScenario?.model_input_enabled ||
                   pending ||
-                  transcribing ||
+                  speechOperationActive ||
                   transcriptConsumed
                 }
                 onClick={() => void handleSubmit()}

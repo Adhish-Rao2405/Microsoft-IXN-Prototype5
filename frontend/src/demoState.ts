@@ -46,10 +46,38 @@ export interface TranscriptionContext {
   readonly operationId: number;
   readonly scenarioId: string;
   readonly commandRevision: number;
+  readonly source: "WAV_UPLOAD" | "MICROPHONE";
+}
+
+export type TranscriptionFailureReason =
+  | "PERMISSION_DENIED"
+  | "DEVICE_UNAVAILABLE"
+  | "CAPTURE_SAMPLE_RATE_UNSUPPORTED"
+  | "DEVICE_LOST"
+  | "CAPTURE_EMPTY"
+  | "CAPTURE_TOO_LONG"
+  | "CAPTURE_FAILED"
+  | "ENCODING_FAILED"
+  | "TRANSCRIPTION_PARTIAL"
+  | "TRANSCRIPTION_EMPTY"
+  | "SPEECH_BACKEND_UNAVAILABLE"
+  | "SPEECH_BUSY"
+  | "TRANSCRIPTION_INVALID_RESPONSE"
+  | "TRANSCRIPTION_TIMEOUT"
+  | "TRANSCRIPTION_NETWORK_FAILURE"
+  | "TRANSCRIPTION_FAILED"
+  | "CANCELLED";
+
+export interface TranscriptionFailure {
+  readonly reason: TranscriptionFailureReason;
+  readonly serverCode: string | null;
 }
 
 export type TranscriptionState =
   | { kind: "NONE" }
+  | { kind: "REQUESTING_PERMISSION"; context: TranscriptionContext }
+  | { kind: "CAPTURING"; context: TranscriptionContext }
+  | { kind: "FINALISING"; context: TranscriptionContext }
   | { kind: "TRANSCRIBING"; context: TranscriptionContext }
   | {
       kind: "READY";
@@ -57,7 +85,11 @@ export type TranscriptionState =
       transcription: RecordedTranscription;
       consumed: boolean;
     }
-  | { kind: "FAILED"; context: TranscriptionContext; failure: ClientFailure };
+  | {
+      kind: "FAILED";
+      context: TranscriptionContext;
+      failure: TranscriptionFailure;
+    };
 
 export type ReplayClientFailureCode =
   | ReplayErrorCode
@@ -130,13 +162,21 @@ export type DemoAction =
   | { type: "GOVERNANCE_STARTED"; context: GovernanceContext }
   | { type: "GOVERNANCE_SUCCEEDED"; operationId: number; result: HybridGovernanceResult }
   | { type: "GOVERNANCE_FAILED"; operationId: number; failure: ClientFailure }
+  | { type: "MICROPHONE_REQUESTED"; context: TranscriptionContext }
+  | { type: "MICROPHONE_CAPTURE_STARTED"; operationId: number }
+  | { type: "MICROPHONE_FINALISING"; operationId: number }
   | { type: "TRANSCRIPTION_STARTED"; context: TranscriptionContext }
   | {
       type: "TRANSCRIPTION_SUCCEEDED";
       operationId: number;
       transcription: RecordedTranscription;
     }
-  | { type: "TRANSCRIPTION_FAILED"; operationId: number; failure: ClientFailure }
+  | {
+      type: "TRANSCRIPTION_FAILED";
+      operationId: number;
+      failure: TranscriptionFailure;
+    }
+  | { type: "TRANSCRIPTION_CANCELLED"; operationId: number }
   | { type: "DISCARD_TRANSCRIPT" }
   | { type: "REPLAY_DEACTIVATED" }
   | { type: "REPLAY_READ_STARTED"; context: ReplayReadContext }
@@ -179,6 +219,18 @@ export const initialDemoState: DemoState = {
 
 function isPositiveSafeOperationId(operationId: number): boolean {
   return Number.isSafeInteger(operationId) && operationId > 0;
+}
+
+function isActiveTranscription(
+  transcription: TranscriptionState,
+): transcription is Extract<
+  TranscriptionState,
+  { kind: "REQUESTING_PERMISSION" | "CAPTURING" | "FINALISING" | "TRANSCRIBING" }
+> {
+  return transcription.kind === "REQUESTING_PERMISSION" ||
+    transcription.kind === "CAPTURING" ||
+    transcription.kind === "FINALISING" ||
+    transcription.kind === "TRANSCRIBING";
 }
 
 function replayAnnouncement(projection: ReplayStateProjection): string {
@@ -295,7 +347,7 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
           commandRevision: state.controls.commandRevision + 1,
         },
         transcription:
-          state.transcription.kind === "TRANSCRIBING"
+          isActiveTranscription(state.transcription)
             ? { kind: "NONE" }
             : state.transcription,
       };
@@ -360,20 +412,71 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         },
       };
 
-    case "TRANSCRIPTION_STARTED":
+    case "MICROPHONE_REQUESTED":
       if (
         state.bootstrap.kind !== "READY" ||
         !isPositiveSafeOperationId(action.context.operationId) ||
+        action.context.source !== "MICROPHONE" ||
         action.context.scenarioId !== state.controls.scenarioId ||
-        action.context.commandRevision !== state.controls.commandRevision
+        action.context.commandRevision !== state.controls.commandRevision ||
+        state.transcription.kind !== "NONE" &&
+        state.transcription.kind !== "FAILED"
       ) {
         return state;
       }
       return {
         ...state,
         governance: { kind: "IDLE" },
+        transcription: { kind: "REQUESTING_PERMISSION", context: action.context },
+      };
+
+    case "MICROPHONE_CAPTURE_STARTED":
+      if (
+        state.transcription.kind !== "REQUESTING_PERMISSION" ||
+        state.transcription.context.operationId !== action.operationId
+      ) return state;
+      return {
+        ...state,
+        transcription: {
+          kind: "CAPTURING",
+          context: state.transcription.context,
+        },
+      };
+
+    case "MICROPHONE_FINALISING":
+      if (
+        state.transcription.kind !== "CAPTURING" ||
+        state.transcription.context.operationId !== action.operationId
+      ) return state;
+      return {
+        ...state,
+        transcription: {
+          kind: "FINALISING",
+          context: state.transcription.context,
+        },
+      };
+
+    case "TRANSCRIPTION_STARTED": {
+      const fromMicrophone = action.context.source === "MICROPHONE";
+      const microphoneOwnsFinalisation =
+        state.transcription.kind === "FINALISING" &&
+        state.transcription.context.operationId === action.context.operationId;
+      if (
+        state.bootstrap.kind !== "READY" ||
+        !isPositiveSafeOperationId(action.context.operationId) ||
+        action.context.scenarioId !== state.controls.scenarioId ||
+        action.context.commandRevision !== state.controls.commandRevision ||
+        (fromMicrophone
+          ? !microphoneOwnsFinalisation
+          : state.transcription.kind !== "NONE" &&
+            state.transcription.kind !== "FAILED")
+      ) return state;
+      return {
+        ...state,
+        governance: { kind: "IDLE" },
         transcription: { kind: "TRANSCRIBING", context: action.context },
       };
+    }
 
     case "TRANSCRIPTION_SUCCEEDED":
       if (
@@ -401,7 +504,7 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
 
     case "TRANSCRIPTION_FAILED":
       if (
-        state.transcription.kind !== "TRANSCRIBING" ||
+        !isActiveTranscription(state.transcription) ||
         state.transcription.context.operationId !== action.operationId
       ) {
         return state;
@@ -412,6 +515,20 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
           kind: "FAILED",
           context: state.transcription.context,
           failure: action.failure,
+        },
+      };
+
+    case "TRANSCRIPTION_CANCELLED":
+      if (
+        !isActiveTranscription(state.transcription) ||
+        state.transcription.context.operationId !== action.operationId
+      ) return state;
+      return {
+        ...state,
+        transcription: {
+          kind: "FAILED",
+          context: state.transcription.context,
+          failure: { reason: "CANCELLED", serverCode: null },
         },
       };
 

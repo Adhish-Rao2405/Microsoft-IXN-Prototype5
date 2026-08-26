@@ -13,6 +13,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FluentProvider, webLightTheme } from "@fluentui/react-components";
 import {
+  MicrophoneCaptureController,
+  type MicrophoneCaptureOutcome,
+} from "../src/microphoneCapture";
+import * as replayApi from "../src/api";
+import {
   App,
   BOOTSTRAP_CLIENT_DEADLINE_MS,
   GOVERNANCE_CLIENT_DEADLINE_MS,
@@ -21,6 +26,21 @@ import {
   clientErrorMessage,
   selectInferenceMode,
 } from "../src/App";
+import { decodeReplayState } from "../src/runtimeContracts";
+
+const microphoneCaptureMocks = vi.hoisted(() => ({
+  createController: vi.fn(),
+}));
+
+vi.mock("../src/microphoneCapture", async () => {
+  const actual = await vi.importActual<typeof import("../src/microphoneCapture")>(
+    "../src/microphoneCapture",
+  );
+  return {
+    ...actual,
+    createMicrophoneCaptureController: microphoneCaptureMocks.createController,
+  };
+});
 
 interface Deferred<T> {
   promise: Promise<T>;
@@ -36,6 +56,32 @@ function deferred<T>(): Deferred<T> {
     reject = nextReject;
   });
   return { promise, resolve, reject };
+}
+
+function fakeMicrophoneController() {
+  const outcome = deferred<MicrophoneCaptureOutcome>();
+  const start = vi.fn(async () => true);
+  const stop = vi.fn(() => outcome.promise);
+  const cancel = vi.fn(() => outcome.promise);
+
+  class FakeMicrophoneCaptureController extends MicrophoneCaptureController {
+    override readonly outcome = outcome.promise;
+
+    override start(): Promise<boolean> {
+      return start();
+    }
+
+    override stop(): Promise<MicrophoneCaptureOutcome> {
+      return stop();
+    }
+
+    override cancel(): Promise<MicrophoneCaptureOutcome> {
+      return cancel();
+    }
+  }
+
+  const controller = new FakeMicrophoneCaptureController();
+  return { controller, outcome, start, stop, cancel };
 }
 
 function jsonResponse(value: unknown, statusCode = 200): Response {
@@ -515,6 +561,7 @@ function mockFetch(result = governanceResult()) {
 
 describe("Prototype 5 typed UI", () => {
   beforeEach(() => {
+    microphoneCaptureMocks.createController.mockReset();
     mockFetch();
   });
 
@@ -555,8 +602,8 @@ describe("Prototype 5 typed UI", () => {
     expect(screen.queryByRole("combobox", { name: "Domain" })).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: "Requester role" })).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Microphone available in V2" }),
-    ).toBeDisabled();
+      screen.getByRole("button", { name: "Start microphone recording" }),
+    ).toBeEnabled();
     expect(
       screen.getByRole("button", { name: "Upload WAV recording" }),
     ).toBeEnabled();
@@ -859,6 +906,7 @@ describe("Prototype 5 typed UI", () => {
   it("reviews a real recorded transcript before using the voice endpoint", async () => {
     const user = userEvent.setup();
     renderApp();
+    await waitUntilReady();
     const recording = new File([new Uint8Array([1, 2, 3])], "operator.wav", {
       type: "audio/wav",
     });
@@ -868,13 +916,18 @@ describe("Prototype 5 typed UI", () => {
       recording,
     );
 
-    await waitFor(() =>
-      expect(screen.getByText("Nemotron transcript")).toBeInTheDocument(),
-    );
-    expect(
-      screen.getByRole("textbox", { name: "Operator command" }),
-    ).toHaveValue("Move the blue component.");
+    const reviewCommand = await screen.findByRole("textbox", {
+      name: "Operator review command",
+    });
+    expect(screen.getByText("RAW ASR TRANSCRIPT — UNTRUSTED")).toBeInTheDocument();
+    expect(reviewCommand).toHaveValue("Move the blue component.");
+    expect(screen.getByText("Move the blue component.", { selector: "blockquote" })).toBeInTheDocument();
     expect(screen.getByText("operator.wav · 860.0 ms")).toBeInTheDocument();
+    expect(
+      vi.mocked(fetch).mock.calls.filter(([url]) =>
+        String(url).includes("/api/v1/governance/voice"),
+      ),
+    ).toHaveLength(0);
 
     await user.click(screen.getByRole("button", { name: "Submit" }));
 
@@ -882,7 +935,10 @@ describe("Prototype 5 typed UI", () => {
       expect(screen.getByText("Reviewed voice transcript")).toBeInTheDocument(),
     );
     expect(screen.getByText("Submitted")).toBeInTheDocument();
+    expect(reviewCommand).toBeDisabled();
+    expect(reviewCommand).toHaveValue("Move the blue component.");
     expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Discard transcript" })).toBeEnabled();
     const calls = vi.mocked(fetch).mock.calls;
     const transcriptionCall = calls.find(([url]) =>
       String(url).includes("/api/v1/speech/recorded"),
@@ -890,6 +946,9 @@ describe("Prototype 5 typed UI", () => {
     const governanceCall = calls.find(([url]) =>
       String(url).includes("/api/v1/governance/voice"),
     );
+    expect(
+      calls.filter(([url]) => String(url).includes("/api/v1/governance/voice")),
+    ).toHaveLength(1);
     expect(transcriptionCall?.[1]?.body).toBe(recording);
     const body = JSON.parse(String(governanceCall?.[1]?.body));
     expect(body.transcription_id).toBe("transcription-ui-001");
@@ -900,6 +959,206 @@ describe("Prototype 5 typed UI", () => {
     expect(body).not.toHaveProperty("requester_role");
     expect(body).not.toHaveProperty("human_obstruction");
     expect(body).not.toHaveProperty("safety_interlock_enabled");
+  });
+
+  it.each([
+    {
+      status: "PARTIAL",
+      transcriptText: "Move the blue component",
+      errorCode: "TRANSCRIPTION_PARTIAL",
+      expectedFailure: "TRANSCRIPTION_PARTIAL",
+    },
+    {
+      status: "EMPTY",
+      transcriptText: null,
+      errorCode: "TRANSCRIPT_EMPTY",
+      expectedFailure: "TRANSCRIPTION_EMPTY (TRANSCRIPT_EMPTY)",
+    },
+    {
+      status: "BACKEND_UNAVAILABLE",
+      transcriptText: null,
+      errorCode: "NEMOTRON_MODEL_NOT_CACHED",
+      expectedFailure: "SPEECH_BACKEND_UNAVAILABLE (NEMOTRON_MODEL_NOT_CACHED)",
+    },
+  ] as const)(
+    "keeps $status speech results outside the operator review boundary",
+    async ({ status: transcriptStatus, transcriptText, errorCode, expectedFailure }) => {
+      const nonReady = {
+        ...transcription,
+        transcript_status: transcriptStatus,
+        transcript_text: transcriptText,
+        error_code: errorCode,
+      };
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL) => {
+          const url = String(input);
+          if (url.includes("/api/v1/demo/manifest")) return jsonResponse(manifest);
+          if (url.includes("/api/v1/status")) return jsonResponse(status);
+          if (url.includes("/api/v1/speech/recorded")) return jsonResponse(nonReady);
+          throw new Error("UNEXPECTED_REQUEST");
+        }),
+      );
+      renderApp();
+      await waitUntilReady();
+      await userEvent.upload(
+        screen.getByLabelText("Recorded WAV file"),
+        new File([new Uint8Array([1])], `${transcriptStatus}.wav`, {
+          type: "audio/wav",
+        }),
+      );
+
+      await waitFor(() =>
+        expect(screen.getByRole("alert")).toHaveTextContent(expectedFailure),
+      );
+      expect(screen.queryByText("RAW ASR TRANSCRIPT — UNTRUSTED")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("textbox", { name: "Operator review command" }),
+      ).not.toBeInTheDocument();
+      const calls = vi.mocked(fetch).mock.calls;
+      expect(
+        calls.filter(([url]) => String(url).includes("/api/v1/governance/voice")),
+      ).toHaveLength(0);
+      expect(
+        calls.filter(([url]) => String(url).includes("/api/v1/governance/typed")),
+      ).toHaveLength(0);
+    },
+  );
+
+  it("requires explicit review after App-owned microphone capture", async () => {
+    const microphone = fakeMicrophoneController();
+    microphoneCaptureMocks.createController.mockReturnValue(microphone.controller);
+    const speechRequest = deferred<Response>();
+    const governanceRequest = deferred<Response>();
+    const fetchMock = deferredFetch({
+      speech: [speechRequest],
+      governance: [governanceRequest],
+    });
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+
+    await user.click(screen.getByRole("button", { name: "Start microphone recording" }));
+    expect(microphoneCaptureMocks.createController).toHaveBeenCalledTimes(1);
+    expect(microphone.start).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Stop microphone recording" })).toBeEnabled(),
+    );
+
+    const capturedWav = new File([new Uint8Array([82, 73, 70, 70])], "microphone.wav", {
+      type: "audio/wav",
+    });
+    await act(async () => {
+      microphone.outcome.resolve({ kind: "CAPTURED", file: capturedWav, frameCount: 2 });
+      await microphone.outcome.promise;
+    });
+    const speechCall = await waitFor(() => {
+      const call = fetchMock.mock.calls.find(([url]) =>
+        String(url).includes("/api/v1/speech/recorded"),
+      );
+      expect(call).toBeDefined();
+      return call;
+    });
+    expect(speechCall?.[1]?.body).toBe(capturedWav);
+
+    await act(async () => {
+      speechRequest.resolve(jsonResponse({
+        ...transcription,
+        audio: { ...transcription.audio, original_filename: "microphone.wav" },
+      }));
+      await speechRequest.promise;
+    });
+    await screen.findByText("RAW ASR TRANSCRIPT — UNTRUSTED");
+    expect(
+      fetchMock.mock.calls.filter(([url]) =>
+        String(url).includes("/api/v1/governance/voice"),
+      ),
+    ).toHaveLength(0);
+
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    const voiceCall = await waitFor(() => {
+      const call = fetchMock.mock.calls.find(([url]) =>
+        String(url).includes("/api/v1/governance/voice"),
+      );
+      expect(call).toBeDefined();
+      return call;
+    });
+    expect(JSON.parse(String(voiceCall?.[1]?.body))).toMatchObject({
+      transcription_id: "transcription-ui-001",
+      reviewed_transcript_text: "Move the blue component.",
+    });
+    await act(async () => {
+      governanceRequest.resolve(jsonResponse(governanceResult()));
+      await governanceRequest.promise;
+    });
+  });
+
+  it("cancels active microphone capture on scenario change and ignores late outcome", async () => {
+    const microphone = fakeMicrophoneController();
+    microphoneCaptureMocks.createController.mockReturnValue(microphone.controller);
+    const fetchMock = mockFetch();
+    const user = userEvent.setup();
+    renderApp();
+    await waitUntilReady();
+    await user.click(screen.getByRole("button", { name: "Start microphone recording" }));
+    await screen.findByRole("button", { name: "Stop microphone recording" });
+
+    await chooseScenario(user, "Manufacturing scenario 2");
+    expect(microphone.cancel).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      microphone.outcome.resolve({
+        kind: "CAPTURED",
+        file: new File([new Uint8Array([1])], "late.wav", { type: "audio/wav" }),
+        frameCount: 1,
+      });
+      await microphone.outcome.promise;
+      await Promise.resolve();
+    });
+
+    expect(screen.getByRole("combobox", { name: "Scenario" })).toHaveTextContent(
+      "Manufacturing scenario 2",
+    );
+    expect(
+      fetchMock.mock.calls.filter(([url]) =>
+        String(url).includes("/api/v1/speech/recorded"),
+      ),
+    ).toHaveLength(0);
+    expect(
+      fetchMock.mock.calls.filter(([url]) => String(url).includes("/api/v1/governance/")),
+    ).toHaveLength(0);
+  });
+
+  it("cancels active microphone capture on unmount and ignores late outcome", async () => {
+    const microphone = fakeMicrophoneController();
+    microphoneCaptureMocks.createController.mockReturnValue(microphone.controller);
+    const fetchMock = mockFetch();
+    const user = userEvent.setup();
+    const view = renderApp();
+    await waitUntilReady();
+    await user.click(screen.getByRole("button", { name: "Start microphone recording" }));
+    await screen.findByRole("button", { name: "Stop microphone recording" });
+
+    view.unmount();
+    expect(microphone.cancel).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      microphone.outcome.resolve({
+        kind: "CAPTURED",
+        file: new File([new Uint8Array([1])], "late.wav", { type: "audio/wav" }),
+        frameCount: 1,
+      });
+      await microphone.outcome.promise;
+      await Promise.resolve();
+    });
+
+    expect(view.container).toBeEmptyDOMElement();
+    expect(
+      fetchMock.mock.calls.filter(([url]) =>
+        String(url).includes("/api/v1/speech/recorded"),
+      ),
+    ).toHaveLength(0);
+    expect(
+      fetchMock.mock.calls.filter(([url]) => String(url).includes("/api/v1/governance/")),
+    ).toHaveLength(0);
   });
   it("bounds non-Error failures and retains the current mode for invalid UI values", () => {
     expect(clientErrorMessage("opaque failure")).toBe("UNKNOWN_CLIENT_FAILURE");
@@ -1035,7 +1294,7 @@ describe("Prototype 5 typed UI", () => {
     ).toHaveTextContent("Manufacturing scenario 2");
   });
 
-  it("keeps AbortError silent when governance is intentionally superseded", async () => {
+  it("keeps DOMException AbortError silent when governance is intentionally superseded", async () => {
     const fetchMock = vi.fn(
       (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
         const url = String(input);
@@ -1074,6 +1333,7 @@ describe("Prototype 5 typed UI", () => {
     );
     expect(screen.queryByText("Request failed")).not.toBeInTheDocument();
     expect(screen.queryByText("NETWORK_FAILURE")).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Local" })).toBeChecked();
   });
 
   it("clears and aborts bootstrap ownership on unmount", async () => {
@@ -1207,9 +1467,18 @@ describe("Prototype 5 typed UI", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(SPEECH_CLIENT_DEADLINE_MS);
     });
-    expect(screen.getByText("CLIENT_TIMEOUT")).toBeInTheDocument();
+    expect(screen.getByText("TRANSCRIPTION_TIMEOUT")).toBeInTheDocument();
+    expect(screen.queryByText("CLIENT_TIMEOUT")).not.toBeInTheDocument();
     expect(signal?.aborted).toBe(true);
     expect(screen.queryByText("PROVIDER_TIMEOUT")).not.toBeInTheDocument();
+
+    await act(async () => {
+      request.resolve(jsonResponse(transcription));
+      await request.promise;
+      await Promise.resolve();
+    });
+    expect(screen.getByText("TRANSCRIPTION_TIMEOUT")).toBeInTheDocument();
+    expect(screen.queryByText("RAW ASR TRANSCRIPT — UNTRUSTED")).not.toBeInTheDocument();
   });
 
   it("bounds bootstrap wait time and aborts both bootstrap fetches", async () => {
@@ -1278,7 +1547,7 @@ describe("Prototype 5 typed UI", () => {
     expect(screen.queryByText("Transcription failed")).not.toBeInTheDocument();
   });
 
-  it("keeps transcription B when A settles late with an error", async () => {
+  it("rejects a second transcription while one is active and preserves the active owner", async () => {
     const requestA = deferred<Response>();
     const requestB = deferred<Response>();
     const fetchMock = deferredFetch({ speech: [requestA, requestB] });
@@ -1286,19 +1555,50 @@ describe("Prototype 5 typed UI", () => {
     renderApp();
     await waitUntilReady();
     const input = screen.getByLabelText("Recorded WAV file");
-    await user.upload(
-      input,
-      new File([new Uint8Array([1])], "a.wav", { type: "audio/wav" }),
-    );
-    await user.upload(
-      input,
-      new File([new Uint8Array([2])], "b.wav", { type: "audio/wav" }),
-    );
-    const speechCalls = fetchMock.mock.calls.filter(([url]) =>
+    const audioA = new File([new Uint8Array([1])], "a.wav", { type: "audio/wav" });
+    const audioB = new File([new Uint8Array([2])], "b.wav", { type: "audio/wav" });
+    const speechCalls = () => fetchMock.mock.calls.filter(([url]) =>
       String(url).includes("/api/v1/speech/recorded"),
     );
-    expect(speechCalls[0]?.[1]?.signal?.aborted).toBe(true);
-    expect(speechCalls[1]?.[1]?.signal?.aborted).toBe(false);
+
+    await user.upload(input, audioA);
+    await waitFor(() => expect(speechCalls()).toHaveLength(1));
+    const signalA = speechCalls()[0]?.[1]?.signal;
+    expect(signalA).toBeInstanceOf(AbortSignal);
+    expect(signalA?.aborted).toBe(false);
+    expect(screen.getByText("Transcribing recording")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Upload WAV recording" }),
+    ).toBeDisabled();
+
+    await user.upload(input, audioB);
+    expect(speechCalls()).toHaveLength(1);
+    expect(signalA?.aborted).toBe(false);
+    expect(screen.getByText("Transcribing recording")).toBeInTheDocument();
+    expect(screen.queryByText("b.wav · 860.0 ms")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: "Operator review command" }),
+    ).not.toBeInTheDocument();
+
+    await act(async () => {
+      const activeFailure = new TypeError("active network failure");
+      requestA.reject(activeFailure);
+      await expect(requestA.promise).rejects.toBe(activeFailure);
+    });
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent("TRANSCRIPTION_NETWORK_FAILURE"),
+    );
+    expect(screen.getByText("Transcription failed")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Upload WAV recording" }),
+    ).toBeEnabled();
+
+    await user.upload(screen.getByLabelText("Recorded WAV file"), audioB);
+    await waitFor(() => expect(speechCalls()).toHaveLength(2));
+    const signalB = speechCalls()[1]?.[1]?.signal;
+    expect(signalB).toBeInstanceOf(AbortSignal);
+    expect(signalB?.aborted).toBe(false);
+    expect(screen.getByText("Transcribing recording")).toBeInTheDocument();
 
     await act(async () => {
       requestB.resolve(
@@ -1306,19 +1606,11 @@ describe("Prototype 5 typed UI", () => {
       );
       await requestB.promise;
     });
-    await waitFor(() => expect(screen.getByText("b.wav · 860.0 ms")).toBeInTheDocument());
-    await act(async () => {
-      requestA.reject(new TypeError("stale network failure"));
-      try {
-        await requestA.promise;
-      } catch {
-        // The stale rejection is expected and must not own UI state.
-      }
+    const reviewCommand = await screen.findByRole("textbox", {
+      name: "Operator review command",
     });
-    expect(
-      screen.getByRole("textbox", { name: "Operator command" }),
-    ).toHaveValue("Transcript B");
-    expect(screen.queryByText("Transcription failed")).not.toBeInTheDocument();
+    expect(reviewCommand).toHaveValue("Transcript B");
+    expect(screen.queryByText("Transcribing recording")).not.toBeInTheDocument();
   });
 
   it("clears a READY transcript when the scenario changes", async () => {
@@ -1329,10 +1621,16 @@ describe("Prototype 5 typed UI", () => {
       screen.getByLabelText("Recorded WAV file"),
       new File([new Uint8Array([1])], "scenario.wav", { type: "audio/wav" }),
     );
-    await screen.findByText("Nemotron transcript");
+    await screen.findByRole("textbox", { name: "Operator review command" });
+    expect(screen.getByText("RAW ASR TRANSCRIPT — UNTRUSTED")).toBeInTheDocument();
     await chooseScenario(user, "Manufacturing scenario 2");
 
-    expect(screen.queryByText("Nemotron transcript")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: "Operator review command" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("RAW ASR TRANSCRIPT — UNTRUSTED"),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("No command submitted.")).toBeInTheDocument();
   });
 
@@ -1354,7 +1652,10 @@ describe("Prototype 5 typed UI", () => {
       speechRequest.resolve(jsonResponse(transcription));
       await speechRequest.promise;
     });
-    await screen.findByText("Nemotron transcript");
+    const reviewCommand = await screen.findByRole("textbox", {
+      name: "Operator review command",
+    });
+    expect(reviewCommand).toHaveValue("Move the blue component.");
     await user.click(screen.getByRole("button", { name: "Submit" }));
     expect(screen.getByText("Submitted")).toBeInTheDocument();
     const voiceCall = fetchMock.mock.calls.find(([url]) =>
@@ -1401,7 +1702,10 @@ describe("Prototype 5 typed UI", () => {
       );
       await speechRequest.promise;
     });
-    await screen.findByText("Nemotron transcript");
+    const reviewCommand = await screen.findByRole("textbox", {
+      name: "Operator review command",
+    });
+    expect(reviewCommand).toHaveValue("Newer voice");
     await user.click(screen.getByRole("button", { name: "Submit" }));
 
     await act(async () => {
@@ -1436,7 +1740,7 @@ describe("Prototype 5 typed UI", () => {
       );
       await speechRequest.promise;
     });
-    await screen.findByText("Nemotron transcript");
+    await screen.findByRole("textbox", { name: "Operator review command" });
     await user.click(screen.getByRole("button", { name: "Submit" }));
     await user.click(screen.getByRole("button", { name: "Discard transcript" }));
     await user.type(
@@ -1710,7 +2014,7 @@ describe("Prototype 5 typed UI", () => {
     expect(screen.getAllByText(lifecycle).length).toBeGreaterThan(0);
   }, 10_000);
 
-  it("latches fatal version exhaustion across scenario changes without further replay I/O", async () => {
+  it("latches fatal version exhaustion without further replay I/O", async () => {
     let replayCalls = 0;
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
@@ -1722,42 +2026,173 @@ describe("Prototype 5 typed UI", () => {
       }
       throw new Error("UNEXPECTED_REQUEST");
     }));
-    const user = userEvent.setup();
     renderApp();
     await waitUntilReady();
-    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
+    fireEvent.click(screen.getByRole("combobox", { name: "Scenario" }));
+    fireEvent.click(screen.getByRole("option", {
+      name: "Frozen B2 pick/place evidence replay",
+    }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("REPLAY_VERSION_EXHAUSTED"));
     ["Start", "Pause", "Resume", "Next snapshot", "Previous snapshot", "Stop", "Reset view"].forEach((label) => {
       expect(screen.getByRole("button", { name: label })).toBeDisabled();
     });
     expect(replayCalls).toBe(1);
-    await chooseScenario(user, "Manufacturing scenario 2");
-    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
-    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("REPLAY_VERSION_EXHAUSTED"));
-    await new Promise((resolve) => setTimeout(resolve, REPLAY_POLL_INTERVAL_MS + 100));
+    vi.useFakeTimers();
+    expect(screen.getByRole("alert")).toHaveTextContent("REPLAY_VERSION_EXHAUSTED");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(REPLAY_POLL_INTERVAL_MS * 2);
+    });
     expect(replayCalls).toBe(1);
   });
 
-  it("publishes an owned fatal response that settles during a scenario switch", async () => {
-    const fatalControl = deferred<Response>();
-    let replayCalls = 0;
-    let controlCalls = 0;
-    let nextScenario: HTMLElement | null = null;
+  it("ignores stale replay mutation version exhaustion after scenario switch", async () => {
+    const firstReplayRead = deferred<Awaited<ReturnType<typeof replayApi.getReplayState>>>();
+    const secondReplayRead = deferred<Awaited<ReturnType<typeof replayApi.getReplayState>>>();
+    const staleStart = deferred<Awaited<ReturnType<typeof replayApi.startReplay>>>();
+    let stateCalls = 0;
+    let controlSignal: AbortSignal | undefined;
+    const replayRaceManifest = {
+      ...manifest,
+      scenarios: manifest.scenarios.filter((scenario) =>
+        scenario.scenario_id === "MANUFACTURING_UNSAFE_REJECT" ||
+        scenario.scenario_id === "FROZEN_B2_PICK_PLACE_EVIDENCE_REPLAY"
+      ),
+    };
+    const idleProjection = decodeReplayState(
+      replayState(),
+      "FROZEN_B2_PICK_PLACE_EVIDENCE_REPLAY",
+    );
+    const getReplayStateSpy = vi.spyOn(replayApi, "getReplayState")
+      .mockImplementation(() => {
+        stateCalls += 1;
+        if (stateCalls === 1) return firstReplayRead.promise;
+        if (stateCalls === 2) return secondReplayRead.promise;
+        throw new Error("UNEXPECTED_REPLAY_STATE_REQUEST");
+      });
+    const startReplaySpy = vi.spyOn(replayApi, "startReplay")
+      .mockImplementation((_payload, signal) => {
+        controlSignal = signal;
+        return staleStart.promise;
+      });
     vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) {
+        return Promise.resolve(jsonResponse(replayRaceManifest));
+      }
+      if (url.includes("/api/v1/status")) return Promise.resolve(jsonResponse(status));
+      if (url.includes("/api/v1/replay/")) throw new Error("UNEXPECTED_REPLAY_FETCH");
+      throw new Error("UNEXPECTED_REQUEST");
+    }));
+    const selectScenario = async (name: string): Promise<void> => {
+      fireEvent.click(
+        screen.getByRole("combobox", { name: "Scenario" }),
+      );
+      fireEvent.click(
+        await screen.findByRole("option", { name }),
+      );
+    };
+    renderApp();
+    await waitUntilReady();
+    await selectScenario("Frozen B2 pick/place evidence replay");
+    await waitFor(() => expect(getReplayStateSpy).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      firstReplayRead.resolve(idleProjection);
+      await firstReplayRead.promise;
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Start" })).toBeEnabled();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Start" }));
+    await waitFor(() => expect(startReplaySpy).toHaveBeenCalledTimes(1));
+    expect(controlSignal).toBeDefined();
+    expect(controlSignal?.aborted).toBe(false);
+    await selectScenario("Manufacturing scenario 2");
+    expect(controlSignal?.aborted).toBe(true);
+
+    const staleFatal = new replayApi.ReplayApiRequestError(
+      503,
+      "REPLAY_VERSION_EXHAUSTED",
+    );
+    await act(async () => {
+      staleStart.reject(staleFatal);
+      await expect(staleStart.promise).rejects.toBe(staleFatal);
+    });
+    expect(screen.queryByText("Replay restart required")).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Scenario" })).toHaveTextContent(
+      "Manufacturing scenario 2",
+    );
+
+    await selectScenario("Frozen B2 pick/place evidence replay");
+    await waitFor(() => expect(getReplayStateSpy).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      secondReplayRead.resolve(idleProjection);
+      await secondReplayRead.promise;
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Start" })).toBeEnabled();
+    });
+    expect(screen.queryByText("Replay restart required")).not.toBeInTheDocument();
+  }, 10_000);
+
+  it("ignores stale replay read version exhaustion after ownership revocation", async () => {
+    const staleRead = deferred<Response>();
+    let stateCalls = 0;
+    let staleReadSignal: AbortSignal | undefined;
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.includes("/api/v1/demo/manifest")) return Promise.resolve(jsonResponse(manifest));
       if (url.includes("/api/v1/status")) return Promise.resolve(jsonResponse(status));
       if (url.includes("/api/v1/replay/state")) {
-        replayCalls += 1;
-        return Promise.resolve(jsonResponse(pausedReplayState()));
+        stateCalls += 1;
+        if (stateCalls === 1) {
+          staleReadSignal = init?.signal ?? undefined;
+          return staleRead.promise;
+        }
+        return Promise.resolve(jsonResponse(replayState()));
       }
-      if (url.includes("/api/v1/replay/control")) {
+      throw new Error("UNEXPECTED_REQUEST");
+    }));
+    renderApp();
+    await waitUntilReady();
+    fireEvent.click(screen.getByRole("combobox", { name: "Scenario" }));
+    fireEvent.click(screen.getByRole("option", {
+      name: "Frozen B2 pick/place evidence replay",
+    }));
+    await waitFor(() => expect(stateCalls).toBe(1));
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Scenario" }));
+    fireEvent.click(screen.getByRole("option", { name: "Manufacturing scenario 2" }));
+    expect(staleReadSignal?.aborted).toBe(true);
+    await act(async () => {
+      staleRead.resolve(jsonResponse({ code: "REPLAY_VERSION_EXHAUSTED" }, 503));
+      await staleRead.promise;
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.queryByText("Replay restart required")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Scenario" }));
+    fireEvent.click(screen.getByRole("option", {
+      name: "Frozen B2 pick/place evidence replay",
+    }));
+    await waitFor(() => expect(stateCalls).toBe(2));
+    expect(screen.getByRole("button", { name: "Start" })).toBeEnabled();
+    expect(screen.queryByText("Replay restart required")).not.toBeInTheDocument();
+  }, 10_000);
+
+  it("latches fatal for current owned replay mutation version exhaustion", async () => {
+    let replayCalls = 0;
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) return jsonResponse(manifest);
+      if (url.includes("/api/v1/status")) return jsonResponse(status);
+      if (url.includes("/api/v1/replay/state")) {
         replayCalls += 1;
-        controlCalls += 1;
-        if (nextScenario === null) throw new Error("SCENARIO_SWITCH_NOT_ARMED");
-        fireEvent.click(nextScenario);
-        fatalControl.resolve(jsonResponse({ code: "REPLAY_VERSION_EXHAUSTED" }, 503));
-        return fatalControl.promise;
+        return jsonResponse(replayState());
+      }
+      if (url.includes("/api/v1/replay/start")) {
+        replayCalls += 1;
+        return jsonResponse({ code: "REPLAY_VERSION_EXHAUSTED" }, 503);
       }
       throw new Error("UNEXPECTED_REQUEST");
     }));
@@ -1765,26 +2200,21 @@ describe("Prototype 5 typed UI", () => {
     renderApp();
     await waitUntilReady();
     await chooseScenario(user, "Frozen B2 pick/place evidence replay");
-    await waitFor(() => expect(screen.getByRole("button", { name: "Next snapshot" })).toBeEnabled());
-    await user.click(screen.getByRole("combobox", { name: "Scenario" }));
-    nextScenario = await screen.findByRole("option", { name: "Manufacturing scenario 2" });
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Next snapshot" }));
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    expect(controlCalls).toBe(1);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Start" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "Start" }));
 
-    const callsAtFatalSettlement = replayCalls;
-    await chooseScenario(user, "Frozen B2 pick/place evidence replay");
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent("Replay restart required");
       expect(screen.getByRole("alert")).toHaveTextContent("REPLAY_VERSION_EXHAUSTED");
     });
-    await new Promise((resolve) => setTimeout(resolve, REPLAY_POLL_INTERVAL_MS + 100));
-    expect(replayCalls).toBe(callsAtFatalSettlement);
     ["Start", "Pause", "Resume", "Next snapshot", "Previous snapshot", "Stop", "Reset view"]
       .forEach((label) => expect(screen.getByRole("button", { name: label })).toBeDisabled());
+    const callsAtFatalSettlement = replayCalls;
+    vi.useFakeTimers();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(REPLAY_POLL_INTERVAL_MS * 2);
+    });
+    expect(replayCalls).toBe(callsAtFatalSettlement);
   }, 10_000);
 
   it("keeps replay polling single-flight and aborts the poll on unmount", async () => {
@@ -1815,6 +2245,123 @@ describe("Prototype 5 typed UI", () => {
     expect(stateCalls).toBe(2);
     view.unmount();
     expect(pollSignal?.aborted).toBe(true);
+  });
+
+  it("revokes an active replay read before mutation and ignores its late projection", async () => {
+    const initialRead = deferred<Awaited<ReturnType<typeof replayApi.getReplayState>>>();
+    const pendingPoll = deferred<Awaited<ReturnType<typeof replayApi.getReplayState>>>();
+    const mutation = deferred<Response>();
+    const initialProjection = decodeReplayState(
+      pausedReplayState(),
+      "FROZEN_B2_PICK_PLACE_EVIDENCE_REPLAY",
+    );
+    let readCalls = 0;
+    let initialSignal: AbortSignal | undefined;
+    let pollSignal: AbortSignal | undefined;
+    let readWasAbortedBeforeMutation = false;
+    const getReplayStateSpy = vi.spyOn(replayApi, "getReplayState")
+      .mockImplementation((_scenarioId, signal) => {
+        readCalls += 1;
+        if (readCalls === 1) {
+          initialSignal = signal;
+          return initialRead.promise;
+        }
+        if (readCalls === 2) {
+          pollSignal = signal;
+          return pendingPoll.promise;
+        }
+        throw new Error("UNEXPECTED_REPLAY_STATE_REQUEST");
+      });
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) return Promise.resolve(jsonResponse(manifest));
+      if (url.includes("/api/v1/status")) return Promise.resolve(jsonResponse(status));
+      if (url.includes("/api/v1/replay/state")) throw new Error("UNEXPECTED_REPLAY_FETCH");
+      if (url.includes("/api/v1/replay/control")) {
+        readWasAbortedBeforeMutation = pollSignal?.aborted ?? false;
+        return mutation.promise;
+      }
+      throw new Error("UNEXPECTED_REQUEST");
+    }));
+    renderApp();
+    await waitUntilReady();
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole("combobox", { name: "Scenario" }));
+
+    const replayScenarioOption = screen.getByRole("option", {
+      name: "Frozen B2 pick/place evidence replay",
+    });
+
+    fireEvent.click(replayScenarioOption);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(getReplayStateSpy).toHaveBeenCalledTimes(1);
+    expect(readCalls).toBe(1);
+    expect(initialSignal).toBeInstanceOf(AbortSignal);
+    expect(initialSignal?.aborted).toBe(false);
+
+    await act(async () => {
+      initialRead.resolve(initialProjection);
+      await initialRead.promise;
+    });
+    expect(screen.getByRole("button", { name: "Next snapshot" })).toBeEnabled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(REPLAY_POLL_INTERVAL_MS);
+    });
+    expect(getReplayStateSpy).toHaveBeenCalledTimes(2);
+    expect(readCalls).toBe(2);
+    expect(pollSignal).toBeInstanceOf(AbortSignal);
+    expect(pollSignal?.aborted).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Next snapshot" }));
+    expect(readWasAbortedBeforeMutation).toBe(true);
+    expect(pollSignal?.aborted).toBe(true);
+    const mutationProjection = pausedReplayState({
+      control_version: 2,
+      projection_version: 20,
+      current_frame: {
+        frame_index: 20,
+        semantic_snapshot_index: 20,
+        route_configuration_index: 20,
+        route_state: "INTERPOLATED",
+        phase: "CARRIED",
+        boundary_snapshot: "NONE",
+        is_key_snapshot: false,
+      },
+    });
+    await act(async () => {
+      mutation.resolve(jsonResponse(mutationProjection));
+      await mutation.promise;
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByText("Frame 21 of 469")).toBeInTheDocument();
+
+    const staleProjection = decodeReplayState(
+      pausedReplayState({
+        control_version: 400,
+        projection_version: 400,
+        current_frame: {
+          frame_index: 99,
+          semantic_snapshot_index: 99,
+          route_configuration_index: 99,
+          route_state: "INTERPOLATED",
+          phase: "CARRIED",
+          boundary_snapshot: "NONE",
+          is_key_snapshot: false,
+        },
+      }),
+      "FROZEN_B2_PICK_PLACE_EVIDENCE_REPLAY",
+    );
+    await act(async () => {
+      pendingPoll.resolve(staleProjection);
+      await pendingPoll.promise;
+    });
+    expect(screen.getByText("Frame 21 of 469")).toBeInTheDocument();
+    expect(screen.queryByText("Frame 100 of 469")).not.toBeInTheDocument();
+    expect(getReplayStateSpy).toHaveBeenCalledTimes(2);
+    expect(readCalls).toBe(2);
   });
 
   it("does not announce same-lifecycle frame polls but announces completion once", async () => {
@@ -2009,7 +2556,7 @@ describe("Prototype 5 typed UI", () => {
       expected_control_version: 1,
       control: "STOP",
     });
-  });
+  }, 10_000);
 
   it.each([
     ["FAILED", "REPLAY_RUNTIME_INTEGRITY_FAILED"],

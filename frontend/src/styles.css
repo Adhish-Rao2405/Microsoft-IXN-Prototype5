@@ -341,13 +341,19 @@ textarea {
   grid-column: 1 / -1;
   min-width: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   padding: 10px 12px;
   background: #edf7f5;
   border: 1px solid #9ccdc4;
   border-radius: 4px;
+}
+
+.transcript-review-content {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
 }
 
 .transcript-identity,
@@ -383,6 +389,25 @@ textarea {
 .transcript-identity span {
   color: #565653;
   font-size: 11px;
+}
+
+.raw-transcript {
+  margin: 0;
+  padding: 8px 10px;
+  color: #242422;
+  background: #fff;
+  border-left: 3px solid #176b5c;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.transcript-edited-indicator {
+  color: #565653;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 .composer-actions {
