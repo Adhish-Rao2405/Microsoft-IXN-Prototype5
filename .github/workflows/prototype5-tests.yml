@@ -30,7 +30,38 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Verify exact checkout and predecessor lineage
+        shell: pwsh
+        env:
+          EXPECTED_TRIGGER_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          PREDECESSOR_SHA: f0967b746afa2e027b4fe7eb524138473cb6db8b
+        run: |
+          $actualHead = (git rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0) {
+            throw "Unable to resolve CI HEAD."
+          }
+
+          Write-Output "actual_ci_head=$actualHead"
+          Write-Output "expected_trigger_sha=$env:EXPECTED_TRIGGER_SHA"
+          Write-Output "predecessor_sha=$env:PREDECESSOR_SHA"
+
+          if ($actualHead -cne $env:EXPECTED_TRIGGER_SHA) {
+            throw "CI checked out $actualHead instead of triggering SHA $env:EXPECTED_TRIGGER_SHA."
+          }
+
+          git cat-file -e "$($env:PREDECESSOR_SHA)^{commit}"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Frozen predecessor commit is unavailable: $env:PREDECESSOR_SHA"
+          }
+
+          git merge-base --is-ancestor $env:PREDECESSOR_SHA $actualHead
+          if ($LASTEXITCODE -ne 0) {
+            throw "Frozen predecessor $env:PREDECESSOR_SHA is not an ancestor of $actualHead."
+          }
 
       - name: Set up Python 3.12.10
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
@@ -39,8 +70,88 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-win-py312.lock
 
+      - name: Set up Node.js 24.18.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24.18.0"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install exact qualified PyBullet wheel
+        shell: pwsh
+        env:
+          EXPECTED_WHEEL_SHA256: de6f71be9d8b78f4413a2bc958971725d2b061c4bf2d733e62488683c384726b
+        run: |
+          $wheelName = "pybullet-3.2.7-cp312-cp312-win_amd64.whl"
+          $wheelPath = Join-Path $PWD "ci/wheels/$wheelName"
+          $digestPath = "$wheelPath.sha256"
+
+          if (-not (Test-Path -LiteralPath $wheelPath -PathType Leaf)) {
+            throw "Qualified PyBullet wheel is missing: $wheelName"
+          }
+          if (-not (Test-Path -LiteralPath $digestPath -PathType Leaf)) {
+            throw "Qualified PyBullet wheel digest is missing: $wheelName.sha256"
+          }
+
+          $digestLines = @(Get-Content -LiteralPath $digestPath)
+          $expectedDigestLine = "$env:EXPECTED_WHEEL_SHA256  $wheelName"
+          if ($digestLines.Count -ne 1 -or $digestLines[0] -cne $expectedDigestLine) {
+            throw "Qualified PyBullet wheel digest file is malformed."
+          }
+
+          $actualWheelSha = (Get-FileHash -Algorithm SHA256 -LiteralPath $wheelPath).Hash.ToLowerInvariant()
+          if ($actualWheelSha -cne $digestLines[0].Substring(0, 64)) {
+            throw "Qualified PyBullet wheel does not match its companion digest."
+          }
+          if ($actualWheelSha -cne $env:EXPECTED_WHEEL_SHA256) {
+            throw "Qualified PyBullet wheel does not match the frozen expected SHA-256."
+          }
+
+          & python -m pip install --no-index --no-deps --force-reinstall $wheelPath
+          if ($LASTEXITCODE -ne 0) {
+            throw "Qualified PyBullet wheel installation failed."
+          }
+
       - name: Install repository dependencies
         run: python -m pip install --require-hashes -r requirements-win-py312.lock
+
+      - name: Verify qualified PyBullet runtime provenance
+        shell: pwsh
+        run: |
+          $script = @'
+          from pathlib import Path
+
+          from src.prototype5 import scene_collision_qualification_b3_1 as b3
+
+          provenance = b3.verify_repository_and_runtime(Path.cwd())
+          observed = provenance["pybullet"]
+          expected = {
+              "package_version": "3.2.7",
+              "api_version": 202010061,
+              "binary_sha256": "e8a99694353e508f9e934a57494c177ddb9317cde94781da8bb68670c2334e40",
+              "urdf_sha256": "5c13c5b4bb88b5265223e0ec9a7706cbf81e9bb21cc0e18534273755a041788c",
+              "kuka_asset_manifest_sha256": "cee6f5a30f860c1302cb7ef69f0da2c0736a283fe87b87504f0141438c544fb3",
+          }
+          for field, expected_value in expected.items():
+              actual_value = observed.get(field)
+              if actual_value != expected_value:
+                  raise SystemExit(
+                      f"Qualified runtime mismatch for {field}: "
+                      f"{actual_value!r} != {expected_value!r}"
+                  )
+          print("qualified_pybullet_runtime=PASS")
+          for field in expected:
+              print(f"{field}={observed[field]}")
+          '@
+
+          & python -c $script
+          if ($LASTEXITCODE -ne 0) {
+            throw "Qualified PyBullet runtime provenance verification failed."
+          }
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Verify dependency environment
         run: |
@@ -48,6 +159,17 @@ jobs:
           python -m pip --version
           python -m pip check
           python -m pip freeze --all
+          node --version
+          npm --version
+
+      - name: Qualify integrated demo frontend
+        working-directory: frontend
+        run: |
+          npm run typecheck
+          npm test
+          npm run build
+          npm run test:e2e
+          npm run test:e2e:real
 
       - name: Run Prototype 5 tests
         run: python -m pytest tests/prototype5 -q

@@ -1,0 +1,40 @@
+# Governed-simulation evidence with byte-level SHA-256 provenance.
+# Keep checkout bytes stable across platforms and core.autocrlf settings.
+
+.gitattributes text eol=lf
+
+src/prototype5/scene_calibration_b1_1.py text eol=lf
+scripts/prototype5/run_scene_calibration_b1_1.py text eol=lf
+tests/prototype5/test_scene_calibration_b1_1.py text eol=lf
+results/prototype5/scene_calibration/phase_b1_1_results.jsonl text eol=lf
+results/prototype5/scene_calibration/phase_b1_1_results.jsonl.sha256 text eol=lf
+
+src/prototype5/scene_calibration_b1_2.py text eol=lf
+scripts/prototype5/run_scene_calibration_b1_2.py text eol=lf
+tests/prototype5/test_scene_calibration_b1_2.py text eol=lf
+results/prototype5/scene_calibration/phase_b1_2_results.jsonl text eol=lf
+results/prototype5/scene_calibration/phase_b1_2_results.jsonl.sha256 text eol=lf
+
+src/prototype5/scene_kinematic_plan_b2.py text eol=lf
+scripts/prototype5/run_scene_kinematic_plan_b2.py text eol=lf
+tests/prototype5/test_scene_kinematic_plan_b2.py text eol=lf
+results/prototype5/scene_calibration/phase_b2_kinematic_plan.json text eol=lf
+results/prototype5/scene_calibration/phase_b2_kinematic_plan.json.sha256 text eol=lf
+
+src/prototype5/scene_collision_qualification_b3_1.py text eol=lf
+scripts/prototype5/run_scene_collision_qualification_b3_1.py text eol=lf
+tests/prototype5/test_scene_collision_qualification_b3_1.py text eol=lf
+results/prototype5/scene_calibration/phase_b3_1_collision_qualification.json text eol=lf
+results/prototype5/scene_calibration/phase_b3_1_collision_qualification.json.sha256 text eol=lf
+
+# Vendored qualified CI-only binary dependency.
+ci/wheels/*.whl -text
+ci/wheels/*.whl.sha256 text eol=lf
+
+docs/prototype5/phase_b3_2_discrete_route_collision_qualification_spec.md text eol=lf
+
+src/prototype5/scene_collision_route_qualification_b3_2.py text eol=lf
+scripts/prototype5/run_scene_collision_route_qualification_b3_2.py text eol=lf
+tests/prototype5/test_scene_collision_route_qualification_b3_2.py text eol=lf
+results/prototype5/scene_calibration/phase_b3_2_discrete_route_collision_qualification.json text eol=lf
+results/prototype5/scene_calibration/phase_b3_2_discrete_route_collision_qualification.json.sha256 text eol=lf

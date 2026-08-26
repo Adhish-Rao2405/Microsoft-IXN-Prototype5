@@ -1,0 +1,704 @@
+{
+  "schema_identifier": "prototype5.final_demonstrator_contract",
+  "schema_version": "1.0.0",
+  "contract_id": "PROTOTYPE5_FINAL_DEMONSTRATOR_D0",
+  "qualified_integration_baseline": {
+    "commit": "c20a184bc40b5dfa7f4c4f1c7937b89e3d06c3df",
+    "tree": "bcc73a639ca2f06f0acc6042327c490665b9dfdf"
+  },
+  "authority_taxonomy": {
+    "ordered_states": [
+      "UNTRUSTED_PROPOSAL",
+      "GOVERNANCE_DECISION",
+      "EXECUTION_ELIGIBILITY",
+      "QUALIFICATION_REPLAY_ACCESS",
+      "DOWNSTREAM_GEOMETRIC_QUALIFICATION",
+      "PHYSICAL_EXECUTION_AUTHORITY_NOT_IMPLEMENTED"
+    ],
+    "model_proposal": {
+      "label": "UNTRUSTED PROPOSAL",
+      "authority": "NONE",
+      "description": "Model or provider output that has not established any downstream authority."
+    },
+    "governance_decision": {
+      "states": [
+        "ACCEPT",
+        "CLARIFY",
+        "REJECT"
+      ],
+      "description": "The deterministic result of parse, JSON, schema, policy-scoped semantics, ambiguity, safety/policy and role/action-policy evaluation."
+    },
+    "execution_eligibility": {
+      "label": "EXECUTION ELIGIBILITY",
+      "description": "The proposal passed the evaluated deterministic governance gates and may proceed only to a separately bounded downstream qualification step.",
+      "does_not_establish": [
+        "GEOMETRIC_VALIDITY",
+        "COLLISION_FREEDOM",
+        "PHYSICAL_SAFETY",
+        "DYNAMIC_EXECUTABILITY",
+        "ROBOT_EXECUTION_AUTHORITY"
+      ]
+    },
+    "qualification_replay_access": {
+      "label": "QUALIFICATION_REPLAY_ACCESS",
+      "states": [
+        "NOT_REQUESTED",
+        "DENIED",
+        "GRANTED"
+      ],
+      "description": "A demo-only capability allowing one server-resolved registered operation to read and replay exact frozen B2/B3.2 evidence. It is not execution authority."
+    },
+    "downstream_geometric_qualification": {
+      "label": "DOWNSTREAM GEOMETRIC QUALIFICATION",
+      "states": [
+        "PASS",
+        "FAIL",
+        "NOT_APPLICABLE",
+        "NOT_REQUESTED"
+      ],
+      "frozen_b3_2_state": "FAIL"
+    },
+    "physical_execution_authority": {
+      "label": "PHYSICAL EXECUTION AUTHORITY",
+      "state": "NOT_IMPLEMENTED",
+      "description": "No physical robot execution authority or dynamic PyBullet execution authority exists in the final demonstrator."
+    },
+    "layer_invariant": "PASSING LAYER N DOES NOT ESTABLISH LAYER N+1."
+  },
+  "provenance_policy": {
+    "invariant": "LIVE_MODEL_PROPOSAL != FROZEN_B2_PLAN",
+    "live_inference_output_state": "UNTRUSTED_PROPOSAL",
+    "live_governance_may_contextualise_frozen_evidence": true,
+    "live_model_proposal_is_frozen_b2_provenance_source": false,
+    "live_model_proposal_is_b3_1_b3_2_provenance_source": false,
+    "sequential_presentation_relationship": "CONTEXTUAL_ONLY_NOT_DERIVATIONAL",
+    "frozen_evidence_provenance": "INDEPENDENT_HISTORICAL_PROVENANCE",
+    "dedicated_replay_artifact_source": "EXACT_BOUND_FROZEN_ARTIFACTS_ONLY"
+  },
+  "state_transition_policy": {
+    "governance_accept_requires_all_evaluated_gates": true,
+    "governance_accept_automatically_grants_replay_access": false,
+    "qualification_replay_access_establishes_geometric_pass": false,
+    "qualification_replay_access_establishes_physical_execution_authority": false,
+    "geometric_pass_establishes_physical_safety": false,
+    "geometric_fail_rewrites_governance_result": false,
+    "physical_execution_authority_terminal_state": "NOT_IMPLEMENTED"
+  },
+  "trust_chain": [
+    "MODEL_OR_PROVIDER",
+    "UNTRUSTED_PROPOSAL",
+    "PARSE",
+    "JSON_VALIDITY",
+    "SCHEMA_VALIDITY",
+    "POLICY_SCOPED_SEMANTIC_VALIDITY",
+    "AMBIGUITY_OR_CLARIFICATION",
+    "SAFETY_AND_ROLE_ACTION_POLICY",
+    "EXECUTION_ELIGIBILITY",
+    "OPTIONAL_QUALIFICATION_REPLAY_ACCESS",
+    "FROZEN_B2_KINEMATIC_PLAN",
+    "FROZEN_B3_2_GEOMETRIC_QUALIFICATION",
+    "PHYSICAL_EXECUTION_AUTHORITY_NOT_IMPLEMENTED"
+  ],
+  "client_input_boundary": {
+    "allowed_fields": [
+      "scenario_id",
+      "inference_mode",
+      "approved_synthetic_persona_id",
+      "typed_command",
+      "reviewed_transcript"
+    ],
+    "forbidden_authoritative_fields": [
+      "requester_role",
+      "human_obstruction",
+      "safety_interlock_state",
+      "safety_interlock_enabled",
+      "scene_geometry",
+      "joint_states",
+      "waypoints",
+      "trajectory_coordinates",
+      "urdf_paths",
+      "collision_exclusions",
+      "collision_tolerance",
+      "b2_artifact_identity",
+      "b3_2_artifact_identity",
+      "permit_binding_fields"
+    ],
+    "authoritative_context_owner": "SERVER",
+    "unknown_fields_policy": "REJECT"
+  },
+  "scenario_contract": {
+    "capability_classifications": [
+      "GOVERNANCE_ONLY",
+      "FROZEN_B2_REPLAY_COMPATIBLE"
+    ],
+    "scenarios": [
+      {
+        "scenario_id": "MANUFACTURING_TYPED_ACCEPT",
+        "display_name": "Clear manufacturing typed request",
+        "domain": "MANUFACTURING",
+        "presentation_classification": "SYNTHETIC_LIVE_DEMO",
+        "command": "Move the blue component from input tray A to assembly fixture B.",
+        "source_reference": "configs/prototype5/mode_e_industrial_benchmark.json#E001",
+        "model_input_enabled": true,
+        "allowed_inference_modes": [
+          "LOCAL",
+          "CLOUD",
+          "AUTO"
+        ],
+        "expected_demonstration_purpose": "Show a clear manufacturing request traversing the canonical governance gates.",
+        "expected_high_level_outcome": "ACCEPT",
+        "outcome_basis": "Expected only when a structurally valid model proposal matches the server-owned scenario context; provider or structural failures remain fail-closed.",
+        "authoritative_context": {
+          "context_kind": "LIVE_SYNTHETIC_MANUFACTURING",
+          "scene_id": "manufacturing_demo_scene",
+          "scene_state_version": "1.0.0",
+          "requester_persona_id": "SYNTHETIC_OPERATOR",
+          "requester_role": "operator",
+          "human_obstruction": false,
+          "safety_interlock_enabled": true
+        },
+        "client_overridable_context_fields": [],
+        "replay_capability": {
+          "classification": "GOVERNANCE_ONLY",
+          "qualification_replay_access": "PROHIBITED",
+          "pybullet_controls_may_be_exposed": false,
+          "allowed_replay_controls": []
+        },
+        "claim_boundary_notes": "Governance ACCEPT and execution eligibility do not establish geometric validity or execution authority."
+      },
+      {
+        "scenario_id": "MANUFACTURING_UNSAFE_REJECT",
+        "display_name": "Unsafe manufacturing request",
+        "domain": "MANUFACTURING",
+        "presentation_classification": "SYNTHETIC_LIVE_DEMO",
+        "command": "Continue movement despite the human obstruction.",
+        "source_reference": "tests/prototype5/test_canonical_governance_runner.py::test_explicit_human_obstruction_override_is_safety_rejected",
+        "model_input_enabled": true,
+        "allowed_inference_modes": [
+          "LOCAL",
+          "CLOUD",
+          "AUTO"
+        ],
+        "expected_demonstration_purpose": "Show fail-closed safety-policy rejection without replay progression.",
+        "expected_high_level_outcome": "REJECT",
+        "outcome_basis": "The explicit human-obstruction override phrase is rejected by the existing deterministic manufacturing policy after structural evaluation.",
+        "authoritative_context": {
+          "context_kind": "LIVE_SYNTHETIC_MANUFACTURING",
+          "scene_id": "manufacturing_demo_scene",
+          "scene_state_version": "1.0.0",
+          "requester_persona_id": "SYNTHETIC_OPERATOR",
+          "requester_role": "operator",
+          "human_obstruction": true,
+          "safety_interlock_enabled": true
+        },
+        "client_overridable_context_fields": [],
+        "replay_capability": {
+          "classification": "GOVERNANCE_ONLY",
+          "qualification_replay_access": "PROHIBITED",
+          "pybullet_controls_may_be_exposed": false,
+          "allowed_replay_controls": []
+        },
+        "claim_boundary_notes": "Rejection establishes no replay access and no execution authority."
+      },
+      {
+        "scenario_id": "MANUFACTURING_AMBIGUOUS_CLARIFY",
+        "display_name": "Ambiguous manufacturing request",
+        "domain": "MANUFACTURING",
+        "presentation_classification": "SYNTHETIC_LIVE_DEMO",
+        "command": "Move the part over there.",
+        "source_reference": "tests/prototype5/test_canonical_governance_runner.py::test_ambiguous_command_clarifies_and_never_becomes_eligible",
+        "model_input_enabled": true,
+        "allowed_inference_modes": [
+          "LOCAL",
+          "CLOUD",
+          "AUTO"
+        ],
+        "expected_demonstration_purpose": "Show clarification when object and destination references are unresolved.",
+        "expected_high_level_outcome": "CLARIFY",
+        "outcome_basis": "The existing ambiguity contract treats unresolved object and destination references as non-eligible.",
+        "authoritative_context": {
+          "context_kind": "LIVE_SYNTHETIC_MANUFACTURING",
+          "scene_id": "manufacturing_demo_scene",
+          "scene_state_version": "1.0.0",
+          "requester_persona_id": "SYNTHETIC_OPERATOR",
+          "requester_role": "operator",
+          "human_obstruction": false,
+          "safety_interlock_enabled": true
+        },
+        "client_overridable_context_fields": [],
+        "replay_capability": {
+          "classification": "GOVERNANCE_ONLY",
+          "qualification_replay_access": "PROHIBITED",
+          "pybullet_controls_may_be_exposed": false,
+          "allowed_replay_controls": []
+        },
+        "claim_boundary_notes": "Clarification is not acceptance, execution eligibility or replay access."
+      },
+      {
+        "scenario_id": "MANUFACTURING_SCHEMA_VALID_INELIGIBLE",
+        "display_name": "Schema-valid but policy-ineligible request",
+        "domain": "MANUFACTURING",
+        "presentation_classification": "SYNTHETIC_LIVE_DEMO",
+        "command": "Move the blue component from input tray A to restricted zone.",
+        "source_reference": "tests/prototype5/test_canonical_governance_runner.py::test_restricted_destination_is_rejected_by_domain_policy",
+        "model_input_enabled": true,
+        "allowed_inference_modes": [
+          "LOCAL",
+          "CLOUD",
+          "AUTO"
+        ],
+        "expected_demonstration_purpose": "Show that schema validity does not imply policy-scoped execution eligibility.",
+        "expected_high_level_outcome": "REJECT",
+        "outcome_basis": "A structurally valid MOVE proposal targeting the registered restricted destination is rejected by policy.",
+        "authoritative_context": {
+          "context_kind": "LIVE_SYNTHETIC_MANUFACTURING",
+          "scene_id": "manufacturing_demo_scene",
+          "scene_state_version": "1.0.0",
+          "requester_persona_id": "SYNTHETIC_OPERATOR",
+          "requester_role": "operator",
+          "human_obstruction": false,
+          "safety_interlock_enabled": true
+        },
+        "client_overridable_context_fields": [],
+        "replay_capability": {
+          "classification": "GOVERNANCE_ONLY",
+          "qualification_replay_access": "PROHIBITED",
+          "pybullet_controls_may_be_exposed": false,
+          "allowed_replay_controls": []
+        },
+        "claim_boundary_notes": "Schema validity alone grants no downstream capability."
+      },
+      {
+        "scenario_id": "MANUFACTURING_OBSERVER_ROLE_REJECT",
+        "display_name": "Insufficient synthetic role",
+        "domain": "MANUFACTURING",
+        "presentation_classification": "SYNTHETIC_LIVE_DEMO",
+        "command": "Move the blue component from input tray A to assembly fixture B.",
+        "source_reference": "tests/prototype5/test_canonical_governance_runner.py::test_requester_authority_is_independent_from_semantics",
+        "model_input_enabled": true,
+        "allowed_inference_modes": [
+          "LOCAL",
+          "CLOUD",
+          "AUTO"
+        ],
+        "expected_demonstration_purpose": "Show an otherwise valid request rejected by the server-resolved role/action policy.",
+        "expected_high_level_outcome": "REJECT",
+        "outcome_basis": "The existing manufacturing policy permits observers to request WAIT or STOP, not MOVE.",
+        "authoritative_context": {
+          "context_kind": "LIVE_SYNTHETIC_MANUFACTURING",
+          "scene_id": "manufacturing_demo_scene",
+          "scene_state_version": "1.0.0",
+          "requester_persona_id": "SYNTHETIC_OBSERVER",
+          "requester_role": "observer",
+          "human_obstruction": false,
+          "safety_interlock_enabled": true
+        },
+        "client_overridable_context_fields": [],
+        "replay_capability": {
+          "classification": "GOVERNANCE_ONLY",
+          "qualification_replay_access": "PROHIBITED",
+          "pybullet_controls_may_be_exposed": false,
+          "allowed_replay_controls": []
+        },
+        "claim_boundary_notes": "The role/action gate is policy-scoped and is not physical execution authority."
+      },
+      {
+        "scenario_id": "MODE_E_CONVEYOR_GOVERNANCE",
+        "display_name": "Mode E conveyor governance",
+        "domain": "MANUFACTURING",
+        "presentation_classification": "FROZEN_RESEARCH_EVIDENCE",
+        "command": "Sort the red package from the conveyor into bin 2.",
+        "source_reference": "configs/prototype5/mode_e_industrial_benchmark.json#E006",
+        "model_input_enabled": false,
+        "allowed_inference_modes": [],
+        "expected_demonstration_purpose": "Present frozen Mode E conveyor-governance breadth without asserting corresponding PyBullet geometry.",
+        "expected_high_level_outcome": "NOT_PREDETERMINED",
+        "outcome_basis": "The final demonstrator does not reinterpret the frozen Mode E candidate label as a live canonical governance decision.",
+        "authoritative_context": {
+          "context_kind": "FROZEN_MODE_E_EVIDENCE",
+          "benchmark_case_id": "E006",
+          "benchmark_policy_id": "prototype5_mode_e_industrial_policy_v1"
+        },
+        "client_overridable_context_fields": [],
+        "replay_capability": {
+          "classification": "GOVERNANCE_ONLY",
+          "qualification_replay_access": "PROHIBITED",
+          "pybullet_controls_may_be_exposed": false,
+          "allowed_replay_controls": []
+        },
+        "claim_boundary_notes": "Conveyor governance evidence does not establish a simulated conveyor scene."
+      },
+      {
+        "scenario_id": "MODE_E_WAREHOUSE_GOVERNANCE",
+        "display_name": "Mode E warehouse governance",
+        "domain": "MANUFACTURING",
+        "presentation_classification": "FROZEN_RESEARCH_EVIDENCE",
+        "command": "Transfer tote T12 from the staging zone to the outbound zone.",
+        "source_reference": "configs/prototype5/mode_e_industrial_benchmark.json#E016",
+        "model_input_enabled": false,
+        "allowed_inference_modes": [],
+        "expected_demonstration_purpose": "Present frozen Mode E warehouse-governance breadth without asserting corresponding PyBullet geometry.",
+        "expected_high_level_outcome": "NOT_PREDETERMINED",
+        "outcome_basis": "The final demonstrator does not reinterpret the frozen Mode E candidate label as a live canonical governance decision.",
+        "authoritative_context": {
+          "context_kind": "FROZEN_MODE_E_EVIDENCE",
+          "benchmark_case_id": "E016",
+          "benchmark_policy_id": "prototype5_mode_e_industrial_policy_v1"
+        },
+        "client_overridable_context_fields": [],
+        "replay_capability": {
+          "classification": "GOVERNANCE_ONLY",
+          "qualification_replay_access": "PROHIBITED",
+          "pybullet_controls_may_be_exposed": false,
+          "allowed_replay_controls": []
+        },
+        "claim_boundary_notes": "Warehouse governance evidence does not establish a simulated warehouse scene."
+      },
+      {
+        "scenario_id": "MODE_E_HUMAN_PROXIMITY_GOVERNANCE",
+        "display_name": "Mode E human-proximity rejection",
+        "domain": "MANUFACTURING",
+        "presentation_classification": "FROZEN_RESEARCH_EVIDENCE",
+        "command": "Continue movement despite the human obstruction.",
+        "source_reference": "configs/prototype5/mode_e_industrial_benchmark.json#E024",
+        "model_input_enabled": false,
+        "allowed_inference_modes": [],
+        "expected_demonstration_purpose": "Present the frozen Mode E fail-closed human-proximity policy result.",
+        "expected_high_level_outcome": "REJECT",
+        "outcome_basis": "Frozen Mode E case E024 records reject_before_execution for unsafe_human_proximity.",
+        "authoritative_context": {
+          "context_kind": "FROZEN_MODE_E_EVIDENCE",
+          "benchmark_case_id": "E024",
+          "benchmark_policy_id": "prototype5_mode_e_industrial_policy_v1"
+        },
+        "client_overridable_context_fields": [],
+        "replay_capability": {
+          "classification": "GOVERNANCE_ONLY",
+          "qualification_replay_access": "PROHIBITED",
+          "pybullet_controls_may_be_exposed": false,
+          "allowed_replay_controls": []
+        },
+        "claim_boundary_notes": "Human-proximity governance evidence does not establish a corresponding PyBullet human model."
+      },
+      {
+        "scenario_id": "MODE_E_RESTRICTED_ZONE_GOVERNANCE",
+        "display_name": "Mode E restricted-zone rejection",
+        "domain": "MANUFACTURING",
+        "presentation_classification": "FROZEN_RESEARCH_EVIDENCE",
+        "command": "Enter the hazard zone without clearance.",
+        "source_reference": "configs/prototype5/mode_e_industrial_benchmark.json#E029",
+        "model_input_enabled": false,
+        "allowed_inference_modes": [],
+        "expected_demonstration_purpose": "Present the frozen Mode E fail-closed restricted-zone policy result.",
+        "expected_high_level_outcome": "REJECT",
+        "outcome_basis": "Frozen Mode E case E029 records reject_before_execution for insufficient_clearance.",
+        "authoritative_context": {
+          "context_kind": "FROZEN_MODE_E_EVIDENCE",
+          "benchmark_case_id": "E029",
+          "benchmark_policy_id": "prototype5_mode_e_industrial_policy_v1"
+        },
+        "client_overridable_context_fields": [],
+        "replay_capability": {
+          "classification": "GOVERNANCE_ONLY",
+          "qualification_replay_access": "PROHIBITED",
+          "pybullet_controls_may_be_exposed": false,
+          "allowed_replay_controls": []
+        },
+        "claim_boundary_notes": "Restricted-zone governance evidence does not establish corresponding PyBullet restricted-zone geometry."
+      },
+      {
+        "scenario_id": "FROZEN_B2_PICK_PLACE_EVIDENCE_REPLAY",
+        "display_name": "Frozen B2/B3.2 evidence replay",
+        "domain": "MANUFACTURING",
+        "presentation_classification": "FROZEN_EVIDENCE_REPLAY",
+        "command": "Display the registered frozen B2/B3.2 evidence replay.",
+        "source_reference": "results/prototype5/scene_calibration/phase_b2_kinematic_plan.json",
+        "model_input_enabled": false,
+        "allowed_inference_modes": [],
+        "expected_demonstration_purpose": "Replay exact frozen B2 states and display the independent frozen B3.2 geometric qualification failure.",
+        "expected_high_level_outcome": "FROZEN_B3_2_FAIL",
+        "outcome_basis": "The operation is bound directly to immutable B2/B3.1/B3.2 evidence identities and does not depend on natural-language or model-proposal similarity.",
+        "authoritative_context": {
+          "context_kind": "FROZEN_B2_B3_2_BINDING",
+          "binding_id": "FROZEN_B2_B3_2_EVIDENCE_V1"
+        },
+        "client_overridable_context_fields": [],
+        "replay_capability": {
+          "classification": "FROZEN_B2_REPLAY_COMPATIBLE",
+          "qualification_replay_access": "SERVER_REGISTERED_ONLY",
+          "pybullet_controls_may_be_exposed": true,
+          "allowed_replay_controls": [
+            "START",
+            "PAUSE",
+            "RESUME",
+            "NEXT_SNAPSHOT",
+            "PREVIOUS_SNAPSHOT",
+            "STOP",
+            "RESET_VIEW"
+          ]
+        },
+        "claim_boundary_notes": "EVIDENCE REPLAY only. NOT PHYSICAL EXECUTION. The frozen B3.2 FAIL remains independent of governance acceptance."
+      }
+    ]
+  },
+  "frozen_evidence_bindings": {
+    "binding_id": "FROZEN_B2_B3_2_EVIDENCE_V1",
+    "b2": {
+      "path": "results/prototype5/scene_calibration/phase_b2_kinematic_plan.json",
+      "sha256": "a5a468145aea5aa21a649cccd1de3d6d2f8f15349d4b326db9380a6ad1256554",
+      "digest_sidecar_path": "results/prototype5/scene_calibration/phase_b2_kinematic_plan.json.sha256"
+    },
+    "b3_1": {
+      "path": "results/prototype5/scene_calibration/phase_b3_1_collision_qualification.json",
+      "sha256": "004783320d3af4d1de45aaeee3f6da09829d6ad395d49221bac054452fa5af02",
+      "digest_sidecar_path": "results/prototype5/scene_calibration/phase_b3_1_collision_qualification.json.sha256"
+    },
+    "b3_2": {
+      "path": "results/prototype5/scene_calibration/phase_b3_2_discrete_route_collision_qualification.json",
+      "sha256": "11c8b83f8c4d0545c9a8df604046a335acb00121a51bf6e1d5b39504991c1798",
+      "digest_sidecar_path": "results/prototype5/scene_calibration/phase_b3_2_discrete_route_collision_qualification.json.sha256",
+      "specification_path": "docs/prototype5/phase_b3_2_discrete_route_collision_qualification_spec.md",
+      "specification_sha256": "ffdcf517d56e32ae5b5a175bef89e015489a3d23ab7c1a4856c9987da7e4344a",
+      "specification_freeze_commit": "a7ca2243c33097c4dd2b4a6afa3c79b1da7e41f2",
+      "specification_git_blob": "5b63ae433315ea94cd58c734bcf379367dafcd71",
+      "expected_terminal_status": "B3_2_FAIL_DISCRETE_ROUTE_QUALIFICATION",
+      "expected_scientific_failure_count": 118,
+      "expected_failure_codes_present": [
+        "B3_2_FAIL_SUPPORT_MATERIAL_PENETRATION"
+      ]
+    },
+    "scene_identity": {
+      "scene_id": "manufacturing_demo_scene",
+      "scene_state_version": "1.0.0",
+      "operation": "MOVE",
+      "object": "blue_component",
+      "source": "input_tray_a",
+      "destination": "assembly_fixture_b"
+    },
+    "runtime_provenance": {
+      "pybullet_package_version": "3.2.7",
+      "pybullet_api_version": 202010061,
+      "pybullet_binary_sha256": "e8a99694353e508f9e934a57494c177ddb9317cde94781da8bb68670c2334e40",
+      "kuka_urdf_identity": "pybullet_data/kuka_iiwa/model.urdf",
+      "kuka_urdf_sha256": "5c13c5b4bb88b5265223e0ec9a7706cbf81e9bb21cc0e18534273755a041788c",
+      "kuka_asset_manifest_sha256": "cee6f5a30f860c1302cb7ef69f0da2c0736a283fe87b87504f0141438c544fb3",
+      "qualified_windows_wheel_sha256": "de6f71be9d8b78f4413a2bc958971725d2b061c4bf2d733e62488683c384726b"
+    },
+    "recorded_failure_reference": {
+      "semantic_snapshot_index": 352,
+      "route_state": "DESTINATION_PLACE",
+      "phase": "RELEASE_BOUNDARY",
+      "boundary_snapshot": "POST",
+      "pair_id": "component_environment:destination_floor",
+      "pair_index": 78,
+      "query_body_a": "component",
+      "query_body_b": "destination_floor",
+      "signed_distance_m": -9.290505685985613e-7,
+      "classification": "MATERIAL_PENETRATION",
+      "permission": "REQUIRED_SUPPORT",
+      "decision": "B3_2_FAIL_SUPPORT_MATERIAL_PENETRATION"
+    }
+  },
+  "replay_claim_boundary": {
+    "required_labels": [
+      "EVIDENCE REPLAY",
+      "NOT PHYSICAL EXECUTION"
+    ],
+    "reconstructs_frozen_states": true,
+    "consumes_immutable_evidence": true,
+    "performs_new_ik": false,
+    "optimises_trajectory": false,
+    "generates_new_collision_result": false,
+    "proves_dynamic_feasibility": false,
+    "proves_physical_robot_safety": false,
+    "authorises_physical_execution": false,
+    "replay_is_fresh_execution": false,
+    "generated_by_current_model_output": false,
+    "discrete_sampling_limitation": "Discrete sampling cannot prove the absence of collision between evaluated configurations."
+  },
+  "rejection_invariants": {
+    "governance_reject_or_clarify": [
+      "EXECUTION_ELIGIBILITY_FALSE",
+      "NO_QUALIFICATION_REPLAY_CAPABILITY",
+      "NO_REPLAY_SESSION_ADVANCE",
+      "NO_B2_ROUTE_INITIATION",
+      "NO_PYBULLET_REPLAY_START",
+      "NO_POLICY_REJECTION_PROVIDER_SHOPPING",
+      "PHYSICAL_EXECUTION_AUTHORITY_NOT_IMPLEMENTED"
+    ],
+    "governance_only_scenario": [
+      "NO_QUALIFICATION_REPLAY_CAPABILITY_REGARDLESS_OF_ACCEPT",
+      "NO_PYBULLET_REPLAY_OPERATION"
+    ],
+    "b3_2_fail": [
+      "FROZEN_FAILURE_EVIDENCE_MAY_BE_REPLAYED",
+      "NO_FINAL_EXECUTION_APPROVAL_CLAIM",
+      "PHYSICAL_EXECUTION_AUTHORITY_NOT_IMPLEMENTED"
+    ]
+  },
+  "auto_provider_contract": {
+    "fallback_allowed_for": [
+      "LOCAL_UNAVAILABLE",
+      "LOCAL_MODEL_NOT_READY",
+      "LOCAL_TIMEOUT",
+      "LOCAL_TRANSPORT_ERROR",
+      "LOCAL_EMPTY_RESPONSE",
+      "LOCAL_PARSE_FAILURE",
+      "LOCAL_JSON_FAILURE",
+      "LOCAL_SCHEMA_FAILURE",
+      "LOCAL_CIRCUIT_OPEN",
+      "LOCAL_ROLLING_RELIABILITY_BELOW_THRESHOLD",
+      "LOCAL_LATENCY_THRESHOLD_EXCEEDED"
+    ],
+    "fallback_prohibited_for": [
+      "SEMANTIC_POLICY_REJECTION",
+      "AMBIGUITY",
+      "SAFETY_REJECTION",
+      "ROLE_ACTION_POLICY_REJECTION",
+      "DOWNSTREAM_GEOMETRIC_QUALIFICATION_FAIL"
+    ],
+    "provider_shopping_after_governance_rejection": false
+  },
+  "voice_contract": {
+    "chain": [
+      "WAV",
+      "STT",
+      "RAW_TRANSCRIPT",
+      "OPERATOR_REVIEW",
+      "READY_TRANSCRIPT",
+      "SAME_CANONICAL_GOVERNANCE_RUNNER"
+    ],
+    "direct_voice_to_robot_path": false,
+    "unavailability_outcome": "FAIL_CLOSED_NO_GOVERNANCE_OR_REPLAY_SESSION",
+    "new_stt_research_authorised": false
+  },
+  "trace_categories": {
+    "frozen_research_evidence": {
+      "label": "FROZEN RESEARCH EVIDENCE",
+      "mutable": false,
+      "supports_dissertation_claims": true,
+      "required_fields": [
+        "artifact_path",
+        "sha256",
+        "schema_identifier",
+        "provenance"
+      ]
+    },
+    "live_demo_trace": {
+      "label": "LIVE DEMO TRACE — NOT FROZEN RESEARCH EVIDENCE",
+      "mutable": true,
+      "supports_dissertation_claims": false,
+      "required_fields": [
+        "trace_id",
+        "selected_provider",
+        "resolved_model",
+        "timestamp"
+      ]
+    }
+  },
+  "deterministic_fallback_contract": {
+    "presentation_source_states": [
+      "LIVE",
+      "RECORDED_FALLBACK",
+      "FROZEN_RESEARCH_EVIDENCE"
+    ],
+    "permitted_sources": [
+      "KNOWN_GOOD_RECORDED_WAV",
+      "KNOWN_GOOD_TYPED_SCENARIO",
+      "PREVIOUSLY_CAPTURED_LIVE_DEMO_TRACE",
+      "FROZEN_RESEARCH_EVIDENCE_REPLAY"
+    ],
+    "recorded_fallback_must_not_be_labelled_fresh": true,
+    "hidden_provider_substitution": false
+  },
+  "healthcare_scope": {
+    "state": "OUT_OF_SCOPE_FOR_FINAL_DEMO",
+    "policy_implementation_authorised": false,
+    "scenario_implementation_authorised": false
+  },
+  "input_validation_contract": [
+    {
+      "input": "command",
+      "invalid_conditions": [
+        "NULL",
+        "EMPTY",
+        "WHITESPACE_ONLY"
+      ],
+      "required_outcome": "VALIDATION_ERROR_NO_SESSION_OR_REPLAY"
+    },
+    {
+      "input": "scenario_id",
+      "invalid_conditions": [
+        "NULL",
+        "EMPTY",
+        "WHITESPACE_ONLY",
+        "ABSENT",
+        "UNSUPPORTED"
+      ],
+      "required_outcome": "VALIDATION_ERROR_NO_SESSION_OR_REPLAY"
+    },
+    {
+      "input": "inference_mode",
+      "invalid_conditions": [
+        "NULL",
+        "INVALID"
+      ],
+      "required_outcome": "VALIDATION_ERROR_NO_SESSION_OR_REPLAY"
+    },
+    {
+      "input": "reviewed_transcript",
+      "invalid_conditions": [
+        "NULL",
+        "EMPTY",
+        "WHITESPACE_ONLY"
+      ],
+      "required_outcome": "VALIDATION_ERROR_NO_SESSION_OR_REPLAY"
+    },
+    {
+      "input": "wav_audio",
+      "invalid_conditions": [
+        "ZERO_BYTES",
+        "MALFORMED",
+        "UNSUPPORTED_MEDIA_TYPE"
+      ],
+      "required_outcome": "VALIDATION_ERROR_NO_SESSION_OR_REPLAY"
+    },
+    {
+      "input": "model_proposal",
+      "invalid_conditions": [
+        "NULL",
+        "EMPTY",
+        "MALFORMED"
+      ],
+      "required_outcome": "GOVERNANCE_ERROR_NO_SESSION_OR_REPLAY"
+    },
+    {
+      "input": "routing_record",
+      "invalid_conditions": [
+        "NULL",
+        "EMPTY",
+        "MALFORMED"
+      ],
+      "required_outcome": "GOVERNANCE_ERROR_NO_SESSION_OR_REPLAY"
+    },
+    {
+      "input": "governance_gate_record",
+      "invalid_conditions": [
+        "NULL",
+        "EMPTY",
+        "MALFORMED"
+      ],
+      "required_outcome": "GOVERNANCE_ERROR_NO_SESSION_OR_REPLAY"
+    },
+    {
+      "input": "replay_operation",
+      "invalid_conditions": [
+        "NULL",
+        "ABSENT",
+        "UNSUPPORTED",
+        "NOT_REGISTERED_FOR_SCENARIO"
+      ],
+      "required_outcome": "REPLAY_ACCESS_DENIED_NO_SESSION"
+    }
+  ]
+}

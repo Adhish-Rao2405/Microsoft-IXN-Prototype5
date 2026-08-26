@@ -5,6 +5,12 @@ tmp/
 .venv/
 venv/
 .env
+node_modules/
+frontend/dist/
+frontend/playwright-report/
+frontend/test-results/
+frontend/*.tsbuildinfo
+runtime/
 
 *.log
 *.aux
