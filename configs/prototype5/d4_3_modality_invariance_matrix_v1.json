@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "D4_3_TYPED_VS_OPERATOR_REVIEWED_VOICE_MODALITY_INVARIANCE",
+  "claim_boundary": {
+    "evaluates_real_microphone": false,
+    "evaluates_real_nemotron": false,
+    "evaluates_asr_accuracy": false,
+    "evaluates_model_stochasticity": false,
+    "evaluates_physical_execution": false
+  },
+  "routing_modes": [
+    "LOCAL",
+    "CLOUD",
+    "AUTO"
+  ],
+  "conditions": [
+    {
+      "condition_id": "A1_IDENTITY_ACCEPT",
+      "scenario_id": "MANUFACTURING_TYPED_ACCEPT",
+      "raw_transcript_scenario_id": "MANUFACTURING_TYPED_ACCEPT",
+      "review_stratum": "IDENTITY_REVIEW",
+      "expected_decision": "ACCEPT"
+    },
+    {
+      "condition_id": "A2_IDENTITY_REJECT",
+      "scenario_id": "MANUFACTURING_UNSAFE_REJECT",
+      "raw_transcript_scenario_id": "MANUFACTURING_UNSAFE_REJECT",
+      "review_stratum": "IDENTITY_REVIEW",
+      "expected_decision": "REJECT"
+    },
+    {
+      "condition_id": "A3_IDENTITY_CLARIFY",
+      "scenario_id": "MANUFACTURING_AMBIGUOUS_CLARIFY",
+      "raw_transcript_scenario_id": "MANUFACTURING_AMBIGUOUS_CLARIFY",
+      "review_stratum": "IDENTITY_REVIEW",
+      "expected_decision": "CLARIFY"
+    },
+    {
+      "condition_id": "B1_RAW_AMBIGUOUS_REVIEWED_ACCEPT",
+      "scenario_id": "MANUFACTURING_TYPED_ACCEPT",
+      "raw_transcript_scenario_id": "MANUFACTURING_AMBIGUOUS_CLARIFY",
+      "review_stratum": "MATERIAL_OPERATOR_REVIEW",
+      "expected_decision": "ACCEPT"
+    },
+    {
+      "condition_id": "B2_RAW_CLEAR_REVIEWED_REJECT",
+      "scenario_id": "MANUFACTURING_UNSAFE_REJECT",
+      "raw_transcript_scenario_id": "MANUFACTURING_TYPED_ACCEPT",
+      "review_stratum": "MATERIAL_OPERATOR_REVIEW",
+      "expected_decision": "REJECT"
+    },
+    {
+      "condition_id": "B3_RAW_CLEAR_REVIEWED_CLARIFY",
+      "scenario_id": "MANUFACTURING_AMBIGUOUS_CLARIFY",
+      "raw_transcript_scenario_id": "MANUFACTURING_TYPED_ACCEPT",
+      "review_stratum": "MATERIAL_OPERATOR_REVIEW",
+      "expected_decision": "CLARIFY"
+    }
+  ]
+}

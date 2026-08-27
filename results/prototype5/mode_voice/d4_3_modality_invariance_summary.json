@@ -1,0 +1,208 @@
+{
+  "artifacts": {
+    "pairs_jsonl": "results/prototype5/mode_voice/d4_3_modality_invariance_pairs.jsonl",
+    "pairs_jsonl_sha256": "a2fc09eb72a776416aadc496ee99fc89b4e7f44cec80cfbd4c10f0a9f061971d"
+  },
+  "claim_boundary": {
+    "evaluates_asr_accuracy": false,
+    "evaluates_downstream_geometric_validity": false,
+    "evaluates_model_stochasticity": false,
+    "evaluates_physical_execution": false,
+    "evaluates_real_microphone": false,
+    "evaluates_real_nemotron": false,
+    "operator_reviewed_text_is_governance_command": true,
+    "physical_execution_authority_state": "NOT_IMPLEMENTED",
+    "raw_transcript_is_untrusted_provenance": true
+  },
+  "claim_boundary_text": "This experiment evaluates downstream governance-path invariance after operator review. It does not evaluate microphone capture fidelity, ASR accuracy, real Nemotron transcription quality, model stochasticity, downstream geometric validity or physical execution safety.",
+  "dataset_identity": {
+    "experiment_id": "D4_3_TYPED_VS_OPERATOR_REVIEWED_VOICE_MODALITY_INVARIANCE",
+    "relative_path": "configs/prototype5/d4_3_modality_invariance_matrix_v1.json",
+    "schema_version": "1.0.0",
+    "sha256": "03bed446d96184a12e67123c177783aabbfe8df6ae9f6629446f13fab6b8cf51"
+  },
+  "experiment_id": "D4_3_TYPED_VS_OPERATOR_REVIEWED_VOICE_MODALITY_INVARIANCE",
+  "metrics": {
+    "accept_pair_count": 6,
+    "accept_pair_invariant_count": 6,
+    "auto_controlled_network_call_count": 0,
+    "auto_fallback_occurrence_count": 0,
+    "auto_pair_count": 6,
+    "auto_pair_invariant_count": 6,
+    "auto_selected_providers": [
+      "FOUNDRY_LOCAL"
+    ],
+    "clarify_pair_count": 6,
+    "clarify_pair_invariant_count": 6,
+    "cloud_controlled_network_call_count": 0,
+    "cloud_pair_count": 6,
+    "cloud_pair_invariant_count": 6,
+    "decision_match_count": 18,
+    "execution_eligibility_match_count": 18,
+    "gate_vector_match_count": 18,
+    "identity_review_pair_count": 9,
+    "local_controlled_network_call_count": 0,
+    "local_pair_count": 6,
+    "local_pair_invariant_count": 6,
+    "material_operator_review_pair_count": 9,
+    "negative_control_count": 10,
+    "negative_control_pass_count": 10,
+    "p1_match_count": 18,
+    "p2_match_count": 18,
+    "p3_match_count": 18,
+    "p4_match_count": 18,
+    "pair_count": 18,
+    "pair_divergence_count": 0,
+    "pair_invariant_count": 18,
+    "raw_transcript_authority_violation_count": 0,
+    "reject_pair_count": 6,
+    "reject_pair_invariant_count": 6,
+    "replay_policy_scenario_id_match_count": 18,
+    "unexpected_difference_count": 0,
+    "unknown_canonical_field_count": 0,
+    "unknown_canonical_fields": [],
+    "unknown_result_field_count": 0,
+    "unknown_result_fields": []
+  },
+  "negative_control_outcomes": {
+    "N01": {
+      "node_id": "tests/prototype5/test_d4_3_modality_invariance.py::test_n01_partial_transcript_cannot_enter_governance",
+      "outcome": "PASSED"
+    },
+    "N02": {
+      "node_id": "tests/prototype5/test_d4_3_modality_invariance.py::test_n02_expired_ready_transcript_cannot_enter_governance",
+      "outcome": "PASSED"
+    },
+    "N03": {
+      "node_id": "tests/prototype5/test_d4_3_modality_invariance.py::test_n03_unknown_transcript_identity_fails_closed",
+      "outcome": "PASSED"
+    },
+    "N04": {
+      "node_id": "tests/prototype5/test_d4_3_modality_invariance.py::test_n04_sequential_consumed_identity_reuse_fails",
+      "outcome": "PASSED"
+    },
+    "N05": {
+      "node_id": "tests/prototype5/test_d4_3_modality_invariance.py::test_n05_concurrent_duplicate_claim_yields_exactly_one_winner",
+      "outcome": "PASSED"
+    },
+    "N06": {
+      "node_id": "tests/prototype5/test_d4_3_modality_invariance.py::test_n06_provider_failure_after_claim_never_restores_identity",
+      "outcome": "PASSED"
+    },
+    "N07": {
+      "node_id": "tests/prototype5/test_d4_3_modality_invariance.py::test_n07_raw_transcript_cannot_substitute_for_reviewed_text",
+      "outcome": "PASSED"
+    },
+    "N08": {
+      "node_id": "tests/prototype5/test_d4_3_modality_invariance.py::test_n08_blank_reviewed_text_is_rejected_before_provider",
+      "outcome": "PASSED"
+    },
+    "N09": {
+      "node_id": "tests/prototype5/test_d4_3_modality_invariance.py::test_n09_typed_client_authority_field_injection_is_rejected",
+      "outcome": "PASSED"
+    },
+    "N10": {
+      "node_id": "tests/prototype5/test_d4_3_modality_invariance.py::test_n10_voice_client_authority_field_injection_is_rejected",
+      "outcome": "PASSED"
+    }
+  },
+  "negative_control_runtime_capture": true,
+  "observed_claim": "No modality-induced divergence was observed across 18 controlled paired requests when typed command text and operator-reviewed voice command text were held equal.",
+  "physical_execution_authority_state": "NOT_IMPLEMENTED",
+  "prerequisite_tests": {
+    "errors": 0,
+    "failed": 0,
+    "passed": 36,
+    "skipped": 0,
+    "total": 36,
+    "xfailed": 0
+  },
+  "provenance": {
+    "base_repository_sha": "f8d8894e2c6fd7d1076da02ecef3018b04a5f9fa",
+    "branch": "feature/d4-3-modality-invariance",
+    "dataset_sha256": "03bed446d96184a12e67123c177783aabbfe8df6ae9f6629446f13fab6b8cf51",
+    "evaluator_sha256": "808d87f4ad353a60472ca2811ba1ee43b560754c13371f25d0ea0412835c0bbc",
+    "qualified_test_sha256": "4b6fc92c1ce2fc604a25564151e4eee7875fc8134103075f44d4bd729daf5422",
+    "source_input_manifest": [
+      {
+        "relative_path": "configs/prototype5/d4_3_modality_invariance_matrix_v1.json",
+        "sha256": "03bed446d96184a12e67123c177783aabbfe8df6ae9f6629446f13fab6b8cf51"
+      },
+      {
+        "relative_path": "configs/prototype5/final_demo_scenarios_v1.json",
+        "sha256": "fb2aa8aab7902dd1f2b074c8bd6a0d50c18343834fd899358d7e035f2d2b7a81"
+      },
+      {
+        "relative_path": "configs/prototype5/hybrid_routing_policy_v1.json",
+        "sha256": "60664d6faf0422ef1073c718021c973731d09134ed7f96500eb2d15d46ae3ed4"
+      },
+      {
+        "relative_path": "configs/prototype5/manufacturing_policy_v2.json",
+        "sha256": "cea0b4566a7867fea64b84c2ccbea53c12c28267f6b2092a9bd4b91f777b0d57"
+      },
+      {
+        "relative_path": "scripts/prototype5/run_d4_3_modality_invariance.py",
+        "sha256": "808d87f4ad353a60472ca2811ba1ee43b560754c13371f25d0ea0412835c0bbc"
+      },
+      {
+        "relative_path": "src/prototype5/canonical_governance_runner.py",
+        "sha256": "895e0d13d903a101646cf86886450c7553499340acf764e967a47818e523b037"
+      },
+      {
+        "relative_path": "src/prototype5/demo_service.py",
+        "sha256": "260bb6c68eb0ff71348021ac232e8cb32c812aa3bbf64bc73cefa58ce63f5170"
+      },
+      {
+        "relative_path": "src/prototype5/execution_session.py",
+        "sha256": "ed7bc10266469b6d4438d313530b41f663c6b0973ea9989afbf8b366d90ebbf0"
+      },
+      {
+        "relative_path": "src/prototype5/final_demo_contract.py",
+        "sha256": "0cd759499377d24ff5458a535f26fa054e4a6b5b3be7acc93ef2360674a04a66"
+      },
+      {
+        "relative_path": "src/prototype5/final_demo_presentation.py",
+        "sha256": "0e5ef10d40201abebdc528b66488c8179c5f9503cfc6f31e65784df5ef473de4"
+      },
+      {
+        "relative_path": "src/prototype5/foundry_sdk_backend.py",
+        "sha256": "4159ef86c17605e7a554f1bde7a2664b5c83079ebd92a1ca4f2adb57c6d1d6b6"
+      },
+      {
+        "relative_path": "src/prototype5/governance_contract_v2.py",
+        "sha256": "7a1d22925ec84ce08aa202265530b5f4364fe30bd649cb5c4e026c8888e043ca"
+      },
+      {
+        "relative_path": "src/prototype5/hybrid_inference_router.py",
+        "sha256": "55dc985b0d434f164ef1bb629d96c9ebfff0ef5c0bf3bd5fdc7679684d8e1b9d"
+      },
+      {
+        "relative_path": "src/prototype5/manufacturing_policy_v2.py",
+        "sha256": "958cc5afc7148349840af0007155378fa10f7d63c2d5966171f692976cd31350"
+      },
+      {
+        "relative_path": "src/prototype5/recorded_speech.py",
+        "sha256": "c9733ca99fe5c0cd97e25fa973f683da8eafc76709309229313fb3109936619a"
+      },
+      {
+        "relative_path": "src/prototype5/task_proposal_v2.py",
+        "sha256": "b15818e5ecc0ed5cb3d5a262a3ba34502b04432526a30c96a2d873814f42f830"
+      },
+      {
+        "relative_path": "tests/prototype5/d2_3_e2e_server.py",
+        "sha256": "ad787b875f604febd621c13e8f0b2268a30bd33647839a54fc67261adc1fefac"
+      },
+      {
+        "relative_path": "tests/prototype5/test_d4_3_modality_invariance.py",
+        "sha256": "4b6fc92c1ce2fc604a25564151e4eee7875fc8134103075f44d4bd729daf5422"
+      }
+    ],
+    "source_input_manifest_canonicalisation": "UTF-8 lines sorted by POSIX relative path: <lowercase_sha256><two spaces><relative_path>\\n",
+    "source_input_manifest_sha256": "89c5df7eb28b898db100f69c56c06b0ac33caedf3e888c0d1af72c1f474ac827"
+  },
+  "replay_access_counts": {
+    "PROHIBITED": 18
+  },
+  "schema_version": "1.0.0",
+  "status": "PASS"
+}
