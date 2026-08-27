@@ -24,6 +24,9 @@ import {
   parseCaptureProcessorMessage,
 } from "../src/microphoneCaptureProcessor";
 
+const SETUP_DEADLINE_MS = 30_000;
+const RECORDING_DEADLINE_MS = 16_000;
+
 interface Deferred<T> {
   readonly promise: Promise<T>;
   readonly resolve: (value: T) => void;
@@ -121,13 +124,23 @@ function makeHarness(options: HarnessOptions = {}) {
   const getUserMedia = vi.fn(
     () => options.getUserMedia?.(stream) ?? Promise.resolve(stream),
   );
+  const createAudioContext = vi.fn(() => context);
+  const createWorkletNode = vi.fn(
+    () => worklet as unknown as AudioWorkletNode,
+  );
+  const setTimer = vi.fn(
+    (callback: () => void, delayMs: number) => setTimeout(callback, delayMs),
+  );
+  const clearTimer = vi.fn(
+    (handle: ReturnType<typeof setTimeout>) => clearTimeout(handle),
+  );
   const dependencies: MicrophoneCaptureDependencies = {
     getUserMedia,
-    createAudioContext: vi.fn(() => context),
-    createWorkletNode: vi.fn(() => worklet as unknown as AudioWorkletNode),
+    createAudioContext,
+    createWorkletNode,
     workletModuleUrl: "bounded-capture-worklet.js",
-    setTimer: (callback, delayMs) => setTimeout(callback, delayMs),
-    clearTimer: (handle) => clearTimeout(handle),
+    setTimer,
+    clearTimer,
   };
   const controller = new MicrophoneCaptureController(
     dependencies,
@@ -136,7 +149,11 @@ function makeHarness(options: HarnessOptions = {}) {
   return {
     context,
     controller,
+    createAudioContext,
+    createWorkletNode,
+    clearTimer,
     getUserMedia,
+    setTimer,
     source,
     stream,
     tracks,
@@ -252,6 +269,108 @@ describe("MicrophoneCaptureController bounded lifecycle", () => {
     moduleLoad.resolve();
     await flushMicrotasks();
     expect(harness.tracks[0]?.stop).toHaveBeenCalledOnce();
+  });
+
+  it("terminates pending getUserMedia at the setup deadline and disposes a late stream", async () => {
+    const permission = deferred<MediaStream>();
+    const harness = makeHarness({ getUserMedia: () => permission.promise });
+    const settlement = vi.fn();
+    void harness.controller.outcome.then(settlement);
+    const starting = harness.controller.start();
+    await flushMicrotasks();
+
+    await vi.advanceTimersByTimeAsync(SETUP_DEADLINE_MS);
+
+    await expect(starting).resolves.toBe(false);
+    await expect(harness.controller.outcome).resolves.toEqual({
+      kind: "FAILED",
+      reason: "CAPTURE_FAILED",
+    });
+    expect(settlement).toHaveBeenCalledOnce();
+    expect(harness.createAudioContext).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+
+    permission.resolve(harness.stream);
+    await flushMicrotasks();
+    expect(harness.tracks[0]?.stop).toHaveBeenCalledOnce();
+    expect(harness.createAudioContext).not.toHaveBeenCalled();
+    expect(settlement).toHaveBeenCalledOnce();
+  });
+
+  it("cleans partially acquired resources when AudioContext resume exceeds setup deadline", async () => {
+    const resume = deferred<void>();
+    const harness = makeHarness({
+      contextState: "suspended",
+      resume: () => resume.promise,
+    });
+    const starting = harness.controller.start();
+    await flushMicrotasks();
+    expect(harness.context.resume).toHaveBeenCalledOnce();
+
+    await vi.advanceTimersByTimeAsync(SETUP_DEADLINE_MS);
+
+    await expect(starting).resolves.toBe(false);
+    await expect(harness.controller.outcome).resolves.toEqual({
+      kind: "FAILED",
+      reason: "CAPTURE_FAILED",
+    });
+    expect(harness.tracks[0]?.stop).toHaveBeenCalledOnce();
+    expect(harness.context.close).toHaveBeenCalledOnce();
+    expect(harness.createWorkletNode).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+
+    resume.resolve();
+    await flushMicrotasks();
+    expect(harness.createWorkletNode).not.toHaveBeenCalled();
+    expect(harness.source.connect).not.toHaveBeenCalled();
+  });
+
+  it("cannot resurrect capture when addModule resolves after setup deadline", async () => {
+    const moduleLoad = deferred<void>();
+    const harness = makeHarness({ addModule: () => moduleLoad.promise });
+    const starting = harness.controller.start();
+    await flushMicrotasks();
+    expect(harness.context.audioWorklet.addModule).toHaveBeenCalledOnce();
+
+    await vi.advanceTimersByTimeAsync(SETUP_DEADLINE_MS);
+
+    await expect(starting).resolves.toBe(false);
+    await expect(harness.controller.outcome).resolves.toEqual({
+      kind: "FAILED",
+      reason: "CAPTURE_FAILED",
+    });
+    expect(harness.tracks[0]?.stop).toHaveBeenCalledOnce();
+    expect(harness.context.close).toHaveBeenCalledOnce();
+    expect(harness.createWorkletNode).not.toHaveBeenCalled();
+
+    moduleLoad.resolve();
+    await flushMicrotasks();
+    expect(harness.createWorkletNode).not.toHaveBeenCalled();
+    expect(harness.source.connect).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("lets cancellation win immediately before the setup deadline", async () => {
+    const permission = deferred<MediaStream>();
+    const harness = makeHarness({ getUserMedia: () => permission.promise });
+    const starting = harness.controller.start();
+    await flushMicrotasks();
+    await vi.advanceTimersByTimeAsync(SETUP_DEADLINE_MS - 1);
+
+    await expect(harness.controller.cancel()).resolves.toEqual({
+      kind: "CANCELLED",
+    });
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(starting).resolves.toBe(false);
+    await expect(harness.controller.outcome).resolves.toEqual({
+      kind: "CANCELLED",
+    });
+    expect(vi.getTimerCount()).toBe(0);
+
+    permission.resolve(harness.stream);
+    await flushMicrotasks();
+    expect(harness.tracks[0]?.stop).toHaveBeenCalledOnce();
+    expect(harness.createAudioContext).not.toHaveBeenCalled();
   });
 
   it("fails and cleans up when FINALISE acknowledgement is lost", async () => {
@@ -399,7 +518,7 @@ describe("MicrophoneCaptureController bounded lifecycle", () => {
     await expect(cancelling).resolves.toEqual({ kind: "CANCELLED" });
   });
 
-  it("keeps the wall-clock timer presentation-only", async () => {
+  it("makes the recording deadline own finalisation and bounded cleanup", async () => {
     const automaticFinalise = vi.fn();
     const harness = makeHarness({ automaticFinalise });
     await harness.controller.start();
@@ -408,41 +527,201 @@ describe("MicrophoneCaptureController bounded lifecycle", () => {
       settled = true;
     });
 
-    await vi.advanceTimersByTimeAsync(MAX_CAPTURE_SECONDS * 1000);
+    expect(RECORDING_DEADLINE_MS).toBe(MAX_CAPTURE_SECONDS * 1000 + 1_000);
+    await vi.advanceTimersByTimeAsync(RECORDING_DEADLINE_MS);
 
     expect(automaticFinalise).toHaveBeenCalledOnce();
+    expect(harness.worklet.portOwner.postMessage).toHaveBeenCalledOnce();
+    expect(harness.worklet.portOwner.postMessage).toHaveBeenCalledWith({
+      type: "FINALISE",
+    });
     expect(settled).toBe(false);
-    expect(harness.worklet.portOwner.postMessage).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(FINALISE_ACK_TIMEOUT_MS - 1);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
 
-    harness.worklet.portOwner.emit(
-      completeMessage(MAX_CAPTURE_FRAMES, true),
-    );
-    const outcome = await harness.controller.outcome;
-    expect(outcome.kind).toBe("CAPTURED");
+    await expect(harness.controller.outcome).resolves.toEqual({
+      kind: "FAILED",
+      reason: "CAPTURE_FAILED",
+    });
+    expect(harness.tracks[0]?.stop).toHaveBeenCalledOnce();
+    expect(harness.source.disconnect).toHaveBeenCalledOnce();
+    expect(harness.worklet.disconnect).toHaveBeenCalledOnce();
+    expect(harness.worklet.portOwner.close).toHaveBeenCalledOnce();
+    expect(harness.context.close).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("contains a throwing timer callback without changing capture semantics", async () => {
+  it("contains a throwing presentation callback after controller finalisation starts", async () => {
     const automaticFinalise = vi.fn(() => {
       throw new Error("UI callback failed");
     });
     const harness = makeHarness({ automaticFinalise });
     await harness.controller.start();
-    let settled = false;
-    void harness.controller.outcome.then(() => {
-      settled = true;
-    });
 
-    await vi.advanceTimersByTimeAsync(MAX_CAPTURE_SECONDS * 1000);
+    await vi.advanceTimersByTimeAsync(RECORDING_DEADLINE_MS);
 
     expect(automaticFinalise).toHaveBeenCalledOnce();
-    expect(settled).toBe(false);
+    expect(harness.worklet.portOwner.postMessage).toHaveBeenCalledWith({
+      type: "FINALISE",
+    });
+    harness.worklet.portOwner.emit(completeMessage(1, false));
+    await expect(harness.controller.outcome).resolves.toMatchObject({
+      kind: "CAPTURED",
+      frameCount: 1,
+    });
+  });
+
+  it("suppresses automatic finalising projection after synchronous FINALISE failure", async () => {
+    const automaticFinalise = vi.fn();
+    const harness = makeHarness({ automaticFinalise });
+    const unhandled = vi.fn();
+    window.addEventListener("unhandledrejection", unhandled);
+    await harness.controller.start();
+    const recordingDeadline = harness.setTimer.mock.calls.find(
+      ([, delayMs]) => delayMs === RECORDING_DEADLINE_MS,
+    );
+    if (!recordingDeadline) throw new Error("recording deadline was not armed");
+    const staleDeadlineCallback = recordingDeadline[0];
+    const settlement = vi.fn();
+    void harness.controller.outcome.then(settlement);
+    harness.worklet.portOwner.postMessage.mockImplementationOnce(() => {
+      throw new Error("FINALISE transport failed");
+    });
+
+    await vi.advanceTimersByTimeAsync(RECORDING_DEADLINE_MS);
+
+    expect(harness.worklet.portOwner.postMessage).toHaveBeenCalledOnce();
+    expect(harness.worklet.portOwner.postMessage).toHaveBeenCalledWith({
+      type: "FINALISE",
+    });
+    await expect(harness.controller.outcome).resolves.toEqual({
+      kind: "FAILED",
+      reason: "CAPTURE_FAILED",
+    });
+    expect(automaticFinalise).not.toHaveBeenCalled();
+    expect(settlement).toHaveBeenCalledOnce();
+    expect(harness.tracks[0]?.stop).toHaveBeenCalledOnce();
+    expect(harness.source.disconnect).toHaveBeenCalledOnce();
+    expect(harness.worklet.disconnect).toHaveBeenCalledOnce();
+    expect(harness.worklet.portOwner.close).toHaveBeenCalledOnce();
+    expect(harness.context.close).toHaveBeenCalledOnce();
+
+    staleDeadlineCallback();
+    await flushMicrotasks();
+    expect(automaticFinalise).not.toHaveBeenCalled();
+    expect(harness.worklet.portOwner.postMessage).toHaveBeenCalledOnce();
+    expect(settlement).toHaveBeenCalledOnce();
+    expect(unhandled).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+    window.removeEventListener("unhandledrejection", unhandled);
+  });
+
+  it("encodes only frames owned at the recording deadline without padding", async () => {
+    const harness = makeHarness();
+    await harness.controller.start();
+    const settlement = vi.fn();
+    void harness.controller.outcome.then(settlement);
+
+    await vi.advanceTimersByTimeAsync(RECORDING_DEADLINE_MS);
+    harness.worklet.portOwner.emit(completeMessage(3, false));
+
+    const outcome = await harness.controller.outcome;
+    expect(outcome).toMatchObject({ kind: "CAPTURED", frameCount: 3 });
+    if (outcome.kind !== "CAPTURED") throw new Error("expected captured audio");
+    expect(outcome.file.size).toBe(44 + 3 * Int16Array.BYTES_PER_ELEMENT);
+    expect(outcome.file.size).toBeLessThanOrEqual(44 + MAX_CAPTURE_FRAMES * 2);
+    expect(settlement).toHaveBeenCalledOnce();
+    expect(harness.tracks[0]?.stop).toHaveBeenCalledOnce();
+    expect(harness.source.disconnect).toHaveBeenCalledOnce();
+    expect(harness.worklet.disconnect).toHaveBeenCalledOnce();
+    expect(harness.worklet.portOwner.close).toHaveBeenCalledOnce();
+    expect(harness.context.close).toHaveBeenCalledOnce();
+
+    harness.worklet.portOwner.emit(completeMessage(4, false));
+    harness.tracks[0]?.end();
+    await flushMicrotasks();
+    expect(settlement).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("lets manual stop clear the recording deadline without duplicate finalisation", async () => {
+    const automaticFinalise = vi.fn();
+    const harness = makeHarness({ automaticFinalise });
+    await harness.controller.start();
+    const settlement = vi.fn();
+    void harness.controller.outcome.then(settlement);
+
+    const stopping = harness.controller.stop();
+    harness.worklet.portOwner.emit(completeMessage(2, false));
+    await expect(stopping).resolves.toMatchObject({
+      kind: "CAPTURED",
+      frameCount: 2,
+    });
+    await vi.advanceTimersByTimeAsync(RECORDING_DEADLINE_MS);
+
+    expect(automaticFinalise).not.toHaveBeenCalled();
+    expect(harness.worklet.portOwner.postMessage).toHaveBeenCalledTimes(1);
+    expect(settlement).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("ignores a captured recording deadline callback after manual stop", async () => {
+    const automaticFinalise = vi.fn();
+    const harness = makeHarness({ automaticFinalise });
+    await harness.controller.start();
+    const recordingDeadline = harness.setTimer.mock.calls.find(
+      ([, delayMs]) => delayMs === RECORDING_DEADLINE_MS,
+    );
+    if (!recordingDeadline) throw new Error("recording deadline was not armed");
+    const staleDeadlineCallback = recordingDeadline[0];
+    const settlement = vi.fn();
+    void harness.controller.outcome.then(settlement);
+
+    const stopping = harness.controller.stop();
+    harness.worklet.portOwner.emit(completeMessage(2, false));
+    await expect(stopping).resolves.toMatchObject({
+      kind: "CAPTURED",
+      frameCount: 2,
+    });
+
+    staleDeadlineCallback();
+    await flushMicrotasks();
+    expect(automaticFinalise).not.toHaveBeenCalled();
+    expect(harness.worklet.portOwner.postMessage).toHaveBeenCalledTimes(1);
+    expect(settlement).toHaveBeenCalledOnce();
+    expect(harness.tracks[0]?.stop).toHaveBeenCalledOnce();
+    expect(harness.source.disconnect).toHaveBeenCalledOnce();
+    expect(harness.worklet.disconnect).toHaveBeenCalledOnce();
+    expect(harness.worklet.portOwner.close).toHaveBeenCalledOnce();
+    expect(harness.context.close).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("lets exact-frame completion win once after the recording deadline", async () => {
+    const automaticFinalise = vi.fn();
+    const harness = makeHarness({ automaticFinalise });
+    await harness.controller.start();
+    const settlement = vi.fn();
+    void harness.controller.outcome.then(settlement);
+
+    await vi.advanceTimersByTimeAsync(RECORDING_DEADLINE_MS);
     harness.worklet.portOwner.emit(
       completeMessage(MAX_CAPTURE_FRAMES, true),
     );
-    await expect(harness.controller.outcome).resolves.toMatchObject({
+
+    const outcome = await harness.controller.outcome;
+    expect(outcome).toMatchObject({
       kind: "CAPTURED",
       frameCount: MAX_CAPTURE_FRAMES,
     });
+    if (outcome.kind !== "CAPTURED") throw new Error("expected captured audio");
+    expect(outcome.file.size).toBe(44 + MAX_CAPTURE_FRAMES * 2);
+    await vi.advanceTimersByTimeAsync(FINALISE_ACK_TIMEOUT_MS);
+    expect(automaticFinalise).toHaveBeenCalledOnce();
+    expect(harness.worklet.portOwner.postMessage).toHaveBeenCalledTimes(1);
+    expect(settlement).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("makes repeated stop and cancel calls idempotent", async () => {

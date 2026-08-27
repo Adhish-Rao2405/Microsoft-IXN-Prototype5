@@ -17,6 +17,8 @@ export {
 
 export const MAX_PCM16_BYTES = MAX_CAPTURE_FRAMES * Int16Array.BYTES_PER_ELEMENT;
 export const MAX_WAV_BYTES = 44 + MAX_PCM16_BYTES;
+const SETUP_DEADLINE_MS = 30_000;
+const RECORDING_DEADLINE_MS = 16_000;
 export const FINALISE_ACK_TIMEOUT_MS = 2_000;
 export const CONTEXT_CLOSE_TIMEOUT_MS = 2_000;
 
@@ -230,7 +232,8 @@ export class MicrophoneCaptureController {
   private context: AudioContext | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
   private worklet: AudioWorkletNode | null = null;
-  private durationTimer: ReturnType<typeof setTimeout> | null = null;
+  private lifecycleTimer: ReturnType<typeof setTimeout> | null = null;
+  private lifecycleDeadlineGeneration = 0;
   private finaliseTimer: ReturnType<typeof setTimeout> | null = null;
   private started = false;
   private finalising = false;
@@ -252,6 +255,15 @@ export class MicrophoneCaptureController {
   async start(): Promise<boolean> {
     if (this.started || this.terminal) return false;
     this.started = true;
+    try {
+      this.armLifecycleDeadline(SETUP_DEADLINE_MS, () => {
+        void this.settle({ kind: "FAILED", reason: "CAPTURE_FAILED" });
+      });
+    } catch {
+      await this.settle({ kind: "FAILED", reason: "CAPTURE_FAILED" });
+      return false;
+    }
+    if (this.terminal) return false;
     const mediaResult = await this.raceSetupOperation(
       () => this.dependencies.getUserMedia(),
       stopMediaStreamTracks,
@@ -332,16 +344,9 @@ export class MicrophoneCaptureController {
       this.worklet.addEventListener("processorerror", this.handleProcessorError);
       this.worklet.port.start();
       this.source.connect(this.worklet);
-      this.durationTimer = this.dependencies.setTimer(
-        () => {
-          try {
-            this.onAutomaticFinalise();
-          } catch {
-            // The wall-clock callback is presentation-only and has no
-            // authority to change capture evidence or terminal state.
-          }
-        },
-        MAX_CAPTURE_SECONDS * 1000,
+      this.armLifecycleDeadline(
+        RECORDING_DEADLINE_MS,
+        this.handleRecordingDeadline,
       );
       return true;
     } catch {
@@ -358,7 +363,7 @@ export class MicrophoneCaptureController {
     }
     if (this.finalising) return this.outcome;
     this.finalising = true;
-    this.clearDurationTimer();
+    this.clearLifecycleDeadline();
     try {
       this.armFinaliseTimeout();
       this.worklet.port.postMessage({ type: "FINALISE" });
@@ -389,6 +394,17 @@ export class MicrophoneCaptureController {
   private readonly handleProcessorError = () => {
     if (!this.terminal) {
       void this.settle({ kind: "FAILED", reason: "CAPTURE_FAILED" });
+    }
+  };
+
+  private readonly handleRecordingDeadline = () => {
+    if (this.terminal || this.finalising || this.worklet === null) return;
+    void this.stop();
+    if (this.terminal) return;
+    try {
+      this.onAutomaticFinalise();
+    } catch {
+      // Presentation failure cannot block controller-owned finalisation.
     }
   };
 
@@ -502,9 +518,38 @@ export class MicrophoneCaptureController {
     this.finaliseTimer = handle;
   }
 
-  private clearDurationTimer(): void {
-    const handle = this.durationTimer;
-    this.durationTimer = null;
+  private armLifecycleDeadline(
+    delayMs: number,
+    onDeadline: () => void,
+  ): void {
+    this.clearLifecycleDeadline();
+    const generation = this.lifecycleDeadlineGeneration;
+    const handle = this.dependencies.setTimer(() => {
+      if (
+        this.terminal ||
+        generation !== this.lifecycleDeadlineGeneration
+      ) return;
+      this.lifecycleTimer = null;
+      onDeadline();
+    }, delayMs);
+    if (
+      this.terminal ||
+      generation !== this.lifecycleDeadlineGeneration
+    ) {
+      try {
+        this.dependencies.clearTimer(handle);
+      } catch {
+        // Terminal ownership no longer depends on timer cleanup.
+      }
+      return;
+    }
+    this.lifecycleTimer = handle;
+  }
+
+  private clearLifecycleDeadline(): void {
+    this.lifecycleDeadlineGeneration += 1;
+    const handle = this.lifecycleTimer;
+    this.lifecycleTimer = null;
     if (handle === null) return;
     try {
       this.dependencies.clearTimer(handle);
@@ -525,7 +570,7 @@ export class MicrophoneCaptureController {
   }
 
   private async cleanup(): Promise<void> {
-    this.clearDurationTimer();
+    this.clearLifecycleDeadline();
     this.clearFinaliseTimer();
 
     const stream = this.stream;
