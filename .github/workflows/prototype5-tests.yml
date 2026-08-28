@@ -6,6 +6,11 @@ name: Prototype 5 qualification
     branches:
       - master
   workflow_dispatch:
+    inputs:
+      expected_parent_sha:
+        description: Exact expected immediate parent SHA for release qualification
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -37,41 +42,64 @@ jobs:
       - name: Verify exact checkout and predecessor lineage
         shell: pwsh
         env:
+          EVENT_NAME: ${{ github.event_name }}
           EXPECTED_TRIGGER_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-          EXPECTED_PARENT_SHA: f8d8894e2c6fd7d1076da02ecef3018b04a5f9fa
+          EXPECTED_PARENT_SHA: ${{ inputs.expected_parent_sha || '' }}
+          PREDECESSOR_SHA: f0967b746afa2e027b4fe7eb524138473cb6db8b
         run: |
           $actualHead = (git rev-parse HEAD).Trim()
           if ($LASTEXITCODE -ne 0) {
             throw "Unable to resolve CI HEAD."
           }
 
-          Write-Output "actual_ci_head=$actualHead"
-          Write-Output "expected_trigger_sha=$env:EXPECTED_TRIGGER_SHA"
-          Write-Output "expected_parent_sha=$env:EXPECTED_PARENT_SHA"
+          Write-Output "ACTUAL_CI_HEAD=$actualHead"
+          Write-Output "EXPECTED_TRIGGER_SHA=$env:EXPECTED_TRIGGER_SHA"
 
           if ($actualHead -cne $env:EXPECTED_TRIGGER_SHA) {
             throw "CI checked out $actualHead instead of triggering SHA $env:EXPECTED_TRIGGER_SHA."
           }
 
-          git cat-file -e "$($env:EXPECTED_PARENT_SHA)^{commit}"
-          if ($LASTEXITCODE -ne 0) {
-            throw "Expected parent commit is unavailable: $env:EXPECTED_PARENT_SHA"
-          }
+          if ($env:EVENT_NAME -ceq "workflow_dispatch") {
+            if ($env:EXPECTED_PARENT_SHA -cnotmatch '\A[0-9A-Fa-f]{40}\z') {
+              throw "expected_parent_sha must be exactly 40 hexadecimal characters."
+            }
 
-          $parentLine = (git rev-list --parents -n 1 HEAD).Trim()
-          if ($LASTEXITCODE -ne 0) {
-            throw "Unable to resolve CI HEAD parentage."
-          }
+            $expectedParent = $env:EXPECTED_PARENT_SHA.ToLowerInvariant()
+            Write-Output "EXPECTED_PARENT_SHA=$expectedParent"
 
-          $parentParts = @($parentLine -split '\s+')
-          if ($parentParts.Count -ne 2) {
-            throw "CI HEAD must have exactly one parent; observed parent line: $parentLine"
-          }
+            git cat-file -e "$expectedParent^{commit}"
+            if ($LASTEXITCODE -ne 0) {
+              throw "Expected parent commit is unavailable: $expectedParent"
+            }
 
-          $actualParent = $parentParts[1]
-          Write-Output "actual_parent_sha=$actualParent"
-          if ($actualParent -cne $env:EXPECTED_PARENT_SHA) {
-            throw "CI HEAD parent $actualParent does not equal expected parent $env:EXPECTED_PARENT_SHA."
+            $parentLine = (git rev-list --parents -n 1 HEAD).Trim()
+            if ($LASTEXITCODE -ne 0) {
+              throw "Unable to resolve CI HEAD parentage."
+            }
+
+            $parentParts = @($parentLine -split '\s+')
+            if ($parentParts.Count -ne 2) {
+              throw "CI HEAD must have exactly one parent; observed parent line: $parentLine"
+            }
+
+            $actualParent = $parentParts[1]
+            Write-Output "ACTUAL_PARENT_SHA=$actualParent"
+            if ($actualParent -cne $expectedParent) {
+              throw "CI HEAD parent $actualParent does not equal expected parent $expectedParent."
+            }
+          }
+          else {
+            Write-Output "PREDECESSOR_SHA=$env:PREDECESSOR_SHA"
+
+            git cat-file -e "$($env:PREDECESSOR_SHA)^{commit}"
+            if ($LASTEXITCODE -ne 0) {
+              throw "Frozen predecessor commit is unavailable: $env:PREDECESSOR_SHA"
+            }
+
+            git merge-base --is-ancestor $env:PREDECESSOR_SHA $actualHead
+            if ($LASTEXITCODE -ne 0) {
+              throw "Frozen predecessor $env:PREDECESSOR_SHA is not an ancestor of $actualHead."
+            }
           }
 
       - name: Set up Python 3.12.10
