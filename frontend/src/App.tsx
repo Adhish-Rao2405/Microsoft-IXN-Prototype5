@@ -52,6 +52,7 @@ import {
   type ReplayClientFailure,
   type ReplayMutationContext,
   type ReplayReadContext,
+  type SpeechSessionState,
   type TranscriptionContext,
   type TranscriptionFailure,
 } from "./demoState";
@@ -73,6 +74,7 @@ import {
 } from "./authorityPresentation";
 import type {
   AvailabilityStatus,
+  DemoManifest,
   DemoScenario,
   InferenceMode,
   RecordedTranscription,
@@ -96,7 +98,31 @@ function availabilityLabel(status: AvailabilityStatus | undefined): string {
   return "Not assessed";
 }
 
-function statusTone(status: string): "success" | "danger" | "warning" | "informative" | "subtle" {
+function cloudStatusLabel(status: AvailabilityStatus | undefined): string {
+  if (status === "AVAILABLE") return "Configured";
+  if (status === "UNAVAILABLE") return "Not configured";
+  return "Not checked";
+}
+
+function speechSessionLabel(state: SpeechSessionState): string {
+  if (state === "COMPLETED") return "Completed this session";
+  if (state === "INCOMPLETE") return "Incomplete this session";
+  if (state === "UNAVAILABLE") return "Speech backend unavailable this session";
+  if (state === "FAILED") return "Failed this session";
+  if (state === "TIMED_OUT") return "Timed out this session";
+  return "Not checked this session";
+}
+
+type StatusTone = "success" | "danger" | "warning" | "informative" | "subtle";
+
+function speechSessionTone(state: SpeechSessionState): StatusTone {
+  if (state === "COMPLETED") return "success";
+  if (state === "INCOMPLETE" || state === "TIMED_OUT") return "warning";
+  if (state === "UNAVAILABLE" || state === "FAILED") return "danger";
+  return "subtle";
+}
+
+function statusTone(status: string): StatusTone {
   if (status === "PASSED" || status === "VALID" || status === "ACCEPT" || status === "AVAILABLE" || status === "ELIGIBLE") {
     return "success";
   }
@@ -336,6 +362,10 @@ function isReplayScenario(scenario: DemoScenario | null): boolean {
     scenario.qualification_replay_access === "SERVER_REGISTERED_ONLY";
 }
 
+function hasRegisteredReplayCapability(manifest: DemoManifest | null): boolean {
+  return manifest?.scenarios.some(isReplayScenario) ?? false;
+}
+
 interface ReplayPanelProps {
   readonly projection: ReplayStateProjection | null;
   readonly clientKind: "INACTIVE" | "RECONCILING" | "READY" | "MUTATING" | "ERROR" | "FATAL";
@@ -532,6 +562,7 @@ export function App() {
     ? state.bootstrap.manifest
     : null;
   const status = state.bootstrap.kind === "READY" ? state.bootstrap.status : null;
+  const replayCapabilityImplemented = hasRegisteredReplayCapability(manifest);
   const statusError = state.bootstrap.kind === "FAILED"
     ? failureMessage(state.bootstrap.failure)
     : null;
@@ -1169,22 +1200,25 @@ export function App() {
         </div>
       </header>
 
-      <section className="status-strip" aria-label="Runtime status">
+      <section
+        className="status-strip"
+        aria-label="System capability and runtime status"
+      >
         <div
           className="visually-hidden"
           role="status"
           aria-live="polite"
           aria-atomic="true"
-          aria-label="Runtime status update"
+          aria-label="System capability and runtime status update"
         >
           {statusError ? (
-            `Runtime status unavailable: ${statusError}`
+            `System capability and runtime status unavailable: ${statusError}`
           ) : (
             <>
-              Runtime status: Local {availabilityLabel(status?.local_status)}; Cloud{" "}
-              {availabilityLabel(status?.cloud_status)}; Speech{" "}
-              {availabilityLabel(status?.speech_status)}; Simulator{" "}
-              {availabilityLabel(status?.simulator_status)}.
+              System capability and runtime status: Local {availabilityLabel(status?.local_status)}; Cloud{" "}
+              {cloudStatusLabel(status?.cloud_status)}; Speech{" "}
+              {speechSessionLabel(state.speechSessionState)}; Evidence replay{" "}
+              {replayCapabilityImplemented ? "Implemented" : "Not registered"}; Physical execution Not implemented.
             </>
           )}
         </div>
@@ -1195,21 +1229,28 @@ export function App() {
           icon={<Desktop24Regular aria-hidden="true" />}
           label="Local"
           status={status?.local_status}
+          semanticKind="runtime"
         />
         <RuntimeStatus
           icon={<Cloud24Regular aria-hidden="true" />}
           label="Cloud"
           status={status?.cloud_status}
+          displayLabel={cloudStatusLabel(status?.cloud_status)}
+          semanticKind="configuration"
         />
         <RuntimeStatus
           icon={<Mic24Regular aria-hidden="true" />}
           label="Speech"
-          status={status?.speech_status}
+          tone={speechSessionTone(state.speechSessionState)}
+          displayLabel={speechSessionLabel(state.speechSessionState)}
+          semanticKind="session"
         />
         <RuntimeStatus
           icon={<Bot24Regular aria-hidden="true" />}
-          label="Simulator"
-          status={status?.simulator_status}
+          label="Evidence replay"
+          tone={replayCapabilityImplemented ? "informative" : "subtle"}
+          displayLabel={replayCapabilityImplemented ? "Implemented" : "Not registered"}
+          semanticKind="capability"
         />
         {statusError && (
           <div className="status-error">
@@ -1706,17 +1747,23 @@ function RuntimeStatus({
   icon,
   label,
   status,
+  tone,
+  displayLabel,
+  semanticKind,
 }: {
   icon: ReactNode;
   label: string;
   status?: AvailabilityStatus;
+  tone?: StatusTone;
+  displayLabel?: string;
+  semanticKind: "runtime" | "configuration" | "session" | "capability";
 }) {
   return (
-    <div className="runtime-status">
+    <div className="runtime-status" data-status-kind={semanticKind}>
       {icon}
       <span>{label}</span>
-      <Badge appearance="tint" color={statusTone(status ?? "NOT_ASSESSED")}>
-        {availabilityLabel(status)}
+      <Badge appearance="tint" color={tone ?? statusTone(status ?? "NOT_ASSESSED")}>
+        {displayLabel ?? availabilityLabel(status)}
       </Badge>
     </div>
   );

@@ -117,6 +117,26 @@ function readyTranscriptionState(): DemoState {
 }
 
 describe("demoReducer operation ownership", () => {
+  it.each(["AVAILABLE", "UNAVAILABLE"] as const)(
+    "does not import process-level %s speech status into the client session",
+    (speechStatus) => {
+      const bootstrapping = demoReducer(initialDemoState, {
+        type: "BOOTSTRAP_STARTED",
+        operationId: 1,
+      });
+      const ready = demoReducer(bootstrapping, {
+        type: "BOOTSTRAP_SUCCEEDED",
+        operationId: 1,
+        manifest: {} as DemoManifest,
+        status: { speech_status: speechStatus } as DemoStatus,
+        initialScenarioId: "scenario-a",
+        initialMode: "AUTO",
+      });
+
+      expect(ready.speechSessionState).toBe("NOT_CHECKED");
+    },
+  );
+
   it("rejects governance start before bootstrap readiness", () => {
     const base = {
       ...stateForScenario(),
@@ -353,6 +373,8 @@ describe("demoReducer operation ownership", () => {
       context: transcriptionContext(4),
     });
 
+    expect(active.speechSessionState).toBe("NOT_CHECKED");
+
     expect(
       demoReducer(active, {
         type: "TRANSCRIPTION_SUCCEEDED",
@@ -367,6 +389,123 @@ describe("demoReducer operation ownership", () => {
         failure: transcriptionFailure,
       }),
     ).toBe(active);
+    expect(active.speechSessionState).toBe("NOT_CHECKED");
+  });
+
+  it("updates speech presentation only from the owned completed operation", () => {
+    const active = demoReducer(stateForScenario(), {
+      type: "TRANSCRIPTION_STARTED",
+      context: transcriptionContext(4),
+    });
+    const succeeded = demoReducer(active, {
+      type: "TRANSCRIPTION_SUCCEEDED",
+      operationId: 4,
+      transcription,
+    });
+
+    expect(succeeded.speechSessionState).toBe("COMPLETED");
+
+    const discarded = demoReducer(succeeded, { type: "DISCARD_TRANSCRIPT" });
+    const nextActive = demoReducer(discarded, {
+      type: "TRANSCRIPTION_STARTED",
+      context: {
+        ...transcriptionContext(5),
+        commandRevision: discarded.controls.commandRevision,
+      },
+    });
+    const failed = demoReducer(nextActive, {
+      type: "TRANSCRIPTION_FAILED",
+      operationId: 5,
+      failure: {
+        reason: "TRANSCRIPTION_PARTIAL",
+        serverCode: "TRANSCRIPTION_PARTIAL",
+      },
+    });
+
+    expect(failed.speechSessionState).toBe("INCOMPLETE");
+    const newerActive = demoReducer(failed, {
+      type: "TRANSCRIPTION_STARTED",
+      context: {
+        ...transcriptionContext(6),
+        commandRevision: failed.controls.commandRevision,
+      },
+    });
+    expect(
+      demoReducer(newerActive, {
+        type: "TRANSCRIPTION_SUCCEEDED",
+        operationId: 5,
+        transcription,
+      }),
+    ).toBe(newerActive);
+    expect(
+      demoReducer(newerActive, {
+        type: "TRANSCRIPTION_FAILED",
+        operationId: 5,
+        failure: {
+          reason: "TRANSCRIPTION_TIMEOUT",
+          serverCode: "TRANSCRIPTION_TIMEOUT",
+        },
+      }),
+    ).toBe(newerActive);
+  });
+
+  it.each([
+    ["TRANSCRIPTION_EMPTY", "COMPLETED"],
+    ["TRANSCRIPTION_PARTIAL", "INCOMPLETE"],
+    ["SPEECH_BACKEND_UNAVAILABLE", "UNAVAILABLE"],
+    ["TRANSCRIPTION_TIMEOUT", "TIMED_OUT"],
+    ["TRANSCRIPTION_FAILED", "FAILED"],
+  ] as const)("maps owned %s settlement to %s", (reason, expected) => {
+    const active = demoReducer(stateForScenario(), {
+      type: "TRANSCRIPTION_STARTED",
+      context: transcriptionContext(4),
+    });
+    const settled = demoReducer(active, {
+      type: "TRANSCRIPTION_FAILED",
+      operationId: 4,
+      failure: { reason, serverCode: reason },
+    });
+
+    expect(settled.speechSessionState).toBe(expected);
+  });
+
+  it.each([
+    "PERMISSION_DENIED",
+    "DEVICE_UNAVAILABLE",
+    "CAPTURE_SAMPLE_RATE_UNSUPPORTED",
+    "DEVICE_LOST",
+    "CAPTURE_EMPTY",
+    "CAPTURE_TOO_LONG",
+    "CAPTURE_FAILED",
+    "ENCODING_FAILED",
+    "SPEECH_BUSY",
+    "TRANSCRIPTION_INVALID_RESPONSE",
+    "TRANSCRIPTION_NETWORK_FAILURE",
+  ] as const)("does not fabricate backend state for %s", (reason) => {
+    const active = demoReducer(stateForScenario(), {
+      type: "TRANSCRIPTION_STARTED",
+      context: transcriptionContext(4),
+    });
+    const settled = demoReducer(active, {
+      type: "TRANSCRIPTION_FAILED",
+      operationId: 4,
+      failure: { reason, serverCode: null },
+    });
+
+    expect(settled.speechSessionState).toBe("NOT_CHECKED");
+  });
+
+  it("does not create a backend-health claim when client capture is cancelled", () => {
+    const active = demoReducer(stateForScenario(), {
+      type: "TRANSCRIPTION_STARTED",
+      context: transcriptionContext(4),
+    });
+    const cancelled = demoReducer(active, {
+      type: "TRANSCRIPTION_CANCELLED",
+      operationId: 4,
+    });
+
+    expect(cancelled.speechSessionState).toBe("NOT_CHECKED");
   });
 
   it("command editing invalidates active transcription and preserves the edit", () => {

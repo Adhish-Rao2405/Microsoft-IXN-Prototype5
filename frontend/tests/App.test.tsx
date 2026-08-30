@@ -637,27 +637,35 @@ describe("Prototype 5 typed UI", () => {
     expect(
       screen.getByText("Passing layer N does not establish layer N+1."),
     ).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText("Available")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Configured")).toBeInTheDocument());
   });
 
   it("announces bounded runtime status updates without focusing the hidden file input", async () => {
     renderApp();
 
     const statusUpdate = screen.getByRole("status", {
-      name: "Runtime status update",
+      name: "System capability and runtime status update",
     });
     expect(statusUpdate).toHaveAttribute("aria-live", "polite");
     expect(statusUpdate).toHaveAttribute("aria-atomic", "true");
 
     await waitUntilReady();
     expect(statusUpdate).toHaveTextContent("Local Not assessed");
-    expect(statusUpdate).toHaveTextContent("Cloud Available");
+    expect(statusUpdate).toHaveTextContent("Cloud Configured");
+    expect(statusUpdate).toHaveTextContent("Speech Not checked this session");
+    expect(statusUpdate).toHaveTextContent("Evidence replay Implemented");
+    expect(statusUpdate).toHaveTextContent("Physical execution Not implemented");
     const runtimeStatusRegion = screen.getByRole("region", {
-      name: "Runtime status",
+      name: "System capability and runtime status",
     });
     expect(
       runtimeStatusRegion.querySelectorAll('[role="status"]'),
     ).toHaveLength(1);
+    const replayStatus = within(runtimeStatusRegion)
+      .getByText("Evidence replay")
+      .closest(".runtime-status");
+    expect(replayStatus).toHaveAttribute("data-status-kind", "capability");
+    expect(within(replayStatus as HTMLElement).queryByText("Available")).toBeNull();
 
     expect(screen.getByLabelText("Recorded WAV file")).toHaveAttribute(
       "tabindex",
@@ -666,6 +674,72 @@ describe("Prototype 5 typed UI", () => {
     expect(
       screen.getByRole("button", { name: "Upload WAV recording" }),
     ).toBeEnabled();
+  });
+
+  it.each(["AVAILABLE", "UNAVAILABLE"] as const)(
+    "does not treat bootstrap speech status %s as a client-session outcome",
+    async (speechStatus) => {
+      const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/api/v1/demo/manifest")) return jsonResponse(manifest);
+        if (url.includes("/api/v1/status")) {
+          return jsonResponse({ ...status, speech_status: speechStatus });
+        }
+        throw new Error("UNEXPECTED_REQUEST");
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      renderApp();
+
+      await waitUntilReady();
+      const statusRegion = screen.getByRole("region", {
+        name: "System capability and runtime status",
+      });
+      expect(within(statusRegion).getByText("Not checked this session")).toBeVisible();
+      expect(within(statusRegion).queryByText("Completed this session")).toBeNull();
+      expect(within(statusRegion).queryByText("Unavailable this session")).toBeNull();
+      expect(
+        within(statusRegion).queryByText("Speech backend unavailable this session"),
+      ).toBeNull();
+    },
+  );
+
+  it("presents missing cloud configuration without claiming provider health", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) return jsonResponse(manifest);
+      if (url.includes("/api/v1/status")) {
+        return jsonResponse({ ...status, cloud_status: "UNAVAILABLE" });
+      }
+      throw new Error("UNEXPECTED_REQUEST");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    renderApp();
+
+    await waitUntilReady();
+    const runtimeStatusRegion = screen.getByRole("region", {
+      name: "System capability and runtime status",
+    });
+    expect(within(runtimeStatusRegion).getByText("Not configured")).toBeVisible();
+    expect(within(runtimeStatusRegion).queryByText("Unavailable")).toBeNull();
+  });
+
+  it("presents an unchecked cloud configuration without claiming availability", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/v1/demo/manifest")) return jsonResponse(manifest);
+      if (url.includes("/api/v1/status")) {
+        return jsonResponse({ ...status, cloud_status: "NOT_ASSESSED" });
+      }
+      throw new Error("UNEXPECTED_REQUEST");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    renderApp();
+
+    await waitUntilReady();
+    const runtimeStatusRegion = screen.getByRole("region", {
+      name: "System capability and runtime status",
+    });
+    expect(within(runtimeStatusRegion).getByText("Not checked")).toBeVisible();
   });
 
   it("disables and rejects recorded speech before bootstrap completes", async () => {
@@ -919,6 +993,12 @@ describe("Prototype 5 typed UI", () => {
     const reviewCommand = await screen.findByRole("textbox", {
       name: "Operator review command",
     });
+    const runtimeStatusRegion = screen.getByRole("region", {
+      name: "System capability and runtime status",
+    });
+    expect(
+      within(runtimeStatusRegion).getByText("Completed this session"),
+    ).toBeVisible();
     expect(screen.getByText("RAW ASR TRANSCRIPT — UNTRUSTED")).toBeInTheDocument();
     expect(reviewCommand).toHaveValue("Move the blue component.");
     expect(screen.getByText("Move the blue component.", { selector: "blockquote" })).toBeInTheDocument();
@@ -967,22 +1047,45 @@ describe("Prototype 5 typed UI", () => {
       transcriptText: "Move the blue component",
       errorCode: "TRANSCRIPTION_PARTIAL",
       expectedFailure: "TRANSCRIPTION_PARTIAL",
+      expectedSessionLabel: "Incomplete this session",
     },
     {
       status: "EMPTY",
       transcriptText: null,
       errorCode: "TRANSCRIPT_EMPTY",
       expectedFailure: "TRANSCRIPTION_EMPTY (TRANSCRIPT_EMPTY)",
+      expectedSessionLabel: "Completed this session",
     },
     {
       status: "BACKEND_UNAVAILABLE",
       transcriptText: null,
       errorCode: "NEMOTRON_MODEL_NOT_CACHED",
       expectedFailure: "SPEECH_BACKEND_UNAVAILABLE (NEMOTRON_MODEL_NOT_CACHED)",
+      expectedSessionLabel: "Speech backend unavailable this session",
+    },
+    {
+      status: "FAILED",
+      transcriptText: null,
+      errorCode: "TRANSCRIPTION_TIMEOUT",
+      expectedFailure: "TRANSCRIPTION_TIMEOUT",
+      expectedSessionLabel: "Timed out this session",
+    },
+    {
+      status: "FAILED",
+      transcriptText: null,
+      errorCode: "NEMOTRON_TRANSCRIPTION_FAILED",
+      expectedFailure: "TRANSCRIPTION_FAILED (NEMOTRON_TRANSCRIPTION_FAILED)",
+      expectedSessionLabel: "Failed this session",
     },
   ] as const)(
     "keeps $status speech results outside the operator review boundary",
-    async ({ status: transcriptStatus, transcriptText, errorCode, expectedFailure }) => {
+    async ({
+      status: transcriptStatus,
+      transcriptText,
+      errorCode,
+      expectedFailure,
+      expectedSessionLabel,
+    }) => {
       const nonReady = {
         ...transcription,
         transcript_status: transcriptStatus,
@@ -1011,6 +1114,13 @@ describe("Prototype 5 typed UI", () => {
       await waitFor(() =>
         expect(screen.getByRole("alert")).toHaveTextContent(expectedFailure),
       );
+      const statusRegion = screen.getByRole("region", {
+        name: "System capability and runtime status",
+      });
+      expect(within(statusRegion).getByText(expectedSessionLabel)).toBeVisible();
+      if (transcriptStatus === "PARTIAL") {
+        expect(within(statusRegion).queryByText("Unavailable this session")).toBeNull();
+      }
       expect(screen.queryByText("RAW ASR TRANSCRIPT — UNTRUSTED")).not.toBeInTheDocument();
       expect(
         screen.queryByRole("textbox", { name: "Operator review command" }),
@@ -1494,12 +1604,12 @@ describe("Prototype 5 typed UI", () => {
       await vi.advanceTimersByTimeAsync(BOOTSTRAP_CLIENT_DEADLINE_MS);
     });
     const runtimeStatusRegion = screen.getByRole("region", {
-      name: "Runtime status",
+      name: "System capability and runtime status",
     });
     const statusUpdate = screen.getByRole("status", {
-      name: "Runtime status update",
+      name: "System capability and runtime status update",
     });
-    expect(statusUpdate).toHaveTextContent("Runtime status unavailable:");
+    expect(statusUpdate).toHaveTextContent("System capability and runtime status unavailable:");
     const visibleStatusError = screen.getByText(
       "Status unavailable: CLIENT_TIMEOUT",
     );

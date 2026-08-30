@@ -73,6 +73,14 @@ export interface TranscriptionFailure {
   readonly serverCode: string | null;
 }
 
+export type SpeechSessionState =
+  | "NOT_CHECKED"
+  | "COMPLETED"
+  | "INCOMPLETE"
+  | "UNAVAILABLE"
+  | "FAILED"
+  | "TIMED_OUT";
+
 export type TranscriptionState =
   | { kind: "NONE" }
   | { kind: "REQUESTING_PERMISSION"; context: TranscriptionContext }
@@ -129,6 +137,7 @@ export interface ReplayClientState {
 
 export interface DemoState {
   readonly bootstrap: BootstrapState;
+  readonly speechSessionState: SpeechSessionState;
   readonly controls: {
     readonly scenarioId: string;
     readonly inferenceMode: InferenceMode;
@@ -198,6 +207,7 @@ export type DemoAction =
 
 export const initialDemoState: DemoState = {
   bootstrap: { kind: "BOOTSTRAPPING", operationId: 0 },
+  speechSessionState: "NOT_CHECKED",
   controls: {
     scenarioId: "",
     inferenceMode: "AUTO",
@@ -231,6 +241,18 @@ function isActiveTranscription(
     transcription.kind === "CAPTURING" ||
     transcription.kind === "FINALISING" ||
     transcription.kind === "TRANSCRIBING";
+}
+
+function speechSessionStateAfterFailure(
+  current: SpeechSessionState,
+  failure: TranscriptionFailure,
+): SpeechSessionState {
+  if (failure.reason === "TRANSCRIPTION_EMPTY") return "COMPLETED";
+  if (failure.reason === "TRANSCRIPTION_PARTIAL") return "INCOMPLETE";
+  if (failure.reason === "SPEECH_BACKEND_UNAVAILABLE") return "UNAVAILABLE";
+  if (failure.reason === "TRANSCRIPTION_TIMEOUT") return "TIMED_OUT";
+  if (failure.reason === "TRANSCRIPTION_FAILED") return "FAILED";
+  return current;
 }
 
 function replayAnnouncement(projection: ReplayStateProjection): string {
@@ -489,6 +511,7 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       }
       return {
         ...state,
+        speechSessionState: "COMPLETED",
         controls: {
           ...state.controls,
           command: action.transcription.transcript_text ?? "",
@@ -505,12 +528,18 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
     case "TRANSCRIPTION_FAILED":
       if (
         !isActiveTranscription(state.transcription) ||
-        state.transcription.context.operationId !== action.operationId
+        state.transcription.context.operationId !== action.operationId ||
+        state.transcription.context.scenarioId !== state.controls.scenarioId ||
+        state.transcription.context.commandRevision !== state.controls.commandRevision
       ) {
         return state;
       }
       return {
         ...state,
+        speechSessionState: speechSessionStateAfterFailure(
+          state.speechSessionState,
+          action.failure,
+        ),
         transcription: {
           kind: "FAILED",
           context: state.transcription.context,
