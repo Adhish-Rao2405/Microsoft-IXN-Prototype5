@@ -1,0 +1,98 @@
+[
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\figures\\source\\fig01_hero.svg",
+    "sha256": "A004471A2D876C1B6F6DAF396CCAA1F04BFBEA4C73F8D7551D197ADBDE6B6E78"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\figures\\blog\\fig01_hero.png",
+    "sha256": "A99631ADF6E6574EF25E81D82DE0FD29D06FAB9121E558CCBAAB6273FA1B8305"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\figures\\overleaf\\fig01_hero.pdf",
+    "sha256": "2F3C7991380DAD5790F57DFF3548C8162D9429BCCDC6B8DC468316C762923212"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\overleaf\\figures\\fig01_hero.pdf",
+    "sha256": "2F3C7991380DAD5790F57DFF3548C8162D9429BCCDC6B8DC468316C762923212"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\figures\\source\\fig02_foundry_local_stack.svg",
+    "sha256": "52BFED0B799607FD3CEC8E489B9B2D2EC21CAA350FD60057C366922202632FCB"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\figures\\blog\\fig02_foundry_local_stack.png",
+    "sha256": "56D91FC2B795DB35B4B3A05153425CA7C48EE6D2BCD0ABA5ED89EEE3E35F314B"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\figures\\overleaf\\fig02_foundry_local_stack.pdf",
+    "sha256": "B3C8463505F01E514FC0FF504F8B68B67B0C421FEBA0E6C48DAECA4DF0532F98"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\overleaf\\figures\\fig02_foundry_local_stack.pdf",
+    "sha256": "B3C8463505F01E514FC0FF504F8B68B67B0C421FEBA0E6C48DAECA4DF0532F98"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\figures\\source\\fig04_zero_trust_architecture.svg",
+    "sha256": "2B625D45E9DF1EDAB41ED226E97880CE34F3DE08F54DA9611EF205EBA8E92128"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\figures\\blog\\fig04_zero_trust_architecture.png",
+    "sha256": "424FBBF5BCDFC458816E1C90308E757B2D683DCE3A971B24716CC87F563563CF"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\figures\\overleaf\\fig04_zero_trust_architecture.pdf",
+    "sha256": "643DCF2E1F28A8340E9EB84E38F034A35F31C39A2696E569CD5BF762AF495D83"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\overleaf\\figures\\fig04_zero_trust_architecture.pdf",
+    "sha256": "643DCF2E1F28A8340E9EB84E38F034A35F31C39A2696E569CD5BF762AF495D83"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\figures\\source\\fig05_validity_funnel.svg",
+    "sha256": "048C90DD92B8945476B52B11AC835CA582E756B18CD92E180674F5C810BBCC69"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\figures\\blog\\fig05_validity_funnel.png",
+    "sha256": "8CD52A0DEE09CDCC36CFBBD25436CB749E796FE891DF7FB28AF6E19AC39B0FBA"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\figures\\overleaf\\fig05_validity_funnel.pdf",
+    "sha256": "0D20F86BB1D0B3FD71B3D4388F6D6BC88E3896001DC468346E1B91C2A9F56395"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\overleaf\\figures\\fig05_validity_funnel.pdf",
+    "sha256": "0D20F86BB1D0B3FD71B3D4388F6D6BC88E3896001DC468346E1B91C2A9F56395"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\figures\\source\\fig08_p4_admission_rules.svg",
+    "sha256": "9B25011205B527E50B8D965F0CE09A77573B8CB53DA8F7EA00963CCA29802DDE"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\figures\\blog\\fig08_p4_admission_rules.png",
+    "sha256": "02AF833972040C183EF9023A57C3774B72344FC6FE29A68BE225172A86BA41D4"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\figures\\overleaf\\fig08_p4_admission_rules.pdf",
+    "sha256": "4C981AD3AB90FFD68BCB84B184AF703E4CDD5C0D4BA25114FFB3475A7B8EACEE"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\overleaf\\figures\\fig08_p4_admission_rules.pdf",
+    "sha256": "4C981AD3AB90FFD68BCB84B184AF703E4CDD5C0D4BA25114FFB3475A7B8EACEE"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\figures\\source\\fig07_voice_boundary.svg",
+    "sha256": "442B27B243D2BB00BD0118EB6D0D90F9F913DB792145658966456E4A192A718A"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\figures\\blog\\fig07_voice_boundary.png",
+    "sha256": "CB7FFE335AA8F93883CAE191EE6B5554837376CBAE20C1EBF39B81BC903B4AE9"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\figures\\overleaf\\fig07_voice_boundary.pdf",
+    "sha256": "0E61D82D3FAA902A75454FF3A5D1AB9A061C1742402BF4CB7D311F90EF732033"
+  },
+  {
+    "path": "C:\\Users\\reach\\Microsoft-IXN-Prototype5-integrated-demo\\docs\\microsoft_blog\\overleaf\\figures\\fig07_voice_boundary.pdf",
+    "sha256": "0E61D82D3FAA902A75454FF3A5D1AB9A061C1742402BF4CB7D311F90EF732033"
+  }
+]

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="2746" viewBox="0 0 780 1190" role="img" aria-labelledby="title desc">
+<title id="title">Runtime and governance ownership</title><desc id="desc">The local application calls Microsoft Foundry Local. Microsoft runtime responsibilities are model lifecycle, local cache, inference interface and hardware-aware execution. CPU, GPU and NPU are architecture targets, not benchmark coverage. Project-owned deterministic governance separately controls progression.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M1 1 L9 5 L1 9Z" fill="#605E5C"/></marker></defs>
+<rect width="780" height="1190" fill="white"/>
+<text x="40" y="62.0" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="700" fill="#242424" text-anchor="start">Local inference changes</text>
+<text x="40" y="117.44" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="700" fill="#242424" text-anchor="start">deployment, not trust</text>
+<rect x="100" y="165" width="580" height="90" rx="8" fill="white" stroke="#8A8886" stroke-width="2"/>
+<text x="390" y="220.0" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="600" fill="#242424" text-anchor="middle">Local application</text>
+<path id="application-to-runtime" d="M390 255 V300" fill="none" stroke="#605E5C" stroke-width="2.5" marker-end="url(#arrow)"/>
+<rect x="40" y="310" width="700" height="390" rx="8" fill="#EFF6FC" stroke="#0078D4" stroke-width="2"/>
+<text x="65" y="356.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#005A9E" text-anchor="start">MICROSOFT RUNTIME</text>
+<text x="65" y="409.0" font-family="Segoe UI, Arial, sans-serif" font-size="40" font-weight="700" fill="#242424" text-anchor="start">Microsoft Foundry Local</text>
+<rect x="65" y="443" width="315" height="100" rx="8" fill="white" stroke="#8AAFD1" stroke-width="2"/>
+<text x="83" y="483.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="500" fill="#242424" text-anchor="start">Model acquisition</text>
+<text x="83" y="519.96" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="500" fill="#242424" text-anchor="start">and lifecycle</text>
+<rect x="400" y="443" width="315" height="100" rx="8" fill="white" stroke="#8AAFD1" stroke-width="2"/>
+<text x="418" y="483.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="500" fill="#242424" text-anchor="start">Local model cache</text>
+<text x="418" y="519.96" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="500" fill="#242424" text-anchor="start">On-device assets</text>
+<rect x="65" y="561" width="315" height="100" rx="8" fill="white" stroke="#8AAFD1" stroke-width="2"/>
+<text x="83" y="601.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="500" fill="#242424" text-anchor="start">Inference interface</text>
+<text x="83" y="637.96" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="500" fill="#242424" text-anchor="start">Application calls</text>
+<rect x="400" y="561" width="315" height="100" rx="8" fill="white" stroke="#8AAFD1" stroke-width="2"/>
+<text x="418" y="601.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="500" fill="#242424" text-anchor="start">Hardware-aware</text>
+<text x="418" y="637.96" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="500" fill="#242424" text-anchor="start">execution</text>
+<path id="runtime-to-hardware" d="M390 700 V744" fill="none" stroke="#605E5C" stroke-width="2.5" marker-end="url(#arrow)"/>
+<text x="390" y="784.0" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="600" fill="#242424" text-anchor="middle">CPU  /  GPU  /  NPU</text>
+<text x="390" y="830.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="400" fill="#605E5C" text-anchor="middle">Architecture targets;</text>
+<text x="390" y="866.96" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="400" fill="#605E5C" text-anchor="middle">not benchmark coverage.</text>
+<line x1="40" y1="904" x2="740" y2="904" stroke="#8A6D00" stroke-width="2" stroke-dasharray="10 7"/>
+<text x="390" y="950.0" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="600" fill="#8A6D00" text-anchor="middle">LOCAL INFERENCE ≠ TRUSTED OUTPUT</text>
+<rect x="40" y="991" width="700" height="155" rx="8" fill="white" stroke="#242424" stroke-width="2"/>
+<text x="65" y="1034.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#242424" text-anchor="start">PROJECT-OWNED</text>
+<text x="65" y="1080.0" font-family="Segoe UI, Arial, sans-serif" font-size="38" font-weight="600" fill="#242424" text-anchor="start">Deterministic governance</text>
+<text x="65" y="1121.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="400" fill="#242424" text-anchor="start">Separately controls proposal progression</text>
+</svg>

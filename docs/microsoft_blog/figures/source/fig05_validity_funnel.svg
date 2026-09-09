@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="2354" viewBox="0 0 780 1020" role="img" aria-labelledby="title desc">
+<title id="title">Schema validity and execution eligibility</title><desc id="desc">Selected Qwen2.5-Coder-0.5B P3 run: 30 responses, 25 of 30 schema-valid, and 4 of 30 execution-eligible. A separate benchmark classification recorded 12 model-level false accepts in the same run; it is not a fourth funnel stage or a physical-incident count.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M1 1 L9 5 L1 9Z" fill="#605E5C"/></marker></defs>
+<rect width="780" height="1020" fill="white"/>
+<text x="40" y="62.0" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="700" fill="#242424" text-anchor="start">Schema validity ≠</text>
+<text x="40" y="117.44" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="700" fill="#242424" text-anchor="start">execution eligibility</text>
+<text x="40" y="170.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="400" fill="#605E5C" text-anchor="start">Selected Qwen2.5-Coder-0.5B run</text>
+<text x="40" y="206.96" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="400" fill="#605E5C" text-anchor="start">P3 · 30 commands</text>
+<rect x="40" y="250" width="700" height="125" rx="8" fill="white" stroke="#242424" stroke-width="2"/>
+<text x="390" y="310.0" font-family="Segoe UI, Arial, sans-serif" font-size="54" font-weight="700" fill="#242424" text-anchor="middle">30</text>
+<text x="390" y="354.0" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="600" fill="#242424" text-anchor="middle">Model responses</text>
+<path id="p3-stage-1" d="M390 375 V407" fill="none" stroke="#605E5C" stroke-width="2.5" marker-end="url(#arrow)"/>
+<rect x="80" y="417" width="620" height="125" rx="8" fill="#F7F7F7" stroke="#242424" stroke-width="2"/>
+<text x="390" y="477.0" font-family="Segoe UI, Arial, sans-serif" font-size="54" font-weight="700" fill="#242424" text-anchor="middle">25 / 30</text>
+<text x="390" y="521.0" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="600" fill="#242424" text-anchor="middle">Schema-valid</text>
+<path id="p3-stage-2" d="M390 542 V574" fill="none" stroke="#605E5C" stroke-width="2.5" marker-end="url(#arrow)"/>
+<rect x="120" y="584" width="540" height="125" rx="8" fill="white" stroke="#242424" stroke-width="2"/>
+<text x="390" y="644.0" font-family="Segoe UI, Arial, sans-serif" font-size="54" font-weight="700" fill="#242424" text-anchor="middle">4 / 30</text>
+<text x="390" y="688.0" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="600" fill="#242424" text-anchor="middle">Execution-eligible</text>
+<line x1="40" y1="758" x2="740" y2="758" stroke="#8A8886" stroke-width="2"/>
+<text x="40" y="801.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#605E5C" text-anchor="start">SEPARATE MODEL METRIC</text>
+<text x="40" y="872.0" font-family="Segoe UI, Arial, sans-serif" font-size="60" font-weight="700" fill="#242424" text-anchor="start">12</text>
+<text x="150" y="840.0" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="600" fill="#242424" text-anchor="start">Model-level false accepts</text>
+<text x="150" y="879.6" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="600" fill="#242424" text-anchor="start">under the project benchmark</text>
+<text x="40" y="925.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="400" fill="#605E5C" text-anchor="start">Proposal-evaluation classification;</text>
+<text x="40" y="961.96" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="400" fill="#605E5C" text-anchor="start">not a funnel stage or physical incidents.</text>
+</svg>

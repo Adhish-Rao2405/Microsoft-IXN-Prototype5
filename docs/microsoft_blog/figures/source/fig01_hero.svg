@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1338" viewBox="0 0 780 580" role="img" aria-labelledby="title desc">
+<title id="title">Model proposal is not authority</title><desc id="desc">Model proposal is not equal to authority. Project-owned deterministic governance controls progression. Physical execution authority is NOT_IMPLEMENTED.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M1 1 L9 5 L1 9Z" fill="#605E5C"/></marker></defs>
+<rect width="780" height="580" fill="white"/>
+<text x="40" y="62.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="600" fill="#605E5C" text-anchor="start">LOCAL SLM ROBOT PLANNING</text>
+<text x="390" y="172.0" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="700" fill="#242424" text-anchor="middle">MODEL PROPOSAL</text>
+<line x1="70" y1="253" x2="290" y2="253" stroke="#8A6D00" stroke-width="2" stroke-dasharray="10 7"/>
+<line x1="490" y1="253" x2="710" y2="253" stroke="#8A6D00" stroke-width="2" stroke-dasharray="10 7"/>
+<text x="390" y="281.0" font-family="Segoe UI, Arial, sans-serif" font-size="90" font-weight="400" fill="#8A6D00" text-anchor="middle">≠</text>
+<text x="390" y="370.0" font-family="Segoe UI, Arial, sans-serif" font-size="64" font-weight="700" fill="#242424" text-anchor="middle">AUTHORITY</text>
+<text x="390" y="440.0" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="400" fill="#242424" text-anchor="middle">Project-owned deterministic governance</text>
+<text x="390" y="479.6" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="400" fill="#242424" text-anchor="middle">controls whether proposals may progress.</text>
+<text x="390" y="538.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="600" fill="#242424" text-anchor="middle">Physical execution authority: NOT_IMPLEMENTED</text>
+</svg>

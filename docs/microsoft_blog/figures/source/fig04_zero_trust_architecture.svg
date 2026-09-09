@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="4015" viewBox="0 0 780 1740" role="img" aria-labelledby="title desc">
+<title id="title">Proposal, governance and qualification</title><desc id="desc">Typed or operator-reviewed input enters selected probabilistic inference, producing an untrusted proposal. An authority boundary precedes project-owned deterministic governance: whole-response parsing, schema, semantics, ambiguity and policy. Only ACCEPT leads to execution eligibility and a separately bounded qualification step. CLARIFY or REJECT leads to no progression. Independently sourced frozen qualification evidence is not derived from the fresh proposal. Physical execution authority is NOT_IMPLEMENTED.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M1 1 L9 5 L1 9Z" fill="#605E5C"/></marker></defs>
+<rect width="780" height="1740" fill="white"/>
+<text x="40" y="62.0" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="700" fill="#242424" text-anchor="start">Proposal, governance</text>
+<text x="40" y="117.44" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="700" fill="#242424" text-anchor="start">and qualification</text>
+<rect x="80" y="150" width="620" height="90" rx="8" fill="white" stroke="#8A8886" stroke-width="2"/>
+<text x="390" y="205.0" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="600" fill="#242424" text-anchor="middle">Typed or operator-reviewed input</text>
+<path id="input-to-inference" d="M390 240 V278" fill="none" stroke="#605E5C" stroke-width="2.5" marker-end="url(#arrow)"/>
+<rect x="80" y="287" width="620" height="155" rx="8" fill="white" stroke="#8A8886" stroke-width="2"/>
+<text x="390" y="328.0" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="600" fill="#242424" text-anchor="middle">Selected inference · probabilistic</text>
+<text x="390" y="376.0" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="700" fill="#242424" text-anchor="middle">UNTRUSTED PROPOSAL</text>
+<text x="390" y="417.0" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="400" fill="#242424" text-anchor="middle">No authority</text>
+<path id="proposal-to-governance" d="M390 442 V515" fill="none" stroke="#605E5C" stroke-width="2.5" marker-end="url(#arrow)"/>
+<line x1="40" y1="479" x2="260" y2="479" stroke="#8A6D00" stroke-width="2" stroke-dasharray="10 7"/>
+<line x1="520" y1="479" x2="740" y2="479" stroke="#8A6D00" stroke-width="2" stroke-dasharray="10 7"/>
+<rect x="424" y="454" width="326" height="43" fill="white"/>
+<text x="434" y="485.0" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="600" fill="#8A6D00" text-anchor="start">Authority boundary</text>
+<rect x="40" y="525" width="700" height="165" rx="8" fill="white" stroke="#242424" stroke-width="2"/>
+<text x="65" y="565.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#242424" text-anchor="start">PROJECT-OWNED</text>
+<text x="65" y="609.0" font-family="Segoe UI, Arial, sans-serif" font-size="38" font-weight="600" fill="#242424" text-anchor="start">Deterministic governance</text>
+<text x="65" y="649.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="400" fill="#242424" text-anchor="start">Parse · schema · semantics</text>
+<text x="65" y="681.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="400" fill="#242424" text-anchor="start">Ambiguity · project-defined policy</text>
+<path id="governance-to-accept" d="M390 690 V718 H220 V753" fill="none" stroke="#605E5C" stroke-width="2.5" marker-end="url(#arrow)"/>
+<path id="governance-to-clarify-reject" d="M390 718 H565 V753" fill="none" stroke="#605E5C" stroke-width="2.5" marker-end="url(#arrow)"/>
+<rect x="60" y="763" width="320" height="77" rx="8" fill="white" stroke="#242424" stroke-width="2"/>
+<text x="220" y="812.0" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="700" fill="#242424" text-anchor="middle">ACCEPT</text>
+<rect x="415" y="763" width="305" height="77" rx="8" fill="white" stroke="#242424" stroke-width="2"/>
+<text x="567" y="810.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#242424" text-anchor="middle">CLARIFY / REJECT</text>
+<path id="accept-to-eligibility" d="M220 840 V876" fill="none" stroke="#605E5C" stroke-width="2.5" marker-end="url(#arrow)"/>
+<path id="clarify-reject-to-stop" d="M567 840 V876" fill="none" stroke="#605E5C" stroke-width="2.5" marker-end="url(#arrow)"/>
+<rect x="60" y="885" width="320" height="93" rx="8" fill="white" stroke="#242424" stroke-width="2"/>
+<text x="220" y="923.0" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="600" fill="#242424" text-anchor="middle">Execution</text>
+<text x="220" y="965.24" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="600" fill="#242424" text-anchor="middle">eligibility</text>
+<rect x="415" y="885" width="305" height="93" rx="8" fill="#F7F7F7" stroke="#242424" stroke-width="2"/>
+<text x="567" y="939.0" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="600" fill="#242424" text-anchor="middle">No progression</text>
+<line x1="40" y1="1022" x2="740" y2="1022" stroke="#8A8886" stroke-width="2" stroke-dasharray="3 7"/>
+<text x="417" y="1065.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="600" fill="#605E5C" text-anchor="start">Separate qualification</text>
+<text x="417" y="1101.96" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="600" fill="#605E5C" text-anchor="start">boundary</text>
+<path id="eligibility-to-bounded-qualification" d="M220 978 V1124" fill="none" stroke="#605E5C" stroke-width="2.5" marker-end="url(#arrow)"/>
+<rect x="60" y="1134" width="320" height="120" rx="8" fill="white" stroke="#242424" stroke-width="2"/>
+<text x="220" y="1180.0" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="600" fill="#242424" text-anchor="middle">Separately bounded</text>
+<text x="220" y="1219.6" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="600" fill="#242424" text-anchor="middle">qualification step</text>
+<text x="417" y="1178.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="400" fill="#605E5C" text-anchor="start">Eligibility grants no</text>
+<text x="417" y="1214.96" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="400" fill="#605E5C" text-anchor="start">geometric, dynamic</text>
+<text x="417" y="1251.92" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="400" fill="#605E5C" text-anchor="start">or safety assurance.</text>
+<rect x="40" y="1300" width="700" height="206" rx="8" fill="#F7F7F7" stroke="#8A8886" stroke-width="2"/>
+<text x="65" y="1346.0" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="600" fill="#242424" text-anchor="start">Frozen qualification evidence</text>
+<text x="65" y="1387.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="400" fill="#242424" text-anchor="start">Independent historical provenance.</text>
+<text x="65" y="1423.96" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="400" fill="#242424" text-anchor="start">Not generated from the fresh proposal.</text>
+<text x="65" y="1471.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="600" fill="#242424" text-anchor="start">B3.2: FAIL · 118 findings · zero physics steps</text>
+<line x1="40" y1="1550" x2="740" y2="1550" stroke="#8A6D00" stroke-width="2" stroke-dasharray="10 7"/>
+<text x="390" y="1602.0" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="600" fill="#242424" text-anchor="middle">PHYSICAL EXECUTION AUTHORITY</text>
+<text x="390" y="1666.0" font-family="Segoe UI, Arial, sans-serif" font-size="48" font-weight="700" fill="#242424" text-anchor="middle">NOT_IMPLEMENTED</text>
+</svg>

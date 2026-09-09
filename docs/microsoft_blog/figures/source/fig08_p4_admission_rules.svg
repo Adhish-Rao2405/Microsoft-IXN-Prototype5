@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="2400" viewBox="0 0 780 1040" role="img" aria-labelledby="title desc">
+<title id="title">What stricter admission rules revealed</title><desc id="desc">P4, the same 120 retained records reclassified under four admission rules. Schema: 90 accepted, 14 previously successful records retained, 76 false-accept classifications. Plus exact-score semantics: 18, 14, 4. Plus uncertainty: 14, 14, 0. Full retained policy: 14, 14, 0. This is dependent retrospective reclassification, not a causal ablation or evidence of zero future risk.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M1 1 L9 5 L1 9Z" fill="#605E5C"/></marker></defs>
+<rect width="780" height="1040" fill="white"/>
+<text x="40" y="62.0" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="700" fill="#242424" text-anchor="start">What stricter admission</text>
+<text x="40" y="117.44" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="700" fill="#242424" text-anchor="start">rules revealed</text>
+<text x="40" y="174.0" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="400" fill="#605E5C" text-anchor="start">P4 · same 120 retained records</text>
+<text x="40" y="256.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="600" fill="#242424" text-anchor="start">Admission</text>
+<text x="40" y="292.96" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="600" fill="#242424" text-anchor="start">rule</text>
+<text x="357" y="256.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="600" fill="#242424" text-anchor="middle">Accepted</text>
+<text x="493" y="256.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="600" fill="#242424" text-anchor="middle">Retained</text>
+<text x="493" y="292.96" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="600" fill="#242424" text-anchor="middle">successes</text>
+<text x="661" y="256.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="600" fill="#242424" text-anchor="middle">False-accept</text>
+<text x="661" y="292.96" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="600" fill="#242424" text-anchor="middle">classifications</text>
+<line x1="40" y1="324" x2="740" y2="324" stroke="#242424" stroke-width="2"/>
+<rect x="40" y="325" width="700" height="116" fill="#F7F7F7"/>
+<text x="50" y="394.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="500" fill="#242424" text-anchor="start">Schema</text>
+<text x="357" y="399.0" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="700" fill="#242424" text-anchor="middle">90</text>
+<text x="493" y="399.0" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="700" fill="#242424" text-anchor="middle">14</text>
+<text x="661" y="399.0" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="700" fill="#242424" text-anchor="middle">76</text>
+<line x1="40" y1="442" x2="740" y2="442" stroke="#8A8886" stroke-width="2"/>
+<text x="50" y="494.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="500" fill="#242424" text-anchor="start">+ exact-score</text>
+<text x="50" y="530.96" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="500" fill="#242424" text-anchor="start">semantics</text>
+<text x="357" y="517.0" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="700" fill="#242424" text-anchor="middle">18</text>
+<text x="493" y="517.0" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="700" fill="#242424" text-anchor="middle">14</text>
+<text x="661" y="517.0" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="700" fill="#242424" text-anchor="middle">4</text>
+<line x1="40" y1="560" x2="740" y2="560" stroke="#8A8886" stroke-width="2"/>
+<rect x="40" y="561" width="700" height="116" fill="#F7F7F7"/>
+<text x="50" y="630.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="500" fill="#242424" text-anchor="start">+ uncertainty</text>
+<text x="357" y="635.0" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="700" fill="#242424" text-anchor="middle">14</text>
+<text x="493" y="635.0" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="700" fill="#242424" text-anchor="middle">14</text>
+<text x="661" y="635.0" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="700" fill="#242424" text-anchor="middle">0</text>
+<line x1="40" y1="678" x2="740" y2="678" stroke="#8A8886" stroke-width="2"/>
+<text x="50" y="730.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="500" fill="#242424" text-anchor="start">Full retained</text>
+<text x="50" y="766.96" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="500" fill="#242424" text-anchor="start">policy</text>
+<text x="357" y="753.0" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="700" fill="#242424" text-anchor="middle">14</text>
+<text x="493" y="753.0" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="700" fill="#242424" text-anchor="middle">14</text>
+<text x="661" y="753.0" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="700" fill="#242424" text-anchor="middle">0</text>
+<line x1="40" y1="796" x2="740" y2="796" stroke="#8A8886" stroke-width="2"/>
+<text x="40" y="844.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="400" fill="#605E5C" text-anchor="start">Retained successes: the same 14 previously</text>
+<text x="40" y="880.96" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="400" fill="#605E5C" text-anchor="start">classified successful records at every stage.</text>
+<text x="40" y="932.0" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="400" fill="#605E5C" text-anchor="start">Dependent retrospective reclassification.</text>
+<text x="40" y="968.96" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="400" fill="#605E5C" text-anchor="start">No causal or physical-safety conclusion;</text>
+<text x="40" y="1005.92" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="400" fill="#605E5C" text-anchor="start">zero observed classifications ≠ zero future risk.</text>
+</svg>
